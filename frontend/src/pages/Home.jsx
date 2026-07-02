@@ -156,7 +156,7 @@ export default function Home() {
 
         <div className="relative z-10 text-center px-4 w-full max-w-7xl mx-auto">
           {/* Main Hero Title Adjusted below to remain strictly 100% wide and on 1 line */}
-          <h1 className="font-bold text-white mb-5 leading-tight drop-shadow-[0_20px_30px_rgba(0,0,0,0.45)] whitespace-nowrap overflow-hidden text-center mx-auto w-full max-w-full text-[clamp(1.2rem,4.5vw,2.5rem)] md:text-[clamp(2.2rem,4.2vw,3.8rem)] lg:text-[clamp(3rem,4vw,5rem)]">
+          <h1 className="font-bold text-white mt-5 mb-5 leading-tight drop-shadow-[0_20px_30px_rgba(0,0,0,0.45)] whitespace-nowrap overflow-hidden text-center mx-auto w-full max-w-full text-[clamp(1.2rem,4.5vw,2.5rem)] md:text-[clamp(2.2rem,4.2vw,3.8rem)] lg:text-[clamp(3rem,4vw,5rem)]">
             {t.hero.title}
           </h1>
           <p className="text-xl sm:text-2xl text-primary font-semibold mb-5 drop-shadow-[0_12px_20px_rgba(0,0,0,0.35)]">
