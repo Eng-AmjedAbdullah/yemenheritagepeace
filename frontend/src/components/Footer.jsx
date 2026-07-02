@@ -25,20 +25,21 @@ export default function Footer() {
 
   return (
     <footer className="relative w-full overflow-hidden text-white bg-transparent">
-      {/* Curved Top Shape Divider */}
+      {/* Curved Top Shape Divider (Dips Downward) */}
       <div className="w-full overflow-hidden leading-[0]">
         <svg 
           viewBox="0 0 1200 120" 
           preserveAspectRatio="none" 
-          className="relative block w-full h-[40px] sm:h-[70px] text-primary fill-current"
+          className="relative block w-full h-[40px] sm:h-[60px] text-primary fill-current"
         >
-          <path d="M0,120 C300,0 900,0 1200,120 L1200,120 L0,120 Z"></path>
+          {/* This path creates the downward curve scoop */}
+          <path d="M0,0 C300,90 900,90 1200,0 L1200,120 L0,120 Z"></path>
         </svg>
       </div>
 
       {/* Main Footer Container */}
       <div className="bg-primary">
-        <div className="w-full max-w-[1180px] mx-auto px-6 sm:px-8 lg:px-10 pb-12 pt-4">
+        <div className="w-full max-w-[1180px] mx-auto px-6 sm:px-8 lg:px-10 pb-12 pt-2">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-y-10 gap-x-8 items-start">
             <div className={`lg:col-span-5 ${isRtl ? 'text-right' : 'text-left'}`}>
               <img
@@ -59,7 +60,7 @@ export default function Footer() {
             </div>
 
             <div className={`lg:col-span-3 ${isRtl ? 'text-right lg:justify-self-center' : 'text-left lg:justify-self-center'}`}>
-              <h4 className="font-bold text-white mb-4 border-b border-primary/30 pb-2">
+              <h4 className="font-bold text-white mb-4 border-b border-white/10 pb-2">
                 {isRtl ? 'روابط سريعة' : 'Quick Links'}
               </h4>
 
@@ -84,7 +85,7 @@ export default function Footer() {
             </div>
 
             <div className={`lg:col-span-4 ${isRtl ? 'text-right lg:justify-self-start' : 'text-left lg:justify-self-end'}`}>
-              <h4 className="font-bold text-white mb-4 border-b border-primary/30 pb-2">
+              <h4 className="font-bold text-white mb-4 border-b border-white/10 pb-2">
                 {t.contact_title}
               </h4>
 
