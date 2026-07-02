@@ -6,7 +6,7 @@ export default function PageHeader({ title, subtitle, children }) {
   const isRtl = lang === 'ar'
 
   return (
-    <section className="relative pt-30 md:pt-8 pb-4 md:pb-10 bg-gradient-to-b from-gray-50 to-white overflow-hidden" style={{ scrollMarginTop: '8rem' }}>
+    <section className="relative pt-32 md:pt-8 pb-4 md:pb-10 bg-gradient-to-b from-gray-50 to-white overflow-hidden" style={{ scrollMarginTop: '8rem' }}>
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 start-10 w-40 md:w-56 h-40 md:h-56 bg-primary/5 rounded-full blur-3xl"></div>
         <div className="absolute bottom-1/4 end-10 w-48 md:w-72 h-48 md:h-72 bg-primary/5 rounded-full blur-3xl"></div>
