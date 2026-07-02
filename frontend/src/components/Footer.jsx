@@ -24,20 +24,31 @@ export default function Footer() {
     : (settings?.footer_desc_en ?? t.footer_desc)
 
   return (
-    <footer className="bg-primary text-white overflow-hidden">
-      <div
-        className="h-24 sm:h-28 bg-white/10"
-        style={{ clipPath: 'ellipse(75% 100% at 50% 0%)' }}
-      />
+    <footer className="relative bg-primary text-white mt-12 sm:mt-24">
+      {/* Clean SVG Top Curve - Perfectly matches the footer color */}
+      <div className="absolute left-0 right-0 bottom-full w-full overflow-hidden leading-[0] pointer-events-none">
+        <svg
+          className="block w-full h-[40px] sm:h-[60px] md:h-[80px]"
+          viewBox="0 0 1440 100"
+          preserveAspectRatio="none"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0,100 C480,0 960,0 1440,100 Z"
+            className="fill-primary"
+          />
+        </svg>
+      </div>
 
-      <div className="w-full max-w-[1180px] mx-auto px-6 sm:px-8 lg:px-10 py-12">
+      <div className="w-full max-w-[1180px] mx-auto px-6 sm:px-8 lg:px-10 pb-12 pt-8 sm:pt-4">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-y-10 gap-x-8 items-start">
           <div className={`lg:col-span-5 ${isRtl ? 'text-right' : 'text-left'}`}>
-<img
-  src="/logowhite.png"
-  alt={settings?.site_name_en || settings?.site_name_ar || 'Logo'}
-  className={`h-16 w-auto mb-4 ${isRtl ? 'mr-0 ml-auto' : ''}`}
-/>
+            <img
+              src="/logowhite.png"
+              alt={settings?.site_name_en || settings?.site_name_ar || 'Logo'}
+              className={`h-16 w-auto mb-4 ${isRtl ? 'mr-0 ml-auto' : ''}`}
+            />
 
             <h3 className="text-xl font-bold text-white mb-3">
               {isRtl
@@ -61,7 +72,7 @@ export default function Footer() {
                 { label: t.nav.about, href: '/about' },
                 { label: t.nav.news, href: '/news' },
                 { label: t.nav.contact, href: '/contact' },
-              ].map(item => (
+              ].map((item) => (
                 <li key={item.href}>
                   <Link
                     to={item.href}
