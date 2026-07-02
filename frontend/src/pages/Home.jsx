@@ -91,13 +91,13 @@ export default function Home() {
   }, [heroSlidesData.length])
 
   useEffect(() => {
-heroSlides.forEach(({ image_url }) => {
-  const src = resolveMediaUrl(image_url)
-  if (src) {
-    const i = new Image()
-    i.src = src
-  }
-})
+    heroSlides.forEach(({ image_url }) => {
+      const src = resolveMediaUrl(image_url)
+      if (src) {
+        const i = new Image()
+        i.src = src
+      }
+    })
   }, [heroSlides])
 
   useEffect(() => {
@@ -154,8 +154,9 @@ heroSlides.forEach(({ image_url }) => {
 
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full bg-primary/10 blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white mb-5 leading-tight drop-shadow-[0_20px_30px_rgba(0,0,0,0.45)]">
+        <div className="relative z-10 text-center px-4 w-full max-w-7xl mx-auto">
+          {/* Main Hero Title Adjusted below to remain strictly 100% wide and on 1 line */}
+          <h1 className="font-bold text-white mb-5 leading-tight drop-shadow-[0_20px_30px_rgba(0,0,0,0.45)] whitespace-nowrap overflow-hidden text-center mx-auto w-full max-w-full text-[clamp(1.2rem,4.5vw,2.5rem)] md:text-[clamp(2.2rem,4.2vw,3.8rem)] lg:text-[clamp(3rem,4vw,5rem)]">
             {t.hero.title}
           </h1>
           <p className="text-xl sm:text-2xl text-primary font-semibold mb-5 drop-shadow-[0_12px_20px_rgba(0,0,0,0.35)]">
@@ -461,7 +462,6 @@ heroSlides.forEach(({ image_url }) => {
                   rel={p.website_url ? 'noreferrer' : undefined}
                   className="bg-white rounded-2xl border border-gray-200 px-4 py-6 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-300 flex flex-col items-center justify-center gap-4 min-h-[140px]"
                 >
-                  {/* Logo — always full color, no grayscale ever */}
                   {p.logo_url && !partnerErrors[p.id || i] ? (
                     <div className="h-12 flex items-center justify-center w-full">
                       <img
