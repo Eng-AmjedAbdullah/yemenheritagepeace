@@ -25,23 +25,23 @@ export default function Footer() {
 
   return (
     <footer className="relative bg-primary text-white mt-12 sm:mt-24">
-      {/* Clean SVG Top Curve - Perfectly matches the footer color */}
-      <div className="absolute left-0 right-0 bottom-full w-full overflow-hidden leading-[0] pointer-events-none">
+      {/* Inward Curve (Concave) SVG Section */}
+      <div className="absolute top-0 left-0 w-full overflow-hidden leading-[0] pointer-events-none transform -translate-y-[99%]">
         <svg
-          className="block w-full h-[40px] sm:h-[60px] md:h-[80px]"
+          className="block w-full h-[30px] sm:h-[50px] md:h-[70px]"
           viewBox="0 0 1440 100"
           preserveAspectRatio="none"
-          fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
+          {/* This path fills the bottom corners up to a center dip */}
           <path
-            d="M0,100 C480,0 960,0 1440,100 Z"
+            d="M0,0 L0,100 L1440,100 L1440,0 C960,100 480,100 0,0 Z"
             className="fill-primary"
           />
         </svg>
       </div>
 
-      <div className="w-full max-w-[1180px] mx-auto px-6 sm:px-8 lg:px-10 pb-12 pt-8 sm:pt-4">
+      <div className="w-full max-w-[1180px] mx-auto px-6 sm:px-8 lg:px-10 pb-12 pt-8 sm:pt-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-y-10 gap-x-8 items-start">
           <div className={`lg:col-span-5 ${isRtl ? 'text-right' : 'text-left'}`}>
             <img
