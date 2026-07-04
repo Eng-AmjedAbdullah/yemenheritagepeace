@@ -3,7 +3,6 @@ import { useNavigate, Link } from 'react-router-dom'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
 import {
-  Lock,
   Mail,
   Eye,
   EyeOff,
@@ -34,7 +33,7 @@ const TEXT = {
     password: 'Password',
     emailPlaceholder: 'Enter your email',
     passwordPlaceholder: 'Enter your password',
-    submit: 'Sign In to Dashboard',
+    submit: 'Login',
     loading: 'Verifying...',
     back: 'Back to Website',
     switchLang: 'عربي',
@@ -59,6 +58,7 @@ export default function AdminLogin() {
 
     try {
       const data = await api.post('/auth/login', form)
+
       localStorage.setItem('yhpo_token', data.token)
       localStorage.setItem('yhpo_admin', JSON.stringify(data.admin))
 
@@ -99,35 +99,33 @@ export default function AdminLogin() {
   return (
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="relative min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/5 flex items-center justify-center px-4 py-8"
+      className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/5 flex items-center justify-center px-4 py-8"
       style={{
         fontFamily: isRtl
           ? "'Noto Kufi Arabic', sans-serif"
           : "'Inter', 'Exo 2', sans-serif",
       }}
     >
-      {/* Language button pinned to screen edge */}
-      <button
-        type="button"
-        onClick={() => setUiLang((l) => (l === 'ar' ? 'en' : 'ar'))}
-        className={`fixed top-6 z-50 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm text-primary shadow-md transition hover:border-primary hover:shadow-lg ${
-          isRtl ? 'right-6' : 'left-6'
-        }`}
-      >
-        <Globe size={15} className="text-primary" />
-        <span>{txt.switchLang}</span>
-      </button>
-
       <div className="w-full max-w-md">
+        <div className="mb-8 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setUiLang((lang) => (lang === 'ar' ? 'en' : 'ar'))}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-md transition hover:border-primary hover:shadow-lg"
+          >
+            <span>{txt.switchLang}</span>
+            <Globe size={15} className="text-primary" />
+          </button>
+        </div>
+
         <div className="overflow-hidden rounded-3xl bg-white shadow-2xl border border-primary/10">
-          {/* Header with primary color gradient */}
           <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-8 sm:px-8 text-center">
             <img
               src="/logowhite.png"
               alt="Yemen Heritage for Peace"
               className="mx-auto mb-4 h-14 w-auto"
               onError={(e) => {
-                e.target.style.display = 'none'
+                e.currentTarget.style.display = 'none'
               }}
             />
 
@@ -138,10 +136,8 @@ export default function AdminLogin() {
             </p>
           </div>
 
-          {/* Form section */}
           <div className="px-6 py-7 sm:px-8">
             <form onSubmit={handleLogin} className="space-y-5">
-              {/* Email */}
               <div>
                 <label
                   className={`mb-2 block text-sm font-semibold text-slate-700 ${
@@ -162,7 +158,9 @@ export default function AdminLogin() {
                   <input
                     type="email"
                     value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, email: e.target.value })
+                    }
                     placeholder={txt.emailPlaceholder}
                     dir="ltr"
                     required
@@ -173,7 +171,6 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label
                   className={`mb-2 block text-sm font-semibold text-slate-700 ${
@@ -200,8 +197,8 @@ export default function AdminLogin() {
 
                   <button
                     type="button"
-                    onClick={() => setShowPwd((s) => !s)}
-                    className={`absolute top-1/2 -translate-y-1/2 text-primary hover:text-primary-dark transition ${
+                    onClick={() => setShowPwd((state) => !state)}
+                    className={`absolute top-1/2 -translate-y-1/2 text-primary transition hover:text-primary-dark ${
                       isRtl ? 'left-4' : 'right-4'
                     }`}
                     aria-label={showPwd ? 'Hide password' : 'Show password'}
@@ -211,47 +208,20 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-4 py-3.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <svg
-                      className="h-4 w-4 animate-spin"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                      />
-                    </svg>
-                    {txt.loading}
-                  </>
-                ) : (
-                  <>
-                    <Lock size={16} className="text-white" />
-                    {txt.submit}
-                  </>
-                )}
-              </button>
+              <div className="flex justify-center pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="flex items-center justify-center rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-4 py-3.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:cursor-not-allowed disabled:opacity-50"
+                  style={{ width: '50%' }}
+                >
+                  {loading ? txt.loading : txt.submit}
+                </button>
+              </div>
             </form>
           </div>
         </div>
 
-        {/* Back link */}
         <div className="mt-5 flex justify-center">
           <Link
             to="/"
@@ -262,6 +232,7 @@ export default function AdminLogin() {
             ) : (
               <ArrowLeft size={15} className="text-primary" />
             )}
+
             {txt.back}
           </Link>
         </div>
