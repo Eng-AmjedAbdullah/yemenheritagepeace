@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
-
 import toast from 'react-hot-toast'
 import {
   LayoutDashboard,
@@ -22,8 +21,8 @@ import {
   ShieldAlert,
 } from 'lucide-react'
 import { adminTranslations, AdminLangContext } from './adminI18n'
+import { getSidebarItems, canAccessPage } from './adminPermissions'
 import api from '../lib/api'
-import { PERMISSIONS, canAccessPath } from './adminPermissions'
 
 export const ConfirmContext = React.createContext()
 
@@ -103,6 +102,7 @@ function ConfirmModal({ modal, close, isRtl }) {
 
 export default function AdminLayout() {
   const [admin, setAdmin] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(() => (typeof window !== 'undefined' ? window.innerWidth >= 1024 : true))
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 1024 : false))
   const [adminLang, setAdminLang] = useState(localStorage.getItem('admin_lang') || 'ar')
@@ -165,10 +165,40 @@ export default function AdminLayout() {
   }, [isRtl])
 
   const fetchUnread = useCallback(() => {
-    // Only fetch unread if admin has permission to view messages
-    if (!admin || !PERMISSIONS[admin.role]?.apisAllowed?.includes('/contact')) return
     api.get('/contact/unread-count').then(d => setUnreadCount(d?.count || 0)).catch(() => {})
-  }, [admin])
+  }, [])
+
+  // Refresh admin from backend on mount
+  useEffect(() => {
+    const refreshAdmin = async () => {
+      setLoading(true)
+      try {
+        const token = localStorage.getItem('yhpo_token')
+        if (!token) {
+          localStorage.removeItem('yhpo_admin')
+          navigate('/admin/login')
+          return
+        }
+
+        // Refresh admin data from backend
+        const response = await api.get('/auth/me')
+        setAdmin(response.admin)
+        localStorage.setItem('yhpo_admin', JSON.stringify(response.admin))
+        fetchUnread()
+      } catch (error) {
+        console.error('Failed to refresh admin:', error)
+        localStorage.removeItem('yhpo_token')
+        localStorage.removeItem('yhpo_admin')
+        navigate('/admin/login')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    refreshAdmin()
+    const interval = setInterval(fetchUnread, 30000)
+    return () => clearInterval(interval)
+  }, [navigate, fetchUnread])
 
   useEffect(() => {
     const handleResize = () => {
@@ -183,42 +213,6 @@ export default function AdminLayout() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
-
-  // Refresh admin from server on load using token
-  useEffect(() => {
-    const token = localStorage.getItem('yhpo_token')
-    if (!token) {
-      localStorage.removeItem('yhpo_admin')
-      navigate('/admin/login')
-      return
-    }
-
-    // try to use stored admin first for immediate UI, but always refresh
-    const stored = localStorage.getItem('yhpo_admin')
-    if (stored) setAdmin(JSON.parse(stored))
-
-    api.get('/auth/me')
-      .then(data => {
-        const refreshed = {
-          id: data.id,
-          name: data.name?.trim(),
-          email: (data.email || '').toLowerCase().trim(),
-          role: data.role,
-          is_active: data.is_active,
-        }
-        setAdmin(refreshed)
-        localStorage.setItem('yhpo_admin', JSON.stringify(refreshed))
-        fetchUnread()
-      })
-      .catch(() => {
-        localStorage.removeItem('yhpo_token')
-        localStorage.removeItem('yhpo_admin')
-        navigate('/admin/login')
-      })
-
-    const interval = setInterval(fetchUnread, 30000)
-    return () => clearInterval(interval)
-  }, [navigate, fetchUnread])
 
   useEffect(() => {
     if (location.pathname === '/admin/messages') {
@@ -239,37 +233,39 @@ export default function AdminLayout() {
 
     localStorage.removeItem('yhpo_token')
     localStorage.removeItem('yhpo_admin')
-    toast.success(isRtl ? 'تم تسجيل الخروج' : 'Logged out successfully')
+    toast.success(isRtl ? 'تم تسجيل الخروج' : 'Logged out successfully', {
+      style: {
+        background: '#ffffff',
+        color: '#0d7a91',
+        border: '2px solid #18a2be',
+        borderRadius: '12px',
+      },
+    })
     navigate('/admin/login')
   }
 
-  const role = admin?.role
+  // Check if current path is allowed for this role
+  if (admin && !canAccessPage(admin.role, location.pathname)) {
+    return <Navigate to="/admin" replace />
+  }
 
-  const allNavItems = [
-    { href: '/admin', icon: LayoutDashboard, label: t.dashboard },
-    { href: '/admin/news', icon: Newspaper, label: t.news },
-    { href: '/admin/events', icon: Calendar, label: t.events },
-    { href: '/admin/profile', icon: User, label: t.profile },
-    { href: '/admin/heritage', icon: Mountain, label: t.heritage },
-    { href: '/admin/partners', icon: Handshake, label: t.partners },
-    { href: '/admin/hero', icon: Images, label: t.heroSlides },
-    { href: '/admin/settings', icon: Settings, label: t.siteSettings },
-    { href: '/admin/messages', icon: MessageSquare, label: t.messages, badge: unreadCount },
-    { href: '/admin/admins', icon: Users, label: t.admins },
-  ]
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">{isRtl ? 'جارٍ التحميل...' : 'Loading...'}</p>
+        </div>
+      </div>
+    )
+  }
 
-  const navItems = role && PERMISSIONS[role] ? allNavItems.filter(i => PERMISSIONS[role].sidebar.includes(i.href)) : []
+  if (!admin) {
+    return <Navigate to="/admin/login" replace />
+  }
 
-  // protect manual route entry
-  useEffect(() => {
-    if (!admin) return
-    const path = location.pathname
-    if (path.startsWith('/admin') && !canAccessPath(admin.role, path)) {
-      navigate('/admin', { replace: true })
-    }
-  }, [admin, location.pathname, navigate])
-
-  const contextValue = { t, lang: adminLang, isRtl, toggleAdminLang, fetchUnread, requestConfirm, admin, setAdmin }
+  const navItems = getSidebarItems(admin.role, t)
+  const contextValue = { t, lang: adminLang, isRtl, toggleAdminLang, fetchUnread, requestConfirm }
 
   return (
     <AdminLangContext.Provider value={contextValue}>
@@ -277,53 +273,87 @@ export default function AdminLayout() {
         <div className={`min-h-screen bg-gray-50 ${isRtl ? 'font-ar' : 'font-en'}`} dir={isRtl ? 'rtl' : 'ltr'}>
           <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
 
-          <aside className={`fixed top-0 h-full bg-gradient-to-b from-primary via-primary-dark to-primary/80 text-white border-white/10 z-40 transition-all duration-300 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'}`}>
+          {/* Sidebar */}
+          <aside className={`fixed top-0 h-full bg-gradient-to-b from-primary to-primary-dark border-primary/20 z-40 transition-all duration-300 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'}`}>
+            {/* Logo Section */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               {sidebarOpen && <div>
                 <div className="text-white font-bold text-sm">{t.adminPanel}</div>
-                <div className="text-primary text-xs">{t.yemenHeritage}</div>
+                <div className="text-white/80 text-xs">{t.yemenHeritage}</div>
               </div>}
-              <button onClick={() => setSidebarOpen(o => !o)} className="text-white/80 hover:text-white p-1">
+              <button onClick={() => setSidebarOpen(o => !o)} className="text-white/70 hover:text-white p-1 transition-colors">
                 {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
             </div>
 
+            {/* Navigation Links */}
             <nav className="p-3 space-y-1 h-[calc(100vh-200px)] overflow-y-auto">
-              {navItems.map(item => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative ${location.pathname === item.href ? 'bg-white text-primary' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
-                >
-                  <item.icon size={18} className="flex-shrink-0" />
-                  {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
-                  {item.badge > 0 && (
-                    <span className={`${sidebarOpen ? 'ms-auto' : 'absolute -top-1 -end-1'} bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px]`}>{item.badge > 99 ? '99+' : item.badge}</span>
-                  )}
-                </Link>
-              ))}
+              {navItems.map(item => {
+                const Icon = {
+                  LayoutDashboard,
+                  Newspaper,
+                  Calendar,
+                  Users,
+                  User,
+                  Mountain,
+                  MessageSquare,
+                  Handshake,
+                  Images,
+                  Settings,
+                }[{
+                  'dashboard': 'LayoutDashboard',
+                  'news': 'Newspaper',
+                  'events': 'Calendar',
+                  'admins': 'Users',
+                  'profile': 'User',
+                  'heritage': 'Mountain',
+                  'messages': 'MessageSquare',
+                  'partners': 'Handshake',
+                  'hero': 'Images',
+                  'settings': 'Settings',
+                }[item.key]] || LayoutDashboard
+
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative ${
+                      location.pathname === item.href
+                        ? 'bg-white text-primary shadow-lg'
+                        : 'text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    <Icon size={18} className="flex-shrink-0" />
+                    {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
+                  </Link>
+                )
+              })}
             </nav>
 
-            <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/10">
-              <button onClick={toggleAdminLang} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-colors mb-2">
+            {/* Bottom Actions */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/10 bg-gradient-to-t from-primary-dark/50 to-transparent">
+              <button onClick={toggleAdminLang} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/80 hover:bg-white/10 transition-colors mb-2">
                 <Globe size={18} />
                 {sidebarOpen && <span className="text-sm font-medium">{t.switchLang}</span>}
               </button>
-              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-200 hover:bg-red-500/10 transition-colors">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/80 hover:bg-red-500/20 hover:text-red-300 transition-colors">
                 <LogOut size={18} />
                 {sidebarOpen && <span className="text-sm font-medium">{t.logout}</span>}
               </button>
             </div>
           </aside>
 
+          {/* Mobile overlay */}
           {isMobile && sidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black/40 z-30 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+            <div
+              className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
 
-        <div className={`transition-all duration-300 min-h-screen ${isMobile ? 'ml-0 mr-0' : sidebarOpen ? (isRtl ? 'mr-64' : 'ml-64') : (isRtl ? 'mr-16' : 'ml-16')}`}>
+          {/* Main Content */}
+          <div className={`transition-all duration-300 min-h-screen ${isMobile ? 'ml-0 mr-0' : sidebarOpen ? (isRtl ? 'mr-64' : 'ml-64') : (isRtl ? 'mr-16' : 'ml-16')}`}>
+            {/* Top Bar */}
             <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-sm">
               <div className="flex items-center gap-3">
                 {isMobile && (
@@ -340,19 +370,21 @@ export default function AdminLayout() {
                 </div>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-600">
-                {admin?.role === 'super_admin' && (
-                  <span className="text-xs bg-white text-primary px-2 py-0.5 rounded-full font-medium">
+                {admin.role === 'super_admin' && (
+                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                     {isRtl ? 'مشرف رئيسي' : 'Super Admin'}
                   </span>
                 )}
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
-                    <User size={16} className="text-white" />
+                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                    <User size={16} className="text-primary" />
                   </div>
                   <span>{admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}</span>
                 </div>
               </div>
             </div>
+
+            {/* Page Content */}
             <div className="p-4 md:p-6"><Outlet /></div>
           </div>
         </div>
