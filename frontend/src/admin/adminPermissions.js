@@ -41,34 +41,6 @@ export const PERMISSIONS = {
       manageSettings: true,
       manageMessages: true,
     },
-    apis: [
-      'GET:/news/all',
-      'GET:/events/all',
-      'GET:/admins',
-      'GET:/contact',
-      'GET:/heritage/all',
-      'GET:/partners/all',
-      'GET:/hero/all',
-      'POST:/news',
-      'PUT:/news',
-      'DELETE:/news',
-      'POST:/events',
-      'PUT:/events',
-      'DELETE:/events',
-      'POST:/heritage',
-      'PUT:/heritage',
-      'DELETE:/heritage',
-      'POST:/partners',
-      'PUT:/partners',
-      'DELETE:/partners',
-      'POST:/hero',
-      'PUT:/hero',
-      'DELETE:/hero',
-      'PUT:/settings',
-      'DELETE:/admins',
-      'POST:/admins',
-      'PUT:/admins',
-    ],
   },
   [ADMIN_ROLES.ADMIN]: {
     pages: [
@@ -93,16 +65,6 @@ export const PERMISSIONS = {
       manageSettings: false,
       manageMessages: false,
     },
-    apis: [
-      'GET:/news/all',
-      'GET:/events/all',
-      'POST:/news',
-      'PUT:/news',
-      'DELETE:/news',
-      'POST:/events',
-      'PUT:/events',
-      'DELETE:/events',
-    ],
   },
 }
 
@@ -122,16 +84,6 @@ export const hasFeature = (role, feature) => {
   const rolePerms = PERMISSIONS[role]
   if (!rolePerms) return false
   return rolePerms.features[feature] === true
-}
-
-/**
- * Check if role can perform API action
- */
-export const canCallAPI = (role, method, endpoint) => {
-  const rolePerms = PERMISSIONS[role]
-  if (!rolePerms) return false
-  const action = `${method}:${endpoint}`
-  return rolePerms.apis.includes(action)
 }
 
 /**
@@ -360,7 +312,6 @@ export default {
   PERMISSIONS,
   canAccessPage,
   hasFeature,
-  canCallAPI,
   getAllowedPages,
   getAllowedFeatures,
   getSidebarItems,

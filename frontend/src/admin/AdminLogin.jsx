@@ -65,14 +65,15 @@ export default function AdminLogin() {
       toast.success(txt.success, {
         duration: 3000,
         style: {
-          background: '#0f172a',
-          color: '#fff',
-          border: '1px solid #18a2be',
+          background: '#ffffff',
+          color: '#0d7a91',
+          border: '2px solid #18a2be',
           borderRadius: '12px',
           fontSize: '14px',
           padding: '14px 18px',
+          boxShadow: '0 4px 12px rgba(24, 162, 190, 0.15)',
         },
-        iconTheme: { primary: '#18a2be', secondary: '#fff' },
+        iconTheme: { primary: '#0d7a91', secondary: '#fff' },
       })
 
       navigate('/admin')
@@ -80,15 +81,15 @@ export default function AdminLogin() {
       toast.error(err?.message || txt.error, {
         duration: 4000,
         style: {
-          background: '#fff',
-          color: '#0f172a',
-          border: '1px solid #fecaca',
+          background: '#ffffff',
+          color: '#991b1b',
+          border: '2px solid #dc2626',
           borderRadius: '12px',
           fontSize: '14px',
           padding: '14px 18px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.10)',
+          boxShadow: '0 4px 12px rgba(220, 38, 38, 0.15)',
         },
-        iconTheme: { primary: '#ef4444', secondary: '#fff' },
+        iconTheme: { primary: '#991b1b', secondary: '#fff' },
       })
     } finally {
       setLoading(false)
@@ -98,29 +99,29 @@ export default function AdminLogin() {
   return (
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="relative min-h-screen bg-slate-100 flex items-center justify-center px-4 py-8"
+      className="relative min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/5 flex items-center justify-center px-4 py-8"
       style={{
         fontFamily: isRtl
           ? "'Noto Kufi Arabic', sans-serif"
           : "'Inter', 'Exo 2', sans-serif",
       }}
     >
-      {/* ✅ Language button pinned to screen edge */}
+      {/* Language button pinned to screen edge */}
       <button
         type="button"
         onClick={() => setUiLang((l) => (l === 'ar' ? 'en' : 'ar'))}
-        className={`fixed top-6 z-50 inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm text-slate-700 shadow-sm transition hover:border-primary hover:text-primary
-          ${isRtl ? 'right-6' : 'left-6'}
-        `}
+        className={`fixed top-6 z-50 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm text-primary shadow-md transition hover:border-primary hover:shadow-lg ${
+          isRtl ? 'right-6' : 'left-6'
+        }`}
       >
         <Globe size={15} className="text-primary" />
         <span>{txt.switchLang}</span>
       </button>
 
       <div className="w-full max-w-md">
-        <div className="overflow-hidden rounded-3xl bg-white shadow-[0_20px_60px_rgba(15,23,42,0.12)] border border-slate-200">
-          {/* header */}
-          <div className="bg-slate-900 px-6 py-8 sm:px-8 text-center">
+        <div className="overflow-hidden rounded-3xl bg-white shadow-2xl border border-primary/10">
+          {/* Header with primary color gradient */}
+          <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-8 sm:px-8 text-center">
             <img
               src="/logo.png"
               alt="Yemen Heritage for Peace"
@@ -132,12 +133,12 @@ export default function AdminLogin() {
 
             <h1 className="text-2xl font-bold text-white">{txt.title}</h1>
 
-            <p className="mt-2 text-sm leading-7 text-slate-300">
+            <p className="mt-2 text-sm leading-7 text-white/90">
               {txt.subtitle}
             </p>
           </div>
 
-          {/* form */}
+          {/* Form section */}
           <div className="px-6 py-7 sm:px-8">
             <form onSubmit={handleLogin} className="space-y-5">
               {/* Email */}
@@ -165,7 +166,7 @@ export default function AdminLogin() {
                     placeholder={txt.emailPlaceholder}
                     dir="ltr"
                     required
-                    className={`w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 text-sm text-slate-800 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 ${
+                    className={`w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 text-sm text-slate-800 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20 ${
                       isRtl ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'
                     }`}
                   />
@@ -192,7 +193,7 @@ export default function AdminLogin() {
                     placeholder={txt.passwordPlaceholder}
                     dir="ltr"
                     required
-                    className={`w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 text-sm text-slate-800 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/10 ${
+                    className={`w-full rounded-2xl border border-slate-200 bg-slate-50 py-3.5 text-sm text-slate-800 outline-none transition focus:border-primary focus:bg-white focus:ring-4 focus:ring-primary/20 ${
                       isRtl ? 'pl-12 pr-4 text-right' : 'pr-12 pl-4 text-left'
                     }`}
                   />
@@ -214,7 +215,7 @@ export default function AdminLogin() {
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70"
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary to-primary-dark px-4 py-3.5 text-sm font-bold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
