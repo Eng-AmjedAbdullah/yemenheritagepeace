@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { adminTranslations, AdminLangContext } from './adminI18n'
 import api from '../lib/api'
+import { PERMISSIONS, canAccessPath } from './adminPermissions'
 
 export const ConfirmContext = React.createContext()
 
@@ -164,8 +165,10 @@ export default function AdminLayout() {
   }, [isRtl])
 
   const fetchUnread = useCallback(() => {
+    // Only fetch unread if admin has permission to view messages
+    if (!admin || !PERMISSIONS[admin.role]?.apisAllowed?.includes('/contact')) return
     api.get('/contact/unread-count').then(d => setUnreadCount(d?.count || 0)).catch(() => {})
-  }, [])
+  }, [admin])
 
   useEffect(() => {
     const handleResize = () => {
@@ -181,15 +184,38 @@ export default function AdminLayout() {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  // Refresh admin from server on load using token
   useEffect(() => {
     const token = localStorage.getItem('yhpo_token')
-    const stored = localStorage.getItem('yhpo_admin')
     if (!token) {
+      localStorage.removeItem('yhpo_admin')
       navigate('/admin/login')
       return
     }
+
+    // try to use stored admin first for immediate UI, but always refresh
+    const stored = localStorage.getItem('yhpo_admin')
     if (stored) setAdmin(JSON.parse(stored))
-    fetchUnread()
+
+    api.get('/auth/me')
+      .then(data => {
+        const refreshed = {
+          id: data.id,
+          name: data.name?.trim(),
+          email: (data.email || '').toLowerCase().trim(),
+          role: data.role,
+          is_active: data.is_active,
+        }
+        setAdmin(refreshed)
+        localStorage.setItem('yhpo_admin', JSON.stringify(refreshed))
+        fetchUnread()
+      })
+      .catch(() => {
+        localStorage.removeItem('yhpo_token')
+        localStorage.removeItem('yhpo_admin')
+        navigate('/admin/login')
+      })
+
     const interval = setInterval(fetchUnread, 30000)
     return () => clearInterval(interval)
   }, [navigate, fetchUnread])
@@ -217,15 +243,13 @@ export default function AdminLayout() {
     navigate('/admin/login')
   }
 
-  const isSuperAdmin = admin?.role === 'super_admin'
+  const role = admin?.role
 
-  const commonNavItems = [
+  const allNavItems = [
     { href: '/admin', icon: LayoutDashboard, label: t.dashboard },
     { href: '/admin/news', icon: Newspaper, label: t.news },
     { href: '/admin/events', icon: Calendar, label: t.events },
     { href: '/admin/profile', icon: User, label: t.profile },
-  ]
-  const superAdminNavItems = [
     { href: '/admin/heritage', icon: Mountain, label: t.heritage },
     { href: '/admin/partners', icon: Handshake, label: t.partners },
     { href: '/admin/hero', icon: Images, label: t.heroSlides },
@@ -234,17 +258,18 @@ export default function AdminLayout() {
     { href: '/admin/admins', icon: Users, label: t.admins },
   ]
 
-  const navItems = isSuperAdmin ? [...commonNavItems, ...superAdminNavItems] : commonNavItems
+  const navItems = role && PERMISSIONS[role] ? allNavItems.filter(i => PERMISSIONS[role].sidebar.includes(i.href)) : []
 
-  const allowedAdminPaths = isSuperAdmin
-    ? ['/admin', '/admin/news', '/admin/events', '/admin/heritage', '/admin/partners', '/admin/hero', '/admin/settings', '/admin/messages', '/admin/admins', '/admin/profile']
-    : ['/admin', '/admin/news', '/admin/events', '/admin/profile']
+  // protect manual route entry
+  useEffect(() => {
+    if (!admin) return
+    const path = location.pathname
+    if (path.startsWith('/admin') && !canAccessPath(admin.role, path)) {
+      navigate('/admin', { replace: true })
+    }
+  }, [admin, location.pathname, navigate])
 
-  if (admin && !allowedAdminPaths.includes(location.pathname) && location.pathname.startsWith('/admin')) {
-    return <Navigate to="/admin" replace />
-  }
-
-  const contextValue = { t, lang: adminLang, isRtl, toggleAdminLang, fetchUnread, requestConfirm }
+  const contextValue = { t, lang: adminLang, isRtl, toggleAdminLang, fetchUnread, requestConfirm, admin, setAdmin }
 
   return (
     <AdminLangContext.Provider value={contextValue}>
@@ -252,13 +277,13 @@ export default function AdminLayout() {
         <div className={`min-h-screen bg-gray-50 ${isRtl ? 'font-ar' : 'font-en'}`} dir={isRtl ? 'rtl' : 'ltr'}>
           <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
 
-          <aside className={`fixed top-0 h-full bg-dark border-white/10 z-40 transition-all duration-300 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'} ${isMobile && !sidebarOpen ? (isRtl ? 'translate-x-full' : '-translate-x-full') : 'translate-x-0'}`}>
+          <aside className={`fixed top-0 h-full bg-gradient-to-b from-primary via-primary-dark to-primary/80 text-white border-white/10 z-40 transition-all duration-300 ${isRtl ? 'right-0 border-l' : 'left-0 border-r'} ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'}`}>
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               {sidebarOpen && <div>
                 <div className="text-white font-bold text-sm">{t.adminPanel}</div>
                 <div className="text-primary text-xs">{t.yemenHeritage}</div>
               </div>}
-              <button onClick={() => setSidebarOpen(o => !o)} className="text-gray-400 hover:text-primary p-1">
+              <button onClick={() => setSidebarOpen(o => !o)} className="text-white/80 hover:text-white p-1">
                 {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
             </div>
@@ -268,25 +293,23 @@ export default function AdminLayout() {
                 <Link
                   key={item.href}
                   to={item.href}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative ${location.pathname === item.href ? 'bg-primary text-white' : 'text-gray-400 hover:bg-white/5 hover:text-primary'}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative ${location.pathname === item.href ? 'bg-white text-primary' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
                 >
                   <item.icon size={18} className="flex-shrink-0" />
                   {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
                   {item.badge > 0 && (
-                    <span className={`${sidebarOpen ? 'ms-auto' : 'absolute -top-1 -end-1'} bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-bold`}>
-                      {item.badge > 99 ? '99+' : item.badge}
-                    </span>
+                    <span className={`${sidebarOpen ? 'ms-auto' : 'absolute -top-1 -end-1'} bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 text-[10px]`}>{item.badge > 99 ? '99+' : item.badge}</span>
                   )}
                 </Link>
               ))}
             </nav>
 
-            <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/10 bg-dark">
-              <button onClick={toggleAdminLang} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-400 hover:bg-white/5 hover:text-primary transition-colors mb-2">
+            <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/10">
+              <button onClick={toggleAdminLang} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/80 hover:bg-white/10 hover:text-white transition-colors mb-2">
                 <Globe size={18} />
                 {sidebarOpen && <span className="text-sm font-medium">{t.switchLang}</span>}
               </button>
-              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors">
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-200 hover:bg-red-500/10 transition-colors">
                 <LogOut size={18} />
                 {sidebarOpen && <span className="text-sm font-medium">{t.logout}</span>}
               </button>
@@ -317,14 +340,14 @@ export default function AdminLayout() {
                 </div>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-600">
-                {isSuperAdmin && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                {admin?.role === 'super_admin' && (
+                  <span className="text-xs bg-white text-primary px-2 py-0.5 rounded-full font-medium">
                     {isRtl ? 'مشرف رئيسي' : 'Super Admin'}
                   </span>
                 )}
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                    <User size={16} className="text-primary" />
+                  <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                    <User size={16} className="text-white" />
                   </div>
                   <span>{admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}</span>
                 </div>
