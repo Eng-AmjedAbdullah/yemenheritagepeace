@@ -20,7 +20,7 @@ const TEXT = {
     password: 'كلمة المرور',
     emailPlaceholder: 'أدخل البريد الإلكتروني',
     passwordPlaceholder: 'أدخل كلمة المرور',
-    submit: 'دخول إلى اللوحة',
+    submit: 'دخول',
     loading: 'جارٍ التحقق...',
     back: 'العودة إلى الموقع',
     switchLang: 'English',
@@ -28,7 +28,7 @@ const TEXT = {
     error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
   },
   en: {
-    title: 'Login',
+    title: 'Admin Login',
     subtitle: 'Yemen Heritage for Peace Organization Admin Panel',
     email: 'Email Address',
     password: 'Password',
