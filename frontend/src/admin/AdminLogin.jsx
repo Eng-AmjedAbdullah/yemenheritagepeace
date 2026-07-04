@@ -107,7 +107,8 @@ export default function AdminLogin() {
       }}
     >
       <div className="w-full max-w-md">
-        <div className="mb-8 flex justify-center">
+        {/* Language switcher aligned to the start/end of the container based on language */}
+        <div className={`mb-8 flex ${isRtl ? 'justify-start' : 'justify-end'}`}>
           <button
             type="button"
             onClick={() => setUiLang((lang) => (lang === 'ar' ? 'en' : 'ar'))}
