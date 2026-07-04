@@ -123,7 +123,7 @@ export default function AdminLogin() {
           {/* Header with primary color gradient */}
           <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-8 sm:px-8 text-center">
             <img
-              src="/logo.png"
+              src="/logowhite.png"
               alt="Yemen Heritage for Peace"
               className="mx-auto mb-4 h-14 w-auto"
               onError={(e) => {
