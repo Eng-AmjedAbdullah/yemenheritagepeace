@@ -4,52 +4,75 @@ import { Link } from 'react-router-dom'
 import api from '../lib/api'
 import { Newspaper, Calendar, Users, MessageSquare, Mountain, ExternalLink, Handshake, Images, Settings, Activity, Eye } from 'lucide-react'
 import { useAdminLang } from './adminI18n'
+import { allowedCardsForRole, apisAllowedForRole, allowedQuickActions } from './adminPermissions'
 
 export default function Dashboard() {
-  const { t, isRtl } = useAdminLang()
+  const { t, isRtl, admin } = useAdminLang()
+  const role = admin?.role
   const [stats, setStats] = useState({ news:0, events:0, admins:0, messages:0, heritage:0, partners:0, hero:0, unreadMessages:0 })
   const [recentNews, setRecentNews] = useState([])
   const [recentEvents, setRecentEvents] = useState([])
 
   useEffect(() => {
-    Promise.allSettled([
-      api.get('/news/all'),
-      api.get('/events/all'),
-      api.get('/admins'),
-      api.get('/contact'),
-      api.get('/heritage/all'),
-      api.get('/partners/all'),
-      api.get('/hero/all'),
-    ]).then(([news, events, admins, msgs, heritage, partners, hero]) => {
-      const newsData = news.value || []
-      const eventsData = events.value || []
-      const messagesData = msgs.value || []
+    const allowed = apisAllowedForRole(role)
+    const calls = []
+    const keys = []
+
+    if (allowed.includes('/news/all')) { calls.push(api.get('/news/all')); keys.push('news') }
+    if (allowed.includes('/events/all')) { calls.push(api.get('/events/all')); keys.push('events') }
+    if (allowed.includes('/admins')) { calls.push(api.get('/admins')); keys.push('admins') }
+    if (allowed.includes('/contact')) { calls.push(api.get('/contact')); keys.push('contact') }
+    if (allowed.includes('/heritage/all')) { calls.push(api.get('/heritage/all')); keys.push('heritage') }
+    if (allowed.includes('/partners/all')) { calls.push(api.get('/partners/all')); keys.push('partners') }
+    if (allowed.includes('/hero/all')) { calls.push(api.get('/hero/all')); keys.push('hero') }
+
+    if (calls.length === 0) {
+      // nothing allowed, clear stats
+      setStats({ news:0, events:0, admins:0, messages:0, heritage:0, partners:0, hero:0, unreadMessages:0 })
+      setRecentNews([])
+      setRecentEvents([])
+      return
+    }
+
+    Promise.allSettled(calls).then(results => {
+      const data = {}
+      results.forEach((r, idx) => {
+        const k = keys[idx]
+        data[k] = r.status === 'fulfilled' ? (r.value || []) : []
+      })
+
+      const newsData = data.news || []
+      const eventsData = data.events || []
+      const messagesData = data.contact || []
 
       setStats({
         news: newsData.length,
         events: eventsData.length,
-        admins: admins.value?.length || 0,
+        admins: data.admins?.length || 0,
         messages: messagesData.length,
-        heritage: heritage.value?.length || 0,
-        partners: partners.value?.length || 0,
-        hero: hero.value?.length || 0,
+        heritage: data.heritage?.length || 0,
+        partners: data.partners?.length || 0,
+        hero: data.hero?.length || 0,
         unreadMessages: messagesData.filter(m => !m.read_status).length,
       })
 
       setRecentNews(newsData.slice(0, 3))
       setRecentEvents(eventsData.slice(0, 3))
     })
-  }, [])
+  }, [role])
 
   const cards = [
-    { label: t.news, value:stats.news, icon:Newspaper, color:'bg-blue-500', href:'/admin/news' },
-    { label: t.events, value:stats.events, icon:Calendar, color:'bg-green-500', href:'/admin/events' },
-    { label: t.heritageLife, value:stats.heritage, icon:Mountain, color:'bg-amber-500', href:'/admin/heritage' },
-    { label: t.partners, value:stats.partners, icon:Handshake, color:'bg-sky-500', href:'/admin/partners' },
-    { label: t.heroSlides, value:stats.hero, icon:Images, color:'bg-teal-500', href:'/admin/hero' },
-    { label: t.messages, value:stats.messages, icon:MessageSquare, color:'bg-primary', href:'/admin/messages', badge: stats.unreadMessages },
-    { label: t.admins, value:stats.admins, icon:Users, color:'bg-slate-500', href:'/admin/admins' },
+    { key: 'news', label: t.news, value:stats.news, icon:Newspaper, color:'bg-blue-500', href:'/admin/news' },
+    { key: 'events', label: t.events, value:stats.events, icon:Calendar, color:'bg-green-500', href:'/admin/events' },
+    { key: 'heritage', label: t.heritageLife, value:stats.heritage, icon:Mountain, color:'bg-amber-500', href:'/admin/heritage' },
+    { key: 'partners', label: t.partners, value:stats.partners, icon:Handshake, color:'bg-sky-500', href:'/admin/partners' },
+    { key: 'hero', label: t.heroSlides, value:stats.hero, icon:Images, color:'bg-teal-500', href:'/admin/hero' },
+    { key: 'messages', label: t.messages, value:stats.messages, icon:MessageSquare, color:'bg-primary', href:'/admin/messages', badge: stats.unreadMessages },
+    { key: 'admins', label: t.admins, value:stats.admins, icon:Users, color:'bg-slate-500', href:'/admin/admins' },
   ]
+
+  const visibleCards = allowedCardsForRole(role).length ? cards.filter(c => allowedCardsForRole(role).includes(c.key)) : cards
+  const visibleQuickActions = allowedQuickActions(role)
 
   return (
     <div>
@@ -62,9 +85,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
-        {cards.map((card,i)=>(
+        {visibleCards.map((card,i)=>(
           <Link key={i} to={card.href} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary/20 transition-all group relative overflow-hidden">
-            <div className={`absolute top-0 ${isRtl ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+            <div className={`absolute top-0 ${isRtl ? 'left-0' : 'right-0'} w-20 h-20 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity`} />
             <div className="relative">
               <div className="flex items-center justify-between mb-3">
                 <div className={`w-11 h-11 ${card.color} rounded-xl flex items-center justify-center shadow-md`}>
@@ -149,27 +172,41 @@ export default function Dashboard() {
       <div className="bg-gradient-to-br from-primary/10 via-white to-primary/5 rounded-2xl p-6 shadow-sm border border-primary/20">
         <h2 className="font-bold text-dark mb-4 text-lg">{t.quickActions}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <Link to="/admin/news" className="btn-primary text-sm py-3 justify-center">
-            <Newspaper size={16}/>{t.addNews}
-          </Link>
-          <Link to="/admin/events" className="btn-outline text-sm py-3 justify-center">
-            <Calendar size={16}/>{t.addEvent}
-          </Link>
-          <Link to="/admin/heritage" className="btn-outline text-sm py-3 justify-center">
-            <Mountain size={16}/>{t.addHeritage}
-          </Link>
-          <Link to="/admin/partners" className="btn-outline text-sm py-3 justify-center">
-            <Handshake size={16}/>{t.addPartner}
-          </Link>
-          <Link to="/admin/hero" className="btn-outline text-sm py-3 justify-center">
-            <Images size={16}/>{t.addSlide}
-          </Link>
-          <Link to="/admin/settings" className="btn-outline text-sm py-3 justify-center">
-            <Settings size={16}/>{t.siteSettings}
-          </Link>
-          <Link to="/admin/admins" className="btn-outline text-sm py-3 justify-center">
-            <Users size={16}/>{t.addAdmin}
-          </Link>
+          {visibleQuickActions.includes('/admin/news') && (
+            <Link to="/admin/news" className="btn-primary text-sm py-3 justify-center">
+              <Newspaper size={16}/>{t.addNews}
+            </Link>
+          )}
+          {visibleQuickActions.includes('/admin/events') && (
+            <Link to="/admin/events" className="btn-outline text-sm py-3 justify-center">
+              <Calendar size={16}/>{t.addEvent}
+            </Link>
+          )}
+          {visibleQuickActions.includes('/admin/heritage') && (
+            <Link to="/admin/heritage" className="btn-outline text-sm py-3 justify-center">
+              <Mountain size={16}/>{t.addHeritage}
+            </Link>
+          )}
+          {visibleQuickActions.includes('/admin/partners') && (
+            <Link to="/admin/partners" className="btn-outline text-sm py-3 justify-center">
+              <Handshake size={16}/>{t.addPartner}
+            </Link>
+          )}
+          {visibleQuickActions.includes('/admin/hero') && (
+            <Link to="/admin/hero" className="btn-outline text-sm py-3 justify-center">
+              <Images size={16}/>{t.addSlide}
+            </Link>
+          )}
+          {visibleQuickActions.includes('/admin/settings') && (
+            <Link to="/admin/settings" className="btn-outline text-sm py-3 justify-center">
+              <Settings size={16}/>{t.siteSettings}
+            </Link>
+          )}
+          {visibleQuickActions.includes('/admin/admins') && (
+            <Link to="/admin/admins" className="btn-outline text-sm py-3 justify-center">
+              <Users size={16}/>{t.addAdmin}
+            </Link>
+          )}
           <a href="/" target="_blank" rel="noreferrer" className="btn-outline text-sm py-3 justify-center">
             <Eye size={16}/>{t.viewSite}
           </a>
