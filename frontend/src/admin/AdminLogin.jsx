@@ -20,7 +20,7 @@ const TEXT = {
     password: 'كلمة المرور',
     emailPlaceholder: 'أدخل البريد الإلكتروني',
     passwordPlaceholder: 'أدخل كلمة المرور',
-    submit: 'دخول',
+    submit: 'تسجيل الدخول',
     loading: 'جارٍ التحقق...',
     back: 'العودة إلى الموقع',
     switchLang: 'English',
