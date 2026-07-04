@@ -110,7 +110,7 @@ export default function AdminLogin() {
       <button
         type="button"
         onClick={() => setUiLang((l) => (l === 'ar' ? 'en' : 'ar'))}
-        className={`fixed top-6 z-50 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-2 text-sm text-primary shadow-md transition hover:border-primary hover:shadow-lg ${
+        className={`fixed top-6 z-50 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white px-4 py-4 text-sm text-primary shadow-md transition hover:border-primary hover:shadow-lg ${
           isRtl ? 'right-6' : 'left-6'
         }`}
       >
