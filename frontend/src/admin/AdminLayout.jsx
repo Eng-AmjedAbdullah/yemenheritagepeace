@@ -19,6 +19,8 @@ import {
   AlertTriangle,
   Trash2,
   ShieldAlert,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 
 import { adminTranslations, AdminLangContext } from './adminI18n'
@@ -28,6 +30,7 @@ import api from '../lib/api'
 export const ConfirmContext = React.createContext()
 
 const ADMIN_BRAND = '#18a2be'
+const NAV_HEIGHT = 76
 
 const toastTheme = {
   success: {
@@ -408,6 +411,14 @@ export default function AdminLayout() {
     return location.pathname === href || location.pathname.startsWith(`${href}/`)
   }
 
+  const CollapseIcon = () => {
+    if (isRtl) {
+      return sidebarOpen ? <ChevronRight size={18} /> : <ChevronLeft size={18} />
+    }
+
+    return sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />
+  }
+
   return (
     <AdminLangContext.Provider value={contextValue}>
       <ConfirmContext.Provider value={contextValue}>
@@ -418,11 +429,11 @@ export default function AdminLayout() {
           <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
 
           <header
-            className="fixed inset-x-0 top-0 z-50 h-[72px] border-b border-white/15 shadow-lg"
+            className="fixed inset-x-0 top-0 z-50 h-[76px] border-b border-white/15 shadow-lg"
             style={{ backgroundColor: ADMIN_BRAND }}
           >
             <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3">
+              <div className="flex min-w-0 items-center gap-4">
                 {isMobile && (
                   <button
                     type="button"
@@ -434,16 +445,14 @@ export default function AdminLayout() {
                   </button>
                 )}
 
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20">
-                  <img
-                    src="/logowhite.png"
-                    alt="Yemen Heritage"
-                    className="h-8 w-auto"
-                    onError={(event) => {
-                      event.currentTarget.style.display = 'none'
-                    }}
-                  />
-                </div>
+                <img
+                  src="/logowhite.png"
+                  alt="Yemen Heritage"
+                  className="h-14 w-auto shrink-0"
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none'
+                  }}
+                />
 
                 <div className="min-w-0">
                   <h1 className="truncate text-sm font-bold text-white sm:text-base">
@@ -455,22 +464,22 @@ export default function AdminLayout() {
                 </div>
               </div>
 
-              <div className="flex min-w-0 items-center gap-2">
+              <div className="flex min-w-0 items-center gap-4">
                 <button
                   type="button"
                   onClick={toggleAdminLang}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
+                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition hover:text-white"
                 >
-                  <Globe size={16} />
+                  <Globe size={17} />
                   <span className="hidden sm:inline">{t.switchLang}</span>
                 </button>
 
-                <div className="hidden sm:flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-2">
+                <div className="hidden sm:flex min-w-0 items-center gap-2">
                   <div
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white"
                     style={{ color: ADMIN_BRAND }}
                   >
-                    <User size={16} />
+                    <User size={17} />
                   </div>
 
                   <div className="min-w-0">
@@ -494,7 +503,7 @@ export default function AdminLayout() {
           </header>
 
           <aside
-            className={`fixed bottom-0 top-[72px] border-white/15 z-40 transition-all duration-300 shadow-2xl ${
+            className={`fixed bottom-0 top-[76px] border-white/15 z-40 transition-all duration-300 shadow-2xl ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
@@ -505,19 +514,23 @@ export default function AdminLayout() {
             }`}
             style={{ backgroundColor: ADMIN_BRAND }}
           >
-            <div className="h-full flex flex-col">
-              <div className="hidden lg:flex items-center justify-end p-3 border-b border-white/15">
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen((open) => !open)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/90 transition hover:bg-white/20 hover:text-white"
-                  aria-label={isRtl ? 'طي القائمة' : 'Toggle sidebar'}
-                >
-                  {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-                </button>
-              </div>
+            {!isMobile && (
+              <button
+                type="button"
+                onClick={() => setSidebarOpen((open) => !open)}
+                className={`absolute top-6 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/10 transition hover:scale-105`}
+                style={{
+                  color: ADMIN_BRAND,
+                  [isRtl ? 'left' : 'right']: '-18px',
+                }}
+                aria-label={isRtl ? 'طي القائمة' : 'Toggle sidebar'}
+              >
+                <CollapseIcon />
+              </button>
+            )}
 
-              <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+            <div className="h-full flex flex-col">
+              <nav className="flex-1 p-3 pt-6 space-y-1 overflow-y-auto">
                 {navItems.map((item) => {
                   const Icon = iconMap[item.key] || LayoutDashboard
                   const active = isActiveLink(item.href)
@@ -537,7 +550,9 @@ export default function AdminLayout() {
                       <Icon size={19} className="shrink-0" />
 
                       {(sidebarOpen || isMobile) && (
-                        <span className="text-sm font-semibold">{item.label}</span>
+                        <span className="text-sm font-semibold">
+                          {item.label}
+                        </span>
                       )}
 
                       {item.key === 'messages' && unreadCount > 0 && (
@@ -576,13 +591,13 @@ export default function AdminLayout() {
 
           {isMobile && sidebarOpen && (
             <div
-              className="fixed inset-x-0 bottom-0 top-[72px] bg-black/40 z-30 lg:hidden"
+              className="fixed inset-x-0 bottom-0 top-[76px] bg-black/40 z-30 lg:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
 
           <main
-            className={`min-h-screen pt-[72px] transition-all duration-300 ${
+            className={`min-h-screen pt-[76px] transition-all duration-300 ${
               isMobile
                 ? 'ml-0 mr-0'
                 : sidebarOpen
