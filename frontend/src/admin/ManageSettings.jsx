@@ -427,7 +427,7 @@ export default function ManageSettings() {
           <Save size={16} />
           {saving
             ? t.saving
-            : t.saveSettings || t.save || (isRtl ? 'حفظ' : 'Save')}
+            : t.saveSettings || t.save || (isRtl ? 'حفظ الإعدادات' : 'Save Settings')}
         </button>
       </div>
     </div>
