@@ -447,15 +447,7 @@ export default function AdminLayout() {
             className="fixed inset-x-0 top-0 z-50 h-[76px] border-b border-white/15 shadow-lg"
             style={{ backgroundColor: ADMIN_BRAND }}
           >
-            <div
-              className={`flex h-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6 ${
-                isMobile
-                  ? isRtl
-                    ? 'flex-row-reverse'
-                    : 'flex-row'
-                  : ''
-              }`}
-            >
+            <div className="flex h-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6">
               <div
                 className={`flex min-w-0 items-center gap-3 md:gap-4 ${
                   isMobile
@@ -568,20 +560,21 @@ export default function AdminLayout() {
             )}
 
             <div className="flex h-full flex-col">
-              {isMobile && (
-                <div className="border-b border-white/15 p-3">
+              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
+                {isMobile && (
                   <button
                     type="button"
                     onClick={toggleAdminLang}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-3 text-sm font-bold text-white transition hover:bg-white/25"
+                    className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-white/85 transition-all hover:bg-white/15 hover:text-white"
                   >
-                    <Globe size={18} />
-                    <span>{t.switchLang}</span>
-                  </button>
-                </div>
-              )}
+                    <Globe size={19} className="shrink-0" />
 
-              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
+                    <span className="text-sm font-semibold">
+                      {t.switchLang}
+                    </span>
+                  </button>
+                )}
+
                 {navItems.map((item) => {
                   const Icon = iconMap[item.key] || LayoutDashboard
                   const active = isActiveLink(item.href)
