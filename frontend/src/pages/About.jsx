@@ -13,6 +13,8 @@ import {
   Leaf,
   BookOpen,
   Compass,
+  Mail,
+  Target,
 } from 'lucide-react'
 
 const ACCENT = '#18a2be'
@@ -166,10 +168,9 @@ export default function About() {
       {/* WHO WE ARE */}
       <section className="bg-white py-14">
         <div className="mx-auto max-w-6xl px-4">
-          <SectionHeading
-            icon={Users}
-            title={isRtl ? 'من نحن' : 'Who We Are'}
-          />
+          <h2 className="mb-8 text-2xl font-black text-dark md:text-3xl">
+            {isRtl ? 'من نحن' : 'Who We Are'}
+          </h2>
 
           <div className="rounded-2xl border border-gray-100 bg-gray-50 p-6 shadow-sm sm:p-8">
             <div className="space-y-4 text-base leading-relaxed text-gray-600">
@@ -198,23 +199,20 @@ export default function About() {
             <InfoPanel
               Icon={Eye}
               title={isRtl ? 'الرؤية' : 'Vision'}
-              iconType="lucide"
             >
               <p>{vision}</p>
             </InfoPanel>
 
             <InfoPanel
-              Icon={MessageIcon}
+              Icon={Mail}
               title={isRtl ? 'الرسالة' : 'Mission'}
-              iconType="custom"
             >
               <p>{mission}</p>
             </InfoPanel>
 
             <InfoPanel
-              Icon={TargetArrowIcon}
+              Icon={Target}
               title={isRtl ? 'الأهداف' : 'Goals'}
-              iconType="custom"
             >
               <div className="space-y-3">
                 {goals.map((goal, index) => (
@@ -317,16 +315,12 @@ function InfoCard({ Icon, title, text }) {
   )
 }
 
-function InfoPanel({ Icon, title, children, iconType = 'lucide' }) {
+function InfoPanel({ Icon, title, children }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <IconBox>
-          {iconType === 'custom' ? (
-            <Icon />
-          ) : (
-            <Icon size={22} className="text-primary" />
-          )}
+          <Icon size={22} className="text-primary" />
         </IconBox>
 
         <h3
@@ -351,50 +345,5 @@ function IconBox({ children, className = '' }) {
     >
       {children}
     </div>
-  )
-}
-
-function MessageIcon() {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      className="h-7 w-7 text-primary"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="10" y="14" width="34" height="42" rx="5" />
-      <path d="M18 22h18" />
-      <path d="M18 30h14" />
-      <path d="M18 38h12" />
-      <path d="M44 26h8a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H40l-9 7v-7h-5" />
-      <path d="M45 34h4" />
-      <path d="M42 41h8" />
-    </svg>
-  )
-}
-
-function TargetArrowIcon() {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      className="h-7 w-7 text-primary"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="4"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="28" cy="36" r="20" />
-      <circle cx="28" cy="36" r="13" />
-      <circle cx="28" cy="36" r="6" />
-      <path d="M28 36L50 14" />
-      <path d="M45 14h9v9" />
-      <path d="M42 22l12-12" />
-    </svg>
   )
 }
