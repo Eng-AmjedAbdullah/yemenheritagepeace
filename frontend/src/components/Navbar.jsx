@@ -1,349 +1,437 @@
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useLang } from '../App'
-import PageHeader from '../components/PageHeader'
+import { resolveMediaUrl } from '../lib/media'
 import {
-  Building2,
-  Eye,
-  Gem,
-  HeartHandshake,
-  FlaskConical,
+  Menu,
+  X,
+  ChevronDown,
+  Globe,
   ShieldCheck,
-  Users,
-  Landmark,
-  Network,
-  Leaf,
-  BookOpen,
-  Compass,
-  Mail,
-  Target,
+  Facebook,
+  Youtube,
+  Linkedin,
+  Instagram,
 } from 'lucide-react'
 
-const ACCENT = '#18a2be'
+const DEFAULT_LOGO = '/logo.png'
 
-export default function About() {
-  const { t, lang } = useLang()
-  const isRtl = lang === 'ar'
+const XIcon = ({ size = 16, className = '' }) => (
+  <svg
+    viewBox="0 0 24 24"
+    width={size}
+    height={size}
+    className={className}
+    fill="currentColor"
+  >
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+)
 
-  const headerSubtitle = isRtl
-    ? 'نعمل من أجل صون التراث اليمني وربطه بالمعرفة والتنمية والسلام المجتمعي.'
-    : 'Preserving Yemeni heritage while connecting identity with knowledge, development, and community peace.'
+export default function Navbar() {
+  const { t, toggleLang, settings } = useLang()
 
-  const whoIntro = isRtl
-    ? 'منظمة تراث اليمن لأجل السلام هي منظمة مجتمع مدني غير ربحية، مقرها الرئيسي في محافظة تعز، الجمهورية اليمنية. تأسست وفقًا لقانون الجمعيات والمؤسسات الأهلية اليمني رقم (1) لسنة 2001م ولائحته التنفيذية.'
-    : 'Yemen Heritage for Peace Organization is a non-profit civil society organization headquartered in Taiz Governorate, Republic of Yemen. It was established in accordance with Yemen’s Law No. (1) of 2001 concerning associations and civil institutions and its executive regulations.'
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [openDrop, setOpenDrop] = useState(null)
+  const [logoSrc, setLogoSrc] = useState(DEFAULT_LOGO)
 
-  const whoFocus = isRtl
-    ? 'تعمل المنظمة في مجالات الثقافة والعلوم والتنمية البيئية والسياحية، وتسعى إلى تحويل التراث اليمني إلى مساحة معرفة وسلام وتنمية تشارك فيها المؤسسات والمجتمعات المحلية.'
-    : 'The organization works in culture, science, environmental development, and tourism development, seeking to turn Yemeni heritage into a space for knowledge, peace, and development shared by institutions and local communities.'
+  const navigate = useNavigate()
+  const location = useLocation()
 
-  const organizationFacts = isRtl
-    ? [
-        {
-          Icon: Landmark,
-          title: 'الإطار القانوني',
-          text: 'تأسست المنظمة عام 2025م، وصرح لها رسميًا في يناير 2026م بموجب التصريح رقم 11م/2026م.',
-        },
-        {
-          Icon: Building2,
-          title: 'الهيكل المؤسسي',
-          text: 'يشرف على أعمال المنظمة رئيس المنظمة ورئيس مجلس الأمناء، إلى جانب مجلس أمناء، ومجلس استشاري أكاديمي، ومجلس تنفيذي، ومراجع مالي خارجي، وفريق إداري مؤهل.',
-        },
-        {
-          Icon: Network,
-          title: 'العلاقات والشراكات',
-          text: 'ترتبط المنظمة بعلاقات وتفاهمات مع السلطة المحلية، والجامعات، والمراكز البحثية، والهيئة العامة للآثار والمتاحف، ومنظمات المجتمع المدني، والاتحادات الحرفية والإبداعية.',
-        },
-      ]
-    : [
-        {
-          Icon: Landmark,
-          title: 'Legal Framework',
-          text: 'The organization was founded in 2025 and officially licensed in January 2026 under Permit No. 11M/2026.',
-        },
-        {
-          Icon: Building2,
-          title: 'Institutional Structure',
-          text: 'Its work is overseen by the organization president and board chair, supported by a board of trustees, an academic advisory council, an executive council, an external auditor, and a qualified administrative team.',
-        },
-        {
-          Icon: Network,
-          title: 'Relations & Partnerships',
-          text: 'The organization maintains cooperation with local authorities, universities, research centers, the General Authority for Antiquities and Museums, civil society organizations, and creative and craft associations.',
-        },
-      ]
+  useEffect(() => {
+    setMobileOpen(false)
+    setOpenDrop(null)
+  }, [location.pathname, location.search])
 
-  const vision = isRtl
-    ? 'أن يكون التراث اليمني مصدرًا حيًا للوعي والسلام والتنمية، وأن تصبح الهوية الحضارية اليمنية قوة فاعلة في بناء مجتمع أكثر معرفة وتعاونًا واستدامة.'
-    : 'To make Yemeni heritage a living source of awareness, peace, and development, and to turn Yemen’s civilizational identity into an active force for a more knowledgeable, cooperative, and sustainable society.'
+  useEffect(() => {
+    setLogoSrc(resolveMediaUrl(settings?.logo_url?.trim() || '') || DEFAULT_LOGO)
+  }, [settings?.logo_url])
 
-  const mission = isRtl
-    ? 'صون التراث اليمني المادي وغير المادي، وتعزيز البحث والمعرفة، وتمكين المجتمع من المشاركة في حماية الهوية الثقافية، من خلال برامج تعليمية وبيئية وسياحية وشراكات محلية ودولية.'
-    : 'To preserve Yemen’s tangible and intangible heritage, promote research and knowledge, and empower communities to protect cultural identity through educational, environmental, tourism-related programs and local and international partnerships.'
+  const navText = 'nav-link-dark'
 
-  const goals = isRtl
-    ? [
-        'الإسهام في تطوير التعليم وبناء بيئة بحثية مستدامة تعزز السلام والتعاون.',
-        'حماية التراث الثقافي اليمني وصونه وإحياؤه والتعريف بحقوق الملكية الفكرية المرتبطة به.',
-        'دعم جهود حماية البيئة والحد من آثار التلوث والتغيرات المناخية.',
-        'تشجيع التنمية السياحية المستدامة بما يحقق أثرًا اقتصاديًا واجتماعيًا عادلًا.',
-        'تعزيز الشراكات مع الجهات المحلية والدولية لخدمة أهداف التنمية المستدامة.',
-      ]
-    : [
-        'Contribute to educational development and support a sustainable research environment that promotes peace and cooperation.',
-        'Protect, preserve, and revive Yemeni cultural heritage while raising awareness of related intellectual property rights.',
-        'Support environmental protection and reduce the impacts of pollution and climate change.',
-        'Encourage sustainable tourism development with fair economic and social benefits.',
-        'Strengthen partnerships with local and international actors to serve the Sustainable Development Goals.',
-      ]
+  const dropdowns = useMemo(
+    () => ({
+      activities: [
+        { label: t.nav.events, href: '/events' },
+        { label: t.nav.seminars, href: '/events?type=seminar' },
+        { label: t.nav.projects, href: '/events?type=project' },
+      ],
+      fields: [
+        { label: t.nav.heritage_field, href: '/fields?f=heritage' },
+        {
+          label: t.nav.studies,
+          href: '/fields?f=studies',
+          parent: t.nav.science,
+        },
+        {
+          label: t.nav.training,
+          href: '/fields?f=training',
+          parent: t.nav.science,
+        },
+        { label: t.nav.culture, href: '/fields?f=culture' },
+        { label: t.nav.environment, href: '/fields?f=environment' },
+      ],
+      heritage_life: [
+        { label: t.nav.tangible, href: '/heritage-life?type=tangible' },
+        { label: t.nav.intangible, href: '/heritage-life?type=intangible' },
+      ],
+    }),
+    [t]
+  )
 
-  const values = isRtl
-    ? [
-        {
-          Icon: Compass,
-          label: 'الهوية',
-          desc: 'نؤمن بأن التراث ذاكرة حية تعزز الانتماء وتمنح الأجيال صلة راسخة بجذورها.',
-        },
-        {
-          Icon: HeartHandshake,
-          label: 'السلام',
-          desc: 'نجعل الثقافة مساحة للتقارب والحوار والعمل المشترك بين الناس.',
-        },
-        {
-          Icon: BookOpen,
-          label: 'المعرفة',
-          desc: 'نستند إلى البحث والخبرة الأكاديمية في فهم التراث وتوثيقه ونشره.',
-        },
-        {
-          Icon: FlaskConical,
-          label: 'الابتكار',
-          desc: 'نوظف العلم والتقنيات الحديثة لخدمة التراث والتنمية المجتمعية.',
-        },
-        {
-          Icon: ShieldCheck,
-          label: 'الشفافية',
-          desc: 'نلتزم بالحوكمة الرشيدة والمساءلة والعمل المؤسسي الواضح.',
-        },
-        {
-          Icon: Leaf,
-          label: 'الاستدامة',
-          desc: 'نصمم مبادرات تراعي الإنسان والبيئة واستمرار الأثر.',
-        },
-      ]
-    : [
-        {
-          Icon: Compass,
-          label: 'Identity',
-          desc: 'We see heritage as a living memory that strengthens belonging and connects generations to their roots.',
-        },
-        {
-          Icon: HeartHandshake,
-          label: 'Peace',
-          desc: 'We use culture as a space for dialogue, cooperation, and shared community action.',
-        },
-        {
-          Icon: BookOpen,
-          label: 'Knowledge',
-          desc: 'We rely on research and academic expertise to understand, document, and share heritage.',
-        },
-        {
-          Icon: FlaskConical,
-          label: 'Innovation',
-          desc: 'We use science and modern tools to serve heritage and community development.',
-        },
-        {
-          Icon: ShieldCheck,
-          label: 'Transparency',
-          desc: 'We are committed to good governance, accountability, and clear institutional work.',
-        },
-        {
-          Icon: Leaf,
-          label: 'Sustainability',
-          desc: 'We design initiatives that respect people, the environment, and long-term impact.',
-        },
-      ]
+  const isActiveQueryLink = (to) => {
+    if (!to) return false
+
+    const [path, qs] = String(to).split('?')
+    const pathActive =
+      location.pathname === path ||
+      (path !== '/' && location.pathname.startsWith(`${path}/`))
+
+    if (!qs) return pathActive
+
+    const target = new URLSearchParams(qs)
+    const current = new URLSearchParams(location.search)
+
+    for (const [key, value] of target.entries()) {
+      if (current.get(key) !== value) return false
+    }
+
+    return pathActive
+  }
+
+  const dropdownActive = (key) =>
+    (dropdowns[key] || []).some((item) => isActiveQueryLink(item.href))
 
   return (
-    <main dir={isRtl ? 'rtl' : 'ltr'} className="overflow-hidden">
-      <PageHeader title={t.nav.about} subtitle={headerSubtitle} />
+    <>
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white transition-all duration-300">
+        {/* Desktop Top Bar */}
+        <div className="hidden bg-primary px-4 py-4 md:block">
+          <div className="flex w-full items-center justify-between px-4">
+            <div className="flex items-center gap-3">
+              <img
+                src="/logowhite.png"
+                alt={settings?.site_name_en || settings?.site_name_ar || 'logo'}
+                className="h-12 w-auto"
+              />
 
-      {/* WHO WE ARE */}
-      <section className="bg-white py-14">
-        <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-8 text-2xl font-black text-dark md:text-3xl">
-            {isRtl ? 'من نحن' : 'Who We Are'}
-          </h2>
+              <div className="flex flex-col leading-tight text-white">
+                <span className="text-base font-semibold">
+                  منظمة تراث اليمن لأجل السلام
+                </span>
+                <span className="text-sm text-white/80">
+                  Yemen Heritage for Peace Organization
+                </span>
+              </div>
+            </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-6 shadow-sm sm:p-8">
-            <div className="space-y-4 text-base leading-relaxed text-gray-600">
-              <p>{whoIntro}</p>
-              <p>{whoFocus}</p>
+            <div className="flex items-center gap-2">
+              <SocialLink
+                href={settings?.social_facebook}
+                label="Facebook"
+                icon={<Facebook size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_youtube}
+                label="YouTube"
+                icon={<Youtube size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_linkedin}
+                label="LinkedIn"
+                icon={<Linkedin size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_x}
+                label="X"
+                icon={<XIcon size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_instagram}
+                label="Instagram"
+                icon={<Instagram size={18} />}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Nav */}
+        <div className="bg-white md:border-b md:border-gray-200 md:shadow-sm">
+          <div className="w-full px-0 py-0 md:px-4 md:py-3">
+            {/* Desktop Nav */}
+            <div className="hidden w-full items-center justify-between gap-3 rounded-[999px] border border-gray-200 bg-white px-4 py-2 shadow-sm md:flex">
+              <div className="flex min-w-[260px] flex-1 flex-wrap items-center justify-center gap-3">
+                <NavLink
+                  to="/"
+                  end
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.home}
+                </NavLink>
+
+                <NavLink
+                  to="/about"
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.about}
+                </NavLink>
+
+                <NavLink
+                  to="/news"
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.news}
+                </NavLink>
+
+                <DropMenu
+                  label={t.nav.activities}
+                  items={dropdowns.activities}
+                  open={openDrop === 'activities'}
+                  onToggle={() =>
+                    setOpenDrop((open) =>
+                      open === 'activities' ? null : 'activities'
+                    )
+                  }
+                  active={dropdownActive('activities')}
+                  navText={navText}
+                />
+
+                <DropMenu
+                  label={t.nav.fields}
+                  items={dropdowns.fields}
+                  open={openDrop === 'fields'}
+                  onToggle={() =>
+                    setOpenDrop((open) => (open === 'fields' ? null : 'fields'))
+                  }
+                  active={dropdownActive('fields')}
+                  navText={navText}
+                />
+
+                <DropMenu
+                  label={t.nav.heritage_life}
+                  items={dropdowns.heritage_life}
+                  open={openDrop === 'heritage_life'}
+                  onToggle={() =>
+                    setOpenDrop((open) =>
+                      open === 'heritage_life' ? null : 'heritage_life'
+                    )
+                  }
+                  active={dropdownActive('heritage_life')}
+                  navText={navText}
+                />
+
+                <NavLink
+                  to="/contact"
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.contact}
+                </NavLink>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleLang}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
+                >
+                  <Globe size={16} />
+                  {t.nav.lang}
+                </button>
+
+                <button
+                  onClick={() => navigate('/admin/login')}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
+                >
+                  <ShieldCheck size={16} />
+                  {t.nav.admin}
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile Top Bar - full width, no white side padding */}
+            <div className="w-full md:hidden">
+              <div className="flex min-h-[52px] w-full items-center justify-between gap-2 bg-primary px-3 py-2">
+                <div className="shrink-0">
+                  <img
+                    src="/logowhite.png"
+                    alt={settings?.site_name_en || settings?.site_name_ar || 'logo'}
+                    className="block h-8 w-auto"
+                  />
+                </div>
+
+                <div className="flex flex-1 items-center justify-center gap-1.5 px-1">
+                  <MobileSocialLink
+                    href={settings?.social_facebook}
+                    label="Facebook"
+                    icon={<Facebook size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_youtube}
+                    label="YouTube"
+                    icon={<Youtube size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_linkedin}
+                    label="LinkedIn"
+                    icon={<Linkedin size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_x}
+                    label="X"
+                    icon={<XIcon size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_instagram}
+                    label="Instagram"
+                    icon={<Instagram size={14} />}
+                  />
+                </div>
+
+                <div className="shrink-0">
+                  <button
+                    type="button"
+                    className="block p-1 text-white"
+                    onClick={() => setMobileOpen((open) => !open)}
+                    aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+                  >
+                    {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-            {organizationFacts.map((item, index) => (
-              <InfoCard
-                key={index}
-                Icon={item.Icon}
-                title={item.title}
-                text={item.text}
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* VISION / MISSION / GOALS */}
-      <section className="bg-gray-50 py-14">
-        <div className="mx-auto max-w-5xl px-4">
-          <div className="space-y-5">
-            <InfoPanel
-              Icon={Eye}
-              title={isRtl ? 'الرؤية' : 'Vision'}
-            >
-              <p>{vision}</p>
-            </InfoPanel>
-
-            <InfoPanel
-              Icon={Mail}
-              title={isRtl ? 'الرسالة' : 'Mission'}
-            >
-              <p>{mission}</p>
-            </InfoPanel>
-
-            <InfoPanel
-              Icon={Target}
-              title={isRtl ? 'الأهداف' : 'Goals'}
-            >
-              <div className="space-y-3">
-                {goals.map((goal, index) => (
-                  <div
-                    key={index}
-                    className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 transition hover:border-primary/20 hover:bg-primary/5"
-                  >
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white shadow-sm shadow-primary/20">
-                      {index + 1}
-                    </div>
-
-                    <p className="text-sm leading-7 text-gray-600">
-                      {goal}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </InfoPanel>
-          </div>
-        </div>
-      </section>
-
-      {/* VALUES */}
-      <section className="bg-white py-14">
-        <div className="mx-auto max-w-7xl px-4">
-          <SectionHeading
-            icon={Gem}
-            title={isRtl ? 'القيم' : 'Values'}
-            center
-          />
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {values.map((value, index) => (
-              <div
-                key={index}
-                className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <value.Icon size={22} className="text-primary" />
-                </div>
-
-                <h3
-                  className="mb-2 text-lg font-bold"
-                  style={{ color: ACCENT }}
+          {mobileOpen && (
+            <div className="max-h-[80vh] overflow-y-auto border-t border-gray-200 bg-white px-4 pb-4 shadow-xl md:hidden">
+              {[
+                { label: t.nav.home, href: '/' },
+                { label: t.nav.about, href: '/about' },
+                { label: t.nav.news, href: '/news' },
+                { label: t.nav.events, href: '/events' },
+                { label: t.nav.fields, href: '/fields' },
+                { label: t.nav.heritage_life, href: '/heritage-life' },
+                { label: t.nav.contact, href: '/contact' },
+              ].map((item) => (
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={[
+                    'block border-b border-gray-200 py-3 text-dark transition-colors',
+                    isActiveQueryLink(item.href)
+                      ? 'font-semibold text-primary'
+                      : 'hover:text-primary',
+                  ].join(' ')}
                 >
-                  {value.label}
-                </h3>
+                  {item.label}
+                </Link>
+              ))}
 
-                <p className="text-sm leading-7 text-gray-500">
-                  {value.desc}
-                </p>
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={toggleLang}
+                  className="btn-outline inline-flex flex-1 items-center justify-center gap-2 py-2 text-sm"
+                >
+                  <Globe size={16} />
+                  {t.nav.lang}
+                </button>
+
+                <button
+                  onClick={() => navigate('/admin/login')}
+                  className="btn-primary inline-flex flex-1 items-center justify-center gap-2 py-2 text-sm"
+                >
+                  <ShieldCheck size={16} />
+                  {t.nav.admin}
+                </button>
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
-      </section>
-    </main>
+      </nav>
+
+      <div className="h-[52px] md:h-[120px]" aria-hidden="true" />
+    </>
   )
 }
 
-function SectionHeading({ icon: Icon, title, center = false }) {
+function SocialLink({ href, label, icon }) {
   return (
-    <div
-      className={`mb-8 flex items-center gap-3 ${
-        center ? 'justify-center text-center' : 'justify-start'
-      }`}
+    <a
+      href={href || '#'}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm"
     >
-      <IconBox>
-        <Icon size={22} className="text-primary" />
-      </IconBox>
-
-      <h2
-        className="text-2xl font-black md:text-3xl"
-        style={{ color: ACCENT }}
-      >
-        {title}
-      </h2>
-    </div>
+      {icon}
+    </a>
   )
 }
 
-function InfoCard({ Icon, title, text }) {
+function MobileSocialLink({ href, label, icon }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
-      <IconBox className="mb-4">
-        <Icon size={21} className="text-primary" />
-      </IconBox>
-
-      <h3
-        className="mb-2 text-lg font-bold"
-        style={{ color: ACCENT }}
-      >
-        {title}
-      </h3>
-
-      <p className="text-sm leading-7 text-gray-500">
-        {text}
-      </p>
-    </div>
-  )
-}
-
-function InfoPanel({ Icon, title, children }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
-      <div className="mb-4 flex items-center gap-3">
-        <IconBox>
-          <Icon size={22} className="text-primary" />
-        </IconBox>
-
-        <h3
-          className="text-xl font-bold md:text-2xl"
-          style={{ color: ACCENT }}
-        >
-          {title}
-        </h3>
-      </div>
-
-      <div className="text-sm leading-7 text-gray-600 sm:text-base">
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function IconBox({ children, className = '' }) {
-  return (
-    <div
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 ${className}`}
+    <a
+      href={href || '#'}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm"
     >
-      {children}
+      {icon}
+    </a>
+  )
+}
+
+function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
+  const ref = useRef()
+
+  useEffect(() => {
+    const handler = (event) => {
+      if (ref.current && !ref.current.contains(event.target) && open) {
+        onToggle()
+      }
+    }
+
+    document.addEventListener('mousedown', handler)
+
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open, onToggle])
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={onToggle}
+        className={`nav-link ${active ? 'active' : ''} flex items-center gap-1 ${navText}`}
+      >
+        {label}
+        <ChevronDown
+          size={14}
+          className={`transition-transform duration-200 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="dropdown-menu">
+          {items.map((item, index) => (
+            <Link key={index} to={item.href} className="dropdown-item">
+              {item.parent && (
+                <span className="block text-xs text-primary/60">
+                  {item.parent} /
+                </span>
+              )}
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
