@@ -3,8 +3,6 @@ import PageHeader from '../components/PageHeader'
 import {
   Building2,
   Eye,
-  Send,
-  Target,
   Gem,
   HeartHandshake,
   FlaskConical,
@@ -32,8 +30,8 @@ export default function About() {
     : 'Yemen Heritage for Peace Organization is a non-profit civil society organization headquartered in Taiz Governorate, Republic of Yemen. It was established in accordance with Yemen’s Law No. (1) of 2001 concerning associations and civil institutions and its executive regulations.'
 
   const whoFocus = isRtl
-    ? 'تركز المنظمة عملها في مجالات الثقافة والعلوم والتنمية البيئية والسياحية، من خلال برامج ومبادرات تعزز الوعي بالهوية اليمنية وتدعم حضور التراث في خدمة الإنسان والمجتمع.'
-    : 'The organization works across culture, science, environmental development, and tourism development through programs and initiatives that strengthen awareness of Yemeni identity and place heritage in service of people and society.'
+    ? 'تعمل المنظمة في مجالات الثقافة والعلوم والتنمية البيئية والسياحية، وتسعى إلى تحويل التراث اليمني إلى مساحة معرفة وسلام وتنمية تشارك فيها المؤسسات والمجتمعات المحلية.'
+    : 'The organization works in culture, science, environmental development, and tourism development, seeking to turn Yemeni heritage into a space for knowledge, peace, and development shared by institutions and local communities.'
 
   const organizationFacts = isRtl
     ? [
@@ -45,12 +43,12 @@ export default function About() {
         {
           Icon: Building2,
           title: 'الهيكل المؤسسي',
-          text: 'يشرف على أعمالها رئيس المنظمة ورئيس مجلس الأمناء، إلى جانب مجلس أمناء، ومجلس استشاري أكاديمي، ومجلس تنفيذي، ومراجع مالي خارجي، وفريق إداري مؤهل.',
+          text: 'يشرف على أعمال المنظمة رئيس المنظمة ورئيس مجلس الأمناء، إلى جانب مجلس أمناء، ومجلس استشاري أكاديمي، ومجلس تنفيذي، ومراجع مالي خارجي، وفريق إداري مؤهل.',
         },
         {
           Icon: Network,
           title: 'العلاقات والشراكات',
-          text: 'ترتبط المنظمة بتفاهمات مع السلطة المحلية، والجامعات، والمراكز البحثية، والهيئة العامة للآثار والمتاحف، والمكاتب التنفيذية، ومنظمات المجتمع المدني، والاتحادات الحرفية والإبداعية.',
+          text: 'ترتبط المنظمة بعلاقات وتفاهمات مع السلطة المحلية، والجامعات، والمراكز البحثية، والهيئة العامة للآثار والمتاحف، ومنظمات المجتمع المدني، والاتحادات الحرفية والإبداعية.',
         },
       ]
     : [
@@ -67,7 +65,7 @@ export default function About() {
         {
           Icon: Network,
           title: 'Relations & Partnerships',
-          text: 'The organization maintains cooperation with local authorities, universities, research centers, the General Authority for Antiquities and Museums, executive offices, civil society organizations, and creative and craft associations.',
+          text: 'The organization maintains cooperation with local authorities, universities, research centers, the General Authority for Antiquities and Museums, civil society organizations, and creative and craft associations.',
         },
       ]
 
@@ -76,7 +74,7 @@ export default function About() {
     : 'To make Yemeni heritage a living source of awareness, peace, and development, and to turn Yemen’s civilizational identity into an active force for a more knowledgeable, cooperative, and sustainable society.'
 
   const mission = isRtl
-    ? 'صون التراث اليمني المادي وغير المادي، وتعزيز البحث والمعرفة، وتمكين المجتمع من المشاركة في حماية الهوية الثقافية، عبر برامج تعليمية وبيئية وسياحية وشراكات محلية ودولية.'
+    ? 'صون التراث اليمني المادي وغير المادي، وتعزيز البحث والمعرفة، وتمكين المجتمع من المشاركة في حماية الهوية الثقافية، من خلال برامج تعليمية وبيئية وسياحية وشراكات محلية ودولية.'
     : 'To preserve Yemen’s tangible and intangible heritage, promote research and knowledge, and empower communities to protect cultural identity through educational, environmental, tourism-related programs and local and international partnerships.'
 
   const goals = isRtl
@@ -163,10 +161,7 @@ export default function About() {
 
   return (
     <main dir={isRtl ? 'rtl' : 'ltr'} className="overflow-hidden">
-      <PageHeader
-        title={t.nav.about}
-        subtitle={headerSubtitle}
-      />
+      <PageHeader title={t.nav.about} subtitle={headerSubtitle} />
 
       {/* WHO WE ARE */}
       <section className="bg-white py-14">
@@ -203,20 +198,23 @@ export default function About() {
             <InfoPanel
               Icon={Eye}
               title={isRtl ? 'الرؤية' : 'Vision'}
+              iconType="lucide"
             >
               <p>{vision}</p>
             </InfoPanel>
 
             <InfoPanel
-              Icon={Send}
+              Icon={MessageIcon}
               title={isRtl ? 'الرسالة' : 'Mission'}
+              iconType="custom"
             >
               <p>{mission}</p>
             </InfoPanel>
 
             <InfoPanel
-              Icon={Target}
+              Icon={TargetArrowIcon}
               title={isRtl ? 'الأهداف' : 'Goals'}
+              iconType="custom"
             >
               <div className="space-y-3">
                 {goals.map((goal, index) => (
@@ -284,9 +282,9 @@ function SectionHeading({ icon: Icon, title, center = false }) {
         center ? 'justify-center text-center' : 'justify-start'
       }`}
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+      <IconBox>
         <Icon size={22} className="text-primary" />
-      </div>
+      </IconBox>
 
       <h2
         className="text-2xl font-black md:text-3xl"
@@ -301,9 +299,9 @@ function SectionHeading({ icon: Icon, title, center = false }) {
 function InfoCard({ Icon, title, text }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
-      <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+      <IconBox className="mb-4">
         <Icon size={21} className="text-primary" />
-      </div>
+      </IconBox>
 
       <h3
         className="mb-2 text-lg font-bold"
@@ -319,13 +317,17 @@ function InfoCard({ Icon, title, text }) {
   )
 }
 
-function InfoPanel({ Icon, title, children }) {
+function InfoPanel({ Icon, title, children, iconType = 'lucide' }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-          <Icon size={22} className="text-primary" />
-        </div>
+        <IconBox>
+          {iconType === 'custom' ? (
+            <Icon />
+          ) : (
+            <Icon size={22} className="text-primary" />
+          )}
+        </IconBox>
 
         <h3
           className="text-xl font-bold md:text-2xl"
@@ -339,5 +341,60 @@ function InfoPanel({ Icon, title, children }) {
         {children}
       </div>
     </div>
+  )
+}
+
+function IconBox({ children, className = '' }) {
+  return (
+    <div
+      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 ${className}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+function MessageIcon() {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className="h-7 w-7 text-primary"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="10" y="14" width="34" height="42" rx="5" />
+      <path d="M18 22h18" />
+      <path d="M18 30h14" />
+      <path d="M18 38h12" />
+      <path d="M44 26h8a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4H40l-9 7v-7h-5" />
+      <path d="M45 34h4" />
+      <path d="M42 41h8" />
+    </svg>
+  )
+}
+
+function TargetArrowIcon() {
+  return (
+    <svg
+      viewBox="0 0 64 64"
+      className="h-7 w-7 text-primary"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="28" cy="36" r="20" />
+      <circle cx="28" cy="36" r="13" />
+      <circle cx="28" cy="36" r="6" />
+      <path d="M28 36L50 14" />
+      <path d="M45 14h9v9" />
+      <path d="M42 22l12-12" />
+    </svg>
   )
 }
