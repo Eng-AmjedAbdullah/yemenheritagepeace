@@ -29,21 +29,14 @@ const XIcon = ({ size = 16, className = '' }) => (
 )
 
 export default function Navbar() {
-  const { t, dir, toggleLang, settings } = useLang()
-  const [scrolled, setScrolled] = useState(false)
+  const { t, toggleLang, settings } = useLang()
+
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openDrop, setOpenDrop] = useState(null)
   const [logoSrc, setLogoSrc] = useState(DEFAULT_LOGO)
 
   const navigate = useNavigate()
   const location = useLocation()
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 0)
-    handleScroll()
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   useEffect(() => {
     setMobileOpen(false)
@@ -54,7 +47,6 @@ export default function Navbar() {
     setLogoSrc(resolveMediaUrl(settings?.logo_url?.trim() || '') || DEFAULT_LOGO)
   }, [settings?.logo_url])
 
-  const navBg = 'bg-white'
   const navText = 'nav-link-dark'
 
   const dropdowns = useMemo(
@@ -66,8 +58,16 @@ export default function Navbar() {
       ],
       fields: [
         { label: t.nav.heritage_field, href: '/fields?f=heritage' },
-        { label: t.nav.studies, href: '/fields?f=studies', parent: t.nav.science },
-        { label: t.nav.training, href: '/fields?f=training', parent: t.nav.science },
+        {
+          label: t.nav.studies,
+          href: '/fields?f=studies',
+          parent: t.nav.science,
+        },
+        {
+          label: t.nav.training,
+          href: '/fields?f=training',
+          parent: t.nav.science,
+        },
         { label: t.nav.culture, href: '/fields?f=culture' },
         { label: t.nav.environment, href: '/fields?f=environment' },
       ],
@@ -81,107 +81,235 @@ export default function Navbar() {
 
   const isActiveQueryLink = (to) => {
     if (!to) return false
+
     const [path, qs] = String(to).split('?')
-    const pathActive = location.pathname === path || (path !== '/' && location.pathname.startsWith(path + '/'))
+    const pathActive =
+      location.pathname === path ||
+      (path !== '/' && location.pathname.startsWith(`${path}/`))
+
     if (!qs) return pathActive
+
     const target = new URLSearchParams(qs)
     const current = new URLSearchParams(location.search)
-    for (const [k, v] of target.entries()) {
-      if (current.get(k) !== v) return false
+
+    for (const [key, value] of target.entries()) {
+      if (current.get(key) !== value) return false
     }
+
     return pathActive
   }
 
-  const dropdownActive = (key) => (dropdowns[key] || []).some((it) => isActiveQueryLink(it.href))
+  const dropdownActive = (key) =>
+    (dropdowns[key] || []).some((item) => isActiveQueryLink(item.href))
 
   return (
     <>
-      <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}>
-        {/* Top bar (Desktop Layout) */}
-        <div className="bg-primary py-4 px-4 hidden md:block">
-          <div className="w-full flex items-center justify-between px-4">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-white transition-all duration-300">
+        {/* Desktop Top Bar */}
+        <div className="hidden bg-primary px-4 py-4 md:block">
+          <div className="flex w-full items-center justify-between px-4">
             <div className="flex items-center gap-3">
-              <img src="/logowhite.png" alt={settings?.site_name_en || settings?.site_name_ar || 'logo'} className="h-12 w-auto" />
-              <div className="flex flex-col text-white leading-tight">
-                <span className="font-semibold text-base">منظمة تراث اليمن لأجل السلام</span>
-                <span className="text-sm text-white/80">Yemen Heritage for Peace Organization</span>
+              <img
+                src="/logowhite.png"
+                alt={settings?.site_name_en || settings?.site_name_ar || 'logo'}
+                className="h-12 w-auto"
+              />
+
+              <div className="flex flex-col leading-tight text-white">
+                <span className="text-base font-semibold">
+                  منظمة تراث اليمن لأجل السلام
+                </span>
+                <span className="text-sm text-white/80">
+                  Yemen Heritage for Peace Organization
+                </span>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <a href={settings?.social_facebook || '#'} target="_blank" rel="noreferrer" aria-label="Facebook" className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm"><Facebook size={18} /></a>
-              <a href={settings?.social_youtube || '#'} target="_blank" rel="noreferrer" aria-label="YouTube" className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm"><Youtube size={18} /></a>
-              <a href={settings?.social_linkedin || '#'} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm"><Linkedin size={18} /></a>
-              <a href={settings?.social_x || '#'} target="_blank" rel="noreferrer" aria-label="X" className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm"><XIcon size={18} /></a>
-              <a href={settings?.social_instagram || '#'} target="_blank" rel="noreferrer" aria-label="Instagram" className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-primary shadow-sm"><Instagram size={18} /></a>
+              <SocialLink
+                href={settings?.social_facebook}
+                label="Facebook"
+                icon={<Facebook size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_youtube}
+                label="YouTube"
+                icon={<Youtube size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_linkedin}
+                label="LinkedIn"
+                icon={<Linkedin size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_x}
+                label="X"
+                icon={<XIcon size={18} />}
+              />
+              <SocialLink
+                href={settings?.social_instagram}
+                label="Instagram"
+                icon={<Instagram size={18} />}
+              />
             </div>
           </div>
         </div>
 
-        {/* Main nav */}
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="w-full px-4 py-3">
-            <div className="hidden md:flex w-full items-center justify-between gap-3 bg-white rounded-[999px] border border-gray-200 px-4 py-2 shadow-sm">
-              <div className="flex flex-wrap items-center justify-center gap-3 flex-1 min-w-[260px]">
-                <NavLink to="/" end className={({ isActive }) => `${navText} ${isActive ? 'active' : ''}`}>{t.nav.home}</NavLink>
-                <NavLink to="/about" className={({ isActive }) => `${navText} ${isActive ? 'active' : ''}`}>{t.nav.about}</NavLink>
-                <NavLink to="/news" className={({ isActive }) => `${navText} ${isActive ? 'active' : ''}`}>{t.nav.news}</NavLink>
-                <DropMenu label={t.nav.activities} items={dropdowns.activities} open={openDrop === 'activities'} onToggle={() => setOpenDrop((o) => (o === 'activities' ? null : 'activities'))} active={dropdownActive('activities')} navText={navText} />
-                <DropMenu label={t.nav.fields} items={dropdowns.fields} open={openDrop === 'fields'} onToggle={() => setOpenDrop((o) => (o === 'fields' ? null : 'fields'))} active={dropdownActive('fields')} navText={navText} />
-                <DropMenu label={t.nav.heritage_life} items={dropdowns.heritage_life} open={openDrop === 'heritage_life'} onToggle={() => setOpenDrop((o) => (o === 'heritage_life' ? null : 'heritage_life'))} active={dropdownActive('heritage_life')} navText={navText} />
-                <NavLink to="/contact" className={({ isActive }) => `${navText} ${isActive ? 'active' : ''}`}>{t.nav.contact}</NavLink>
+        {/* Main Nav */}
+        <div className="bg-white md:border-b md:border-gray-200 md:shadow-sm">
+          <div className="w-full px-0 py-0 md:px-4 md:py-3">
+            {/* Desktop Nav */}
+            <div className="hidden w-full items-center justify-between gap-3 rounded-[999px] border border-gray-200 bg-white px-4 py-2 shadow-sm md:flex">
+              <div className="flex min-w-[260px] flex-1 flex-wrap items-center justify-center gap-3">
+                <NavLink
+                  to="/"
+                  end
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.home}
+                </NavLink>
+
+                <NavLink
+                  to="/about"
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.about}
+                </NavLink>
+
+                <NavLink
+                  to="/news"
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.news}
+                </NavLink>
+
+                <DropMenu
+                  label={t.nav.activities}
+                  items={dropdowns.activities}
+                  open={openDrop === 'activities'}
+                  onToggle={() =>
+                    setOpenDrop((open) =>
+                      open === 'activities' ? null : 'activities'
+                    )
+                  }
+                  active={dropdownActive('activities')}
+                  navText={navText}
+                />
+
+                <DropMenu
+                  label={t.nav.fields}
+                  items={dropdowns.fields}
+                  open={openDrop === 'fields'}
+                  onToggle={() =>
+                    setOpenDrop((open) => (open === 'fields' ? null : 'fields'))
+                  }
+                  active={dropdownActive('fields')}
+                  navText={navText}
+                />
+
+                <DropMenu
+                  label={t.nav.heritage_life}
+                  items={dropdowns.heritage_life}
+                  open={openDrop === 'heritage_life'}
+                  onToggle={() =>
+                    setOpenDrop((open) =>
+                      open === 'heritage_life' ? null : 'heritage_life'
+                    )
+                  }
+                  active={dropdownActive('heritage_life')}
+                  navText={navText}
+                />
+
+                <NavLink
+                  to="/contact"
+                  className={({ isActive }) =>
+                    `${navText} ${isActive ? 'active' : ''}`
+                  }
+                >
+                  {t.nav.contact}
+                </NavLink>
               </div>
+
               <div className="flex items-center gap-2">
-                <button onClick={toggleLang} className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark hover:border-primary transition"><Globe size={16} />{t.nav.lang}</button>
-                <button onClick={() => navigate('/admin/login')} className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark hover:border-primary transition"><ShieldCheck size={16} />{t.nav.admin}</button>
+                <button
+                  onClick={toggleLang}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
+                >
+                  <Globe size={16} />
+                  {t.nav.lang}
+                </button>
+
+                <button
+                  onClick={() => navigate('/admin/login')}
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
+                >
+                  <ShieldCheck size={16} />
+                  {t.nav.admin}
+                </button>
               </div>
             </div>
 
-            {/* RESPONSIVE MOBILE TOP BAR */}
-            <div className="md:hidden">
-              <div className="bg-primary px-3 py-2 flex items-center justify-between gap-2 min-h-[52px]">
-                
-                {/* 1. Logo (Proportionally sized) */}
+            {/* Mobile Top Bar - full width, no white side padding */}
+            <div className="w-full md:hidden">
+              <div className="flex min-h-[52px] w-full items-center justify-between gap-2 bg-primary px-3 py-2">
                 <div className="shrink-0">
-                  <img 
-                    src="/logowhite.png" 
-                    alt={settings?.site_name_en || settings?.site_name_ar || 'logo'} 
-                    className="h-8 w-auto block" 
+                  <img
+                    src="/logowhite.png"
+                    alt={settings?.site_name_en || settings?.site_name_ar || 'logo'}
+                    className="block h-8 w-auto"
                   />
                 </div>
-                
-                {/* 2. Scaled Down Social Containers (Clean size alignment) */}
-                <div className="flex items-center justify-center gap-1.5 flex-1 px-1">
-                  <a href={settings?.social_facebook || '#'} target="_blank" rel="noreferrer" aria-label="Facebook" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-primary shadow-sm shrink-0">
-                    <Facebook size={14} />
-                  </a>
-                  <a href={settings?.social_youtube || '#'} target="_blank" rel="noreferrer" aria-label="YouTube" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-primary shadow-sm shrink-0">
-                    <Youtube size={14} />
-                  </a>
-                  <a href={settings?.social_linkedin || '#'} target="_blank" rel="noreferrer" aria-label="LinkedIn" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-primary shadow-sm shrink-0">
-                    <Linkedin size={14} />
-                  </a>
-                  <a href={settings?.social_x || '#'} target="_blank" rel="noreferrer" aria-label="X" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-primary shadow-sm shrink-0">
-                    <XIcon size={14} />
-                  </a>
-                  <a href={settings?.social_instagram || '#'} target="_blank" rel="noreferrer" aria-label="Instagram" className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-primary shadow-sm shrink-0">
-                    <Instagram size={14} />
-                  </a>
+
+                <div className="flex flex-1 items-center justify-center gap-1.5 px-1">
+                  <MobileSocialLink
+                    href={settings?.social_facebook}
+                    label="Facebook"
+                    icon={<Facebook size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_youtube}
+                    label="YouTube"
+                    icon={<Youtube size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_linkedin}
+                    label="LinkedIn"
+                    icon={<Linkedin size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_x}
+                    label="X"
+                    icon={<XIcon size={14} />}
+                  />
+                  <MobileSocialLink
+                    href={settings?.social_instagram}
+                    label="Instagram"
+                    icon={<Instagram size={14} />}
+                  />
                 </div>
 
-                {/* 3. Action Drawer Toggle */}
                 <div className="shrink-0">
-                  <button className="text-white p-1 block" onClick={() => setMobileOpen((o) => !o)}>
+                  <button
+                    type="button"
+                    className="block p-1 text-white"
+                    onClick={() => setMobileOpen((open) => !open)}
+                    aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+                  >
                     {mobileOpen ? <X size={24} /> : <Menu size={24} />}
                   </button>
                 </div>
-
               </div>
             </div>
-
           </div>
+
           {mobileOpen && (
-            <div className="md:hidden bg-white border-t border-gray-200 px-4 pb-4 max-h-[80vh] overflow-y-auto shadow-xl">
+            <div className="max-h-[80vh] overflow-y-auto border-t border-gray-200 bg-white px-4 pb-4 shadow-xl md:hidden">
               {[
                 { label: t.nav.home, href: '/' },
                 { label: t.nav.about, href: '/about' },
@@ -191,43 +319,114 @@ export default function Navbar() {
                 { label: t.nav.heritage_life, href: '/heritage-life' },
                 { label: t.nav.contact, href: '/contact' },
               ].map((item) => (
-                <Link key={item.href} to={item.href} className={['block py-3 border-b border-gray-200 transition-colors text-dark', isActiveQueryLink(item.href) ? 'font-semibold text-primary' : 'hover:text-primary'].join(' ')}>
+                <Link
+                  key={item.href}
+                  to={item.href}
+                  className={[
+                    'block border-b border-gray-200 py-3 text-dark transition-colors',
+                    isActiveQueryLink(item.href)
+                      ? 'font-semibold text-primary'
+                      : 'hover:text-primary',
+                  ].join(' ')}
+                >
                   {item.label}
                 </Link>
               ))}
 
-              <div className="flex gap-3 mt-4">
-                <button onClick={toggleLang} className="flex-1 btn-outline py-2 text-sm justify-center inline-flex items-center gap-2"><Globe size={16} />{t.nav.lang}</button>
-                <button onClick={() => navigate('/admin/login')} className="flex-1 btn-primary py-2 text-sm justify-center inline-flex items-center gap-2"><ShieldCheck size={16} />{t.nav.admin}</button>
+              <div className="mt-4 flex gap-3">
+                <button
+                  onClick={toggleLang}
+                  className="btn-outline inline-flex flex-1 items-center justify-center gap-2 py-2 text-sm"
+                >
+                  <Globe size={16} />
+                  {t.nav.lang}
+                </button>
+
+                <button
+                  onClick={() => navigate('/admin/login')}
+                  className="btn-primary inline-flex flex-1 items-center justify-center gap-2 py-2 text-sm"
+                >
+                  <ShieldCheck size={16} />
+                  {t.nav.admin}
+                </button>
               </div>
             </div>
           )}
         </div>
       </nav>
-      <div className="h-[92px] md:h-[120px]" aria-hidden="true" />
+
+      <div className="h-[52px] md:h-[120px]" aria-hidden="true" />
     </>
+  )
+}
+
+function SocialLink({ href, label, icon }) {
+  return (
+    <a
+      href={href || '#'}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm"
+    >
+      {icon}
+    </a>
+  )
+}
+
+function MobileSocialLink({ href, label, icon }) {
+  return (
+    <a
+      href={href || '#'}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm"
+    >
+      {icon}
+    </a>
   )
 }
 
 function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
   const ref = useRef()
+
   useEffect(() => {
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target) && open) onToggle() }
+    const handler = (event) => {
+      if (ref.current && !ref.current.contains(event.target) && open) {
+        onToggle()
+      }
+    }
+
     document.addEventListener('mousedown', handler)
+
     return () => document.removeEventListener('mousedown', handler)
   }, [open, onToggle])
 
   return (
     <div className="relative" ref={ref}>
-      <button onClick={onToggle} className={`nav-link ${active ? 'active' : ''} flex items-center gap-1 ${navText}`}>
+      <button
+        onClick={onToggle}
+        className={`nav-link ${active ? 'active' : ''} flex items-center gap-1 ${navText}`}
+      >
         {label}
-        <ChevronDown size={14} className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          size={14}
+          className={`transition-transform duration-200 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
       </button>
+
       {open && (
         <div className="dropdown-menu">
-          {items.map((item, i) => (
-            <Link key={i} to={item.href} className="dropdown-item">
-              {item.parent && <span className="text-primary/60 text-xs block">{item.parent} /</span>}
+          {items.map((item, index) => (
+            <Link key={index} to={item.href} className="dropdown-item">
+              {item.parent && (
+                <span className="block text-xs text-primary/60">
+                  {item.parent} /
+                </span>
+              )}
               {item.label}
             </Link>
           ))}
