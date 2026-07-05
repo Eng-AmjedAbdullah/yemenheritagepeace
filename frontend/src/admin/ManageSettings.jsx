@@ -11,23 +11,31 @@ const EMPTY = {
   site_name_en: '',
   logo_url: '',
   favicon_url: '',
+
   contact_phone: '',
   contact_email: '',
   address_ar: '',
   address_en: '',
+
   footer_desc_ar: '',
   footer_desc_en: '',
+
   social_facebook: '',
   social_youtube: '',
   social_linkedin: '',
   social_x: '',
+  social_instagram: '',
+
   home_about_image_url: '',
   home_about_image_alt_ar: '',
   home_about_image_alt_en: '',
+
   about_desc_ar: '',
   about_desc_en: '',
+
   vision_ar: '',
   vision_en: '',
+
   mission_ar: '',
   mission_en: '',
 }
@@ -49,6 +57,7 @@ const toastTheme = {
       secondary: '#166534',
     },
   },
+
   error: {
     duration: 4000,
     style: {
@@ -99,6 +108,7 @@ export default function ManageSettings() {
 
   useEffect(() => {
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const updateField = (key, value) => {
@@ -115,7 +125,8 @@ export default function ManageSettings() {
       await api.put('/settings', form)
 
       toast.success(
-        t.settingsSaved || (isRtl ? 'تم حفظ الإعدادات بنجاح' : 'Settings saved successfully'),
+        t.settingsSaved ||
+          (isRtl ? 'تم حفظ الإعدادات بنجاح' : 'Settings saved successfully'),
         toastTheme.success
       )
 
@@ -123,7 +134,8 @@ export default function ManageSettings() {
       await load()
     } catch (error) {
       toast.error(
-        error?.message || (isRtl ? 'حدث خطأ أثناء حفظ الإعدادات' : 'Failed to save settings'),
+        error?.message ||
+          (isRtl ? 'حدث خطأ أثناء حفظ الإعدادات' : 'Failed to save settings'),
         toastTheme.error
       )
     } finally {
@@ -189,27 +201,16 @@ export default function ManageSettings() {
 
   return (
     <div className="w-full max-w-full overflow-hidden">
-      <div className="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-dark md:text-3xl">
-            {t.manageSiteSettings}
-          </h1>
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-2xl font-bold text-dark md:text-3xl">
+          {t.manageSiteSettings}
+        </h1>
 
-          <p className="mt-1 text-sm text-gray-500">
-            {isRtl
-              ? 'إدارة هوية الموقع ومعلومات التواصل والمحتوى العام'
-              : 'Manage website identity, contact details, and public content'}
-          </p>
-        </div>
-
-        <button
-          onClick={save}
-          disabled={saving || loading}
-          className="btn-primary w-full justify-center sm:w-auto"
-        >
-          <Save size={16} />
-          {saving ? t.saving : t.save}
-        </button>
+        <p className="mt-2 text-sm leading-6 text-gray-500 md:text-base">
+          {isRtl
+            ? 'إدارة هوية الموقع ومعلومات التواصل والمحتوى العام'
+            : 'Manage website identity, contact details, and public content'}
+        </p>
       </div>
 
       <div className="-mx-4 mb-5 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -217,6 +218,7 @@ export default function ManageSettings() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveTab(tab.id)}
               className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
                 activeTab === tab.id
@@ -279,12 +281,23 @@ export default function ManageSettings() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.phone} name="contact_phone" dir="ltr" />
-                  <Field label={t.email} name="contact_email" dir="ltr" type="email" />
+
+                  <Field
+                    label={t.email}
+                    name="contact_email"
+                    dir="ltr"
+                    type="email"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.addressAr} name="address_ar" />
-                  <Field label={t.addressEn} name="address_en" dir="ltr" />
+
+                  <Field
+                    label={t.addressEn}
+                    name="address_en"
+                    dir="ltr"
+                  />
                 </div>
               </div>
             )}
@@ -297,25 +310,40 @@ export default function ManageSettings() {
 
                 <UploadBox
                   value={form.home_about_image_url || ''}
-                  onChange={(value) => updateField('home_about_image_url', value)}
+                  onChange={(value) =>
+                    updateField('home_about_image_url', value)
+                  }
                   folder="site"
                   label={isRtl ? 'صورة قسم من نحن' : 'About Section Image'}
                 />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.altAr} name="home_about_image_alt_ar" />
-                  <Field label={t.altEn} name="home_about_image_alt_en" dir="ltr" />
+
+                  <Field
+                    label={t.altEn}
+                    name="home_about_image_alt_en"
+                    dir="ltr"
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <TextArea
-                    label={isRtl ? 'وصف المنظمة (عربي)' : 'Organization Description (AR)'}
+                    label={
+                      isRtl
+                        ? 'وصف المنظمة (عربي)'
+                        : 'Organization Description (AR)'
+                    }
                     name="about_desc_ar"
                     rows={3}
                   />
 
                   <TextArea
-                    label={isRtl ? 'وصف المنظمة (إنجليزي)' : 'Organization Description (EN)'}
+                    label={
+                      isRtl
+                        ? 'وصف المنظمة (إنجليزي)'
+                        : 'Organization Description (EN)'
+                    }
                     name="about_desc_en"
                     rows={3}
                     dir="ltr"
@@ -364,6 +392,7 @@ export default function ManageSettings() {
                     { name: 'social_youtube', label: 'YouTube' },
                     { name: 'social_linkedin', label: 'LinkedIn' },
                     { name: 'social_x', label: 'X (Twitter)' },
+                    { name: 'social_instagram', label: 'Instagram' },
                   ].map((item) => (
                     <Field
                       key={item.name}
@@ -383,7 +412,12 @@ export default function ManageSettings() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <TextArea label={t.footerDescAr} name="footer_desc_ar" />
-                  <TextArea label={t.footerDescEn} name="footer_desc_en" dir="ltr" />
+
+                  <TextArea
+                    label={t.footerDescEn}
+                    name="footer_desc_en"
+                    dir="ltr"
+                  />
                 </div>
               </div>
             )}
@@ -391,14 +425,17 @@ export default function ManageSettings() {
         )}
       </div>
 
-      <div className="mt-5 flex justify-end">
+      <div className="mt-5 flex justify-end pb-2">
         <button
+          type="button"
           onClick={save}
           disabled={saving || loading}
           className="btn-primary w-full justify-center sm:w-auto"
         >
           <Save size={16} />
-          {saving ? t.saving : t.saveSettings}
+          {saving
+            ? t.saving
+            : t.saveSettings || t.save || (isRtl ? 'حفظ الإعدادات' : 'Save Settings')}
         </button>
       </div>
     </div>
