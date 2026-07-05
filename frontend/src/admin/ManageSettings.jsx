@@ -11,23 +11,31 @@ const EMPTY = {
   site_name_en: '',
   logo_url: '',
   favicon_url: '',
+
   contact_phone: '',
   contact_email: '',
   address_ar: '',
   address_en: '',
+
   footer_desc_ar: '',
   footer_desc_en: '',
+
   social_facebook: '',
   social_youtube: '',
   social_linkedin: '',
   social_x: '',
+  social_instagram: '',
+
   home_about_image_url: '',
   home_about_image_alt_ar: '',
   home_about_image_alt_en: '',
+
   about_desc_ar: '',
   about_desc_en: '',
+
   vision_ar: '',
   vision_en: '',
+
   mission_ar: '',
   mission_en: '',
 }
@@ -377,6 +385,7 @@ export default function ManageSettings() {
                     { name: 'social_youtube', label: 'YouTube' },
                     { name: 'social_linkedin', label: 'LinkedIn' },
                     { name: 'social_x', label: 'X (Twitter)' },
+                    { name: 'social_instagram', label: 'Instagram' },
                   ].map((item) => (
                     <Field
                       key={item.name}
@@ -410,6 +419,7 @@ export default function ManageSettings() {
 
       <div className="mt-5 flex justify-end pb-2">
         <button
+          type="button"
           onClick={save}
           disabled={saving || loading}
           className="btn-primary w-full justify-center sm:w-auto"
