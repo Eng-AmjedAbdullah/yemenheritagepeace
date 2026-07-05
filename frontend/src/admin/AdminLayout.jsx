@@ -27,8 +27,6 @@ import api from '../lib/api'
 
 export const ConfirmContext = React.createContext()
 
-const NAV_HEIGHT = 72
-
 const toastTheme = {
   success: {
     duration: 3000,
@@ -99,6 +97,7 @@ function ConfirmModal({ modal, close, isRtl }) {
     }
 
     document.addEventListener('keydown', onKeyDown)
+
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [modal.isOpen, close])
 
@@ -417,8 +416,7 @@ export default function AdminLayout() {
         >
           <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
 
-          {/* Full-width top navbar above the sidebar */}
-          <header className="fixed inset-x-0 top-0 z-50 h-[72px] bg-[#073B4C] border-b border-white/10 shadow-lg">
+          <header className="fixed inset-x-0 top-0 z-50 h-[72px] bg-primary border-b border-white/10 shadow-lg">
             <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 {isMobile && (
@@ -447,7 +445,7 @@ export default function AdminLayout() {
                   <h1 className="truncate text-sm font-bold text-white sm:text-base">
                     منظمة تراث اليمن لأجل السلام
                   </h1>
-                  <p className="mt-0.5 truncate text-xs font-medium text-white/70 sm:text-sm">
+                  <p className="mt-0.5 truncate text-xs font-medium text-white/75 sm:text-sm">
                     Yemen Heritage for Peace Organization
                   </p>
                 </div>
@@ -464,7 +462,7 @@ export default function AdminLayout() {
                 </button>
 
                 <div className="hidden sm:flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#073B4C]">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-primary">
                     <User size={16} />
                   </div>
 
@@ -472,7 +470,8 @@ export default function AdminLayout() {
                     <p className="truncate text-sm font-semibold text-white">
                       {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
                     </p>
-                    <p className="text-xs text-white/60">
+
+                    <p className="text-xs text-white/65">
                       {admin.role === 'super_admin'
                         ? isRtl
                           ? 'مشرف رئيسي'
@@ -487,9 +486,8 @@ export default function AdminLayout() {
             </div>
           </header>
 
-          {/* Sidebar starts below navbar and uses the same dark color */}
           <aside
-            className={`fixed bottom-0 top-[72px] bg-[#073B4C] border-white/10 z-40 transition-all duration-300 shadow-2xl ${
+            className={`fixed bottom-0 top-[72px] bg-primary border-white/10 z-40 transition-all duration-300 shadow-2xl ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
@@ -523,7 +521,7 @@ export default function AdminLayout() {
                       onClick={() => isMobile && setSidebarOpen(false)}
                       className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
                         active
-                          ? 'bg-white text-[#073B4C] shadow-sm'
+                          ? 'bg-white text-primary shadow-sm'
                           : 'text-white/75 hover:bg-white/10 hover:text-white'
                       } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
                     >
@@ -558,6 +556,7 @@ export default function AdminLayout() {
                   }`}
                 >
                   <LogOut size={19} className="shrink-0" />
+
                   {(sidebarOpen || isMobile) && (
                     <span className="text-sm font-bold">{t.logout}</span>
                   )}
