@@ -27,6 +27,8 @@ import api from '../lib/api'
 
 export const ConfirmContext = React.createContext()
 
+const ADMIN_BRAND = '#18a2be'
+
 const toastTheme = {
   success: {
     duration: 3000,
@@ -97,7 +99,6 @@ function ConfirmModal({ modal, close, isRtl }) {
     }
 
     document.addEventListener('keydown', onKeyDown)
-
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [modal.isOpen, close])
 
@@ -416,21 +417,24 @@ export default function AdminLayout() {
         >
           <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
 
-          <header className="fixed inset-x-0 top-0 z-50 h-[72px] bg-primary border-b border-white/10 shadow-lg">
+          <header
+            className="fixed inset-x-0 top-0 z-50 h-[72px] border-b border-white/15 shadow-lg"
+            style={{ backgroundColor: ADMIN_BRAND }}
+          >
             <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
               <div className="flex min-w-0 items-center gap-3">
                 {isMobile && (
                   <button
                     type="button"
                     onClick={() => setSidebarOpen((open) => !open)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-white/15"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white transition hover:bg-white/25"
                     aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
                   >
                     {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
                   </button>
                 )}
 
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20">
                   <img
                     src="/logowhite.png"
                     alt="Yemen Heritage"
@@ -445,7 +449,7 @@ export default function AdminLayout() {
                   <h1 className="truncate text-sm font-bold text-white sm:text-base">
                     منظمة تراث اليمن لأجل السلام
                   </h1>
-                  <p className="mt-0.5 truncate text-xs font-medium text-white/75 sm:text-sm">
+                  <p className="mt-0.5 truncate text-xs font-medium text-white/85 sm:text-sm">
                     Yemen Heritage for Peace Organization
                   </p>
                 </div>
@@ -455,14 +459,17 @@ export default function AdminLayout() {
                 <button
                   type="button"
                   onClick={toggleAdminLang}
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/25"
                 >
                   <Globe size={16} />
                   <span className="hidden sm:inline">{t.switchLang}</span>
                 </button>
 
-                <div className="hidden sm:flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-primary">
+                <div className="hidden sm:flex min-w-0 items-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-2">
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white"
+                    style={{ color: ADMIN_BRAND }}
+                  >
                     <User size={16} />
                   </div>
 
@@ -471,7 +478,7 @@ export default function AdminLayout() {
                       {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
                     </p>
 
-                    <p className="text-xs text-white/65">
+                    <p className="text-xs text-white/75">
                       {admin.role === 'super_admin'
                         ? isRtl
                           ? 'مشرف رئيسي'
@@ -487,7 +494,7 @@ export default function AdminLayout() {
           </header>
 
           <aside
-            className={`fixed bottom-0 top-[72px] bg-primary border-white/10 z-40 transition-all duration-300 shadow-2xl ${
+            className={`fixed bottom-0 top-[72px] border-white/15 z-40 transition-all duration-300 shadow-2xl ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
@@ -496,13 +503,14 @@ export default function AdminLayout() {
                   : '-translate-x-full'
                 : 'translate-x-0'
             }`}
+            style={{ backgroundColor: ADMIN_BRAND }}
           >
             <div className="h-full flex flex-col">
-              <div className="hidden lg:flex items-center justify-end p-3 border-b border-white/10">
+              <div className="hidden lg:flex items-center justify-end p-3 border-b border-white/15">
                 <button
                   type="button"
                   onClick={() => setSidebarOpen((open) => !open)}
-                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white/90 transition hover:bg-white/20 hover:text-white"
                   aria-label={isRtl ? 'طي القائمة' : 'Toggle sidebar'}
                 >
                   {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
@@ -521,9 +529,10 @@ export default function AdminLayout() {
                       onClick={() => isMobile && setSidebarOpen(false)}
                       className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
                         active
-                          ? 'bg-white text-primary shadow-sm'
-                          : 'text-white/75 hover:bg-white/10 hover:text-white'
+                          ? 'bg-white shadow-sm'
+                          : 'text-white/85 hover:bg-white/15 hover:text-white'
                       } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
+                      style={active ? { color: ADMIN_BRAND } : undefined}
                     >
                       <Icon size={19} className="shrink-0" />
 
@@ -547,11 +556,11 @@ export default function AdminLayout() {
                 })}
               </nav>
 
-              <div className="p-3 border-t border-white/10">
+              <div className="p-3 border-t border-white/15">
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className={`w-full flex items-center gap-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-3 text-red-200 transition hover:bg-red-500/20 hover:text-white ${
+                  className={`w-full flex items-center gap-3 rounded-xl border border-white/20 bg-white/15 px-3 py-3 text-white transition hover:bg-red-600 hover:border-red-600 ${
                     !sidebarOpen && !isMobile ? 'justify-center' : ''
                   }`}
                 >
