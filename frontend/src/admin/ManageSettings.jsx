@@ -177,7 +177,9 @@ export default function ManageSettings() {
   )
 
   const SectionTitle = ({ children }) => (
-    <h2 className="text-lg font-bold text-dark md:text-xl">{children}</h2>
+    <h2 className="text-lg font-bold text-dark md:text-xl">
+      {children}
+    </h2>
   )
 
   const UploadBox = ({ label, value, onChange, folder, lightBlue = false }) => (
@@ -291,7 +293,11 @@ export default function ManageSettings() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.addressAr} name="address_ar" />
 
-                  <Field label={t.addressEn} name="address_en" dir="ltr" />
+                  <Field
+                    label={t.addressEn}
+                    name="address_en"
+                    dir="ltr"
+                  />
                 </div>
               </div>
             )}
@@ -304,7 +310,9 @@ export default function ManageSettings() {
 
                 <UploadBox
                   value={form.home_about_image_url || ''}
-                  onChange={(value) => updateField('home_about_image_url', value)}
+                  onChange={(value) =>
+                    updateField('home_about_image_url', value)
+                  }
                   folder="site"
                   label={isRtl ? 'صورة قسم من نحن' : 'About Section Image'}
                 />
