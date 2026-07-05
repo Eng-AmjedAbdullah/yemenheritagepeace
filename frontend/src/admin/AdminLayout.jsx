@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -25,7 +25,42 @@ import { adminTranslations, AdminLangContext } from './adminI18n'
 import { getSidebarItems, canAccessPage } from './adminPermissions'
 import api from '../lib/api'
 
-export const ConfirmContext = createContext(null)
+export const ConfirmContext = React.createContext()
+
+const toastTheme = {
+  success: {
+    duration: 3000,
+    style: {
+      background: '#166534',
+      color: '#ffffff',
+      border: '1px solid #15803d',
+      borderRadius: '12px',
+      fontSize: '14px',
+      padding: '14px 18px',
+      boxShadow: '0 8px 24px rgba(22, 101, 52, 0.25)',
+    },
+    iconTheme: {
+      primary: '#ffffff',
+      secondary: '#166534',
+    },
+  },
+  error: {
+    duration: 4000,
+    style: {
+      background: '#7f1d1d',
+      color: '#ffffff',
+      border: '1px solid #991b1b',
+      borderRadius: '12px',
+      fontSize: '14px',
+      padding: '14px 18px',
+      boxShadow: '0 8px 24px rgba(127, 29, 29, 0.25)',
+    },
+    iconTheme: {
+      primary: '#ffffff',
+      secondary: '#7f1d1d',
+    },
+  },
+}
 
 const confirmStyles = {
   danger: {
@@ -250,6 +285,12 @@ export default function AdminLayout() {
 
         console.error('Failed to refresh admin:', error)
         clearAdminSession()
+
+        toast.error(
+          isRtl ? 'انتهت الجلسة، سجل الدخول مرة أخرى' : 'Session expired, please login again',
+          toastTheme.error
+        )
+
         navigate('/admin/login', { replace: true })
       } finally {
         if (!cancelled) setLoading(false)
@@ -262,7 +303,7 @@ export default function AdminLayout() {
       cancelled = true
       if (interval) clearInterval(interval)
     }
-  }, [navigate, fetchUnread])
+  }, [navigate, fetchUnread, isRtl])
 
   useEffect(() => {
     const handleResize = () => {
@@ -298,14 +339,10 @@ export default function AdminLayout() {
 
     clearAdminSession()
 
-    toast.success(isRtl ? 'تم تسجيل الخروج' : 'Logged out successfully', {
-      style: {
-        background: '#ffffff',
-        color: '#0d7a91',
-        border: '2px solid #18a2be',
-        borderRadius: '12px',
-      },
-    })
+    toast.success(
+      isRtl ? 'تم تسجيل الخروج' : 'Logged out successfully',
+      toastTheme.success
+    )
 
     navigate('/admin/login', { replace: true })
   }
@@ -366,9 +403,6 @@ export default function AdminLayout() {
     if (href === '/admin') return location.pathname === '/admin'
     return location.pathname === href || location.pathname.startsWith(`${href}/`)
   }
-
-  const currentPageLabel =
-    navItems.find((item) => isActiveLink(item.href))?.label || t.adminPanel
 
   return (
     <AdminLangContext.Provider value={contextValue}>
@@ -504,11 +538,11 @@ export default function AdminLayout() {
                       </button>
                     )}
 
-                    <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-white shadow-sm sm:flex">
+                    <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-white shadow-sm sm:flex">
                       <img
                         src="/logo.png"
                         alt="Yemen Heritage"
-                        className="h-8 w-auto"
+                        className="h-9 w-auto"
                         onError={(event) => {
                           event.currentTarget.style.display = 'none'
                         }}
@@ -516,21 +550,12 @@ export default function AdminLayout() {
                     </div>
 
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold uppercase tracking-wide text-primary">
-                          {isRtl ? 'منظمة تراث اليمن لأجل السلام' : 'Yemen Heritage for Peace Organization'}
-                        </span>
-
-                        {admin.role === 'super_admin' && (
-                          <span className="hidden rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary sm:inline-flex">
-                            {isRtl ? 'مشرف رئيسي' : 'Super Admin'}
-                          </span>
-                        )}
-                      </div>
-
-                      <h1 className="mt-0.5 truncate text-base font-bold text-dark sm:text-lg">
-                        {currentPageLabel}
+                      <h1 className="truncate text-sm font-bold text-dark sm:text-base">
+                        منظمة تراث اليمن لأجل السلام
                       </h1>
+                      <p className="mt-0.5 truncate text-xs font-semibold text-primary sm:text-sm">
+                        Yemen Heritage for Peace Organization
+                      </p>
                     </div>
                   </div>
 
