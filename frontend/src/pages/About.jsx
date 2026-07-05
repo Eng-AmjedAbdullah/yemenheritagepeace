@@ -13,6 +13,14 @@ export default function About() {
   const { t, lang } = useLang()
   const isRtl = lang === 'ar'
 
+  const aboutText = isRtl
+    ? 'منظمة تراث اليمن لأجل السلام هي منظمة مجتمع مدني غير ربحية تأسست وفقًا لقانون الجمعيات والمؤسسات الأهلية اليمني رقم (1) لسنة 2001م ولائحته التنفيذية. يقع مقرها الرئيسي في محافظة تعز، الجمهورية اليمنية. تأسست المنظمة عام 2025م، وصرح لها رسميًا في يناير 2026م بموجب التصريح رقم 11م/2026م. يتركز نشاطها في مجالات الثقافة والعلوم والتنمية البيئية والسياحية.'
+    : 'Yemen Heritage for Peace Organization is a non-profit civil society organization established in accordance with Yemen’s Law No. (1) of 2001 concerning associations and civil institutions and its executive regulations. Headquartered in Taiz Governorate, Republic of Yemen, the organization was founded in 2025 and officially licensed in January 2026 under Permit No. 11M/2026. Its work focuses on culture, science, environmental development, and tourism development.'
+
+  const aboutSecondText = isRtl
+    ? 'تسعى المنظمة إلى صون التراث اليمني وتعزيز الوعي الثقافي والعلمي، ودعم المبادرات التي تربط الهوية الحضارية بالتنمية المستدامة والسلام المجتمعي.'
+    : 'The organization seeks to preserve Yemeni heritage, promote cultural and scientific awareness, and support initiatives that connect civilizational identity with sustainable development and community peace.'
+
   const values = isRtl
     ? [
         { Icon: HeartHandshake, label: 'السلام', desc: 'نعمل من أجل مجتمع يمني يسوده السلام والتعاون.' },
@@ -41,43 +49,24 @@ export default function About() {
     <main>
       <PageHeader
         title={t.nav.about}
-        subtitle={
-          isRtl
-            ? 'منظمة مجتمع مدني غير حكومية تأسّست في تعز لصون الحضارة اليمنية العريقة وتوظيفها في خدمة السلام والتنمية المستدامة.'
-            : 'A non-governmental civil society organization founded in Taiz to preserve Yemen&apos;s ancient civilization and leverage it for peace and sustainable development.'
-        }
+        subtitle={aboutText}
       />
 
       {/* WHO WE ARE */}
       <section className="py-14 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <h2 className="section-title mb-4 text-start">{isRtl ? 'من نحن' : 'Who We Are'}</h2>
-              <p className="text-gray-600 leading-relaxed mb-3">
-                {isRtl
-                  ? 'منظمة مجتمع مدني غير حكومية تعمل على الحفاظ على التراث الثقافي والعلمي اليمني وتعزيز الوعي المجتمعي به من خلال برامج تعليمية وفعاليات ثقافية وبحوث علمية تربط الماضي بالحاضر لبناء مستقبل سلمي ومستدام.'
-                  : 'A non-governmental civil society organization working to preserve Yemeni cultural and scientific heritage, raising community awareness through educational programs, cultural activities, and research that connects the past with the present to build a peaceful and sustainable future.'}
-              </p>
-              <p className="text-gray-600 leading-relaxed">
-                {isRtl
-                  ? 'تعمل المنظمة بالشراكة مع الجهات المحلية والدولية لتعزيز حماية التراث، ودعم المبادرات التي تخدم المعرفة والثقافة والسلام.'
-                  : 'We collaborate with local and international partners to protect heritage and support initiatives that advance knowledge, culture, and peace.'}
-              </p>
-            </div>
+        <div className="max-w-5xl mx-auto px-4">
+          <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 sm:p-8 shadow-sm">
+            <h2 className="section-title mb-5 text-start">
+              {isRtl ? 'من نحن' : 'Who We Are'}
+            </h2>
 
-            <div className="relative">
-              <img
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg"
-                alt={isRtl ? 'قلعة القاهرة التاريخية تطل على مدينة تعز' : 'Historic Al-Qahira Castle overlooking Taiz city'}
-                className="rounded-2xl shadow-lg h-72 w-full object-cover"
-                loading="lazy"
-              />
-              <div className="absolute -bottom-4 -start-4 bg-primary text-white rounded-2xl p-4 shadow-xl">
-                <p className="text-xs text-white/80">{isRtl ? 'من أجل' : 'For'}</p>
-                <p className="font-bold text-sm">{isRtl ? 'التراث والسلام' : 'Heritage & Peace'}</p>
-              </div>
-            </div>
+            <p className="text-gray-600 leading-relaxed mb-4 text-base">
+              {aboutText}
+            </p>
+
+            <p className="text-gray-600 leading-relaxed text-base">
+              {aboutSecondText}
+            </p>
           </div>
         </div>
       </section>
@@ -92,6 +81,7 @@ export default function About() {
             <h3 className="text-xl font-bold text-dark mb-3">{t.vision}</h3>
             <p className="text-gray-600 leading-relaxed text-sm">{t.vision_text}</p>
           </div>
+
           <div className="bg-primary rounded-2xl p-6 text-white shadow-lg">
             <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-3">
               <Target size={22} className="text-white" />
@@ -106,6 +96,7 @@ export default function About() {
       <section className="py-14 bg-white">
         <div className="max-w-5xl mx-auto px-4 text-center">
           <h2 className="section-title mb-8">{t.goals}</h2>
+
           <div className="space-y-3 text-start">
             {goals.map((goal, i) => (
               <div
@@ -126,6 +117,7 @@ export default function About() {
       <section className="py-14 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h2 className="section-title mb-8">{t.values}</h2>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {values.map((v, i) => (
               <div
