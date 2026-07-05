@@ -30,7 +30,6 @@ import api from '../lib/api'
 export const ConfirmContext = React.createContext()
 
 const ADMIN_BRAND = '#18a2be'
-const NAV_HEIGHT = 76
 
 const toastTheme = {
   success: {
@@ -115,17 +114,22 @@ function ConfirmModal({ modal, close, isRtl }) {
       className="modal-overlay"
       onClick={(event) => event.target === event.currentTarget && close(false)}
     >
-      <div className="modal-box max-w-md" dir={isRtl ? 'rtl' : 'ltr'}>
-        <div className="p-6 border-b border-gray-100">
+      <div
+        className="modal-box w-[calc(100vw-24px)] max-w-md"
+        dir={isRtl ? 'rtl' : 'ltr'}
+      >
+        <div className="border-b border-gray-100 p-4 sm:p-6">
           <div className="flex items-start gap-4">
             <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${variant.iconClass}`}
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${variant.iconClass}`}
             >
               <Icon size={22} />
             </div>
 
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-dark">{modal.title}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-lg font-bold text-dark">
+                {modal.title}
+              </h3>
 
               {modal.message && (
                 <p className="mt-2 text-sm leading-6 text-gray-500">
@@ -135,8 +139,9 @@ function ConfirmModal({ modal, close, isRtl }) {
             </div>
 
             <button
+              type="button"
               onClick={() => close(false)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="text-gray-400 transition-colors hover:text-gray-600"
               aria-label={isRtl ? 'إغلاق' : 'Close'}
             >
               <X size={18} />
@@ -144,17 +149,19 @@ function ConfirmModal({ modal, close, isRtl }) {
           </div>
         </div>
 
-        <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end p-6 bg-gray-50/70 rounded-b-2xl">
+        <div className="flex flex-col-reverse gap-3 rounded-b-2xl bg-gray-50/70 p-4 sm:flex-row sm:justify-end sm:p-6">
           <button
+            type="button"
             onClick={() => close(false)}
-            className="btn-outline justify-center min-w-[120px]"
+            className="btn-outline min-w-[120px] justify-center"
           >
             {modal.cancelText}
           </button>
 
           <button
+            type="button"
             onClick={() => close(true)}
-            className={`font-semibold py-3 px-6 rounded-lg transition-all duration-300 inline-flex items-center justify-center gap-2 min-w-[120px] ${variant.buttonClass}`}
+            className={`inline-flex min-w-[120px] items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all duration-300 ${variant.buttonClass}`}
           >
             {modal.confirmText}
           </button>
@@ -167,15 +174,19 @@ function ConfirmModal({ modal, close, isRtl }) {
 export default function AdminLayout() {
   const [admin, setAdmin] = useState(null)
   const [loading, setLoading] = useState(true)
+
   const [sidebarOpen, setSidebarOpen] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
   )
+
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false
   )
+
   const [adminLang, setAdminLang] = useState(
     localStorage.getItem('admin_lang') || 'ar'
   )
+
   const [unreadCount, setUnreadCount] = useState(0)
 
   const [confirmModal, setConfirmModal] = useState({
@@ -357,13 +368,13 @@ export default function AdminLayout() {
   if (loading) {
     return (
       <div
-        className={`min-h-screen bg-gray-50 flex items-center justify-center ${
+        className={`flex min-h-screen items-center justify-center bg-gray-50 ${
           isRtl ? 'font-ar' : 'font-en'
         }`}
         dir={isRtl ? 'rtl' : 'ltr'}
       >
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center">
-          <div className="w-12 h-12 mx-auto mb-4 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
           <p className="text-gray-600">
             {isRtl ? 'جارٍ التحميل...' : 'Loading...'}
           </p>
@@ -426,19 +437,23 @@ export default function AdminLayout() {
           className={`min-h-screen bg-gray-50 ${isRtl ? 'font-ar' : 'font-en'}`}
           dir={isRtl ? 'rtl' : 'ltr'}
         >
-          <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
+          <ConfirmModal
+            modal={confirmModal}
+            close={closeConfirm}
+            isRtl={isRtl}
+          />
 
           <header
             className="fixed inset-x-0 top-0 z-50 h-[76px] border-b border-white/15 shadow-lg"
             style={{ backgroundColor: ADMIN_BRAND }}
           >
-            <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-4">
+            <div className="flex h-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6">
+              <div className="flex min-w-0 items-center gap-3 lg:gap-4">
                 {isMobile && (
                   <button
                     type="button"
                     onClick={() => setSidebarOpen((open) => !open)}
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white transition hover:bg-white/25"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white transition hover:bg-white/25"
                     aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
                   >
                     {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
@@ -448,33 +463,36 @@ export default function AdminLayout() {
                 <img
                   src="/logowhite.png"
                   alt="Yemen Heritage"
-                  className="h-14 w-auto shrink-0"
+                  className="h-12 w-auto shrink-0 sm:h-14"
                   onError={(event) => {
                     event.currentTarget.style.display = 'none'
                   }}
                 />
 
-                <div className="min-w-0">
-                  <h1 className="truncate text-sm font-bold text-white sm:text-base">
+                <div className="hidden min-w-0 lg:block">
+                  <h1 className="truncate text-base font-bold text-white">
                     منظمة تراث اليمن لأجل السلام
                   </h1>
-                  <p className="mt-0.5 truncate text-xs font-medium text-white/85 sm:text-sm">
+
+                  <p className="mt-0.5 truncate text-sm font-medium text-white/85">
                     Yemen Heritage for Peace Organization
                   </p>
                 </div>
               </div>
 
-              <div className="flex min-w-0 items-center gap-4">
+              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
                 <button
                   type="button"
                   onClick={toggleAdminLang}
-                  className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition hover:text-white"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white/90 transition hover:bg-white/20 hover:text-white"
                 >
                   <Globe size={17} />
-                  <span className="hidden sm:inline">{t.switchLang}</span>
+                  <span className="hidden sm:inline">
+                    {t.switchLang}
+                  </span>
                 </button>
 
-                <div className="hidden sm:flex min-w-0 items-center gap-2">
+                <div className="hidden min-w-0 items-center gap-2 sm:flex">
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white"
                     style={{ color: ADMIN_BRAND }}
@@ -482,7 +500,7 @@ export default function AdminLayout() {
                     <User size={17} />
                   </div>
 
-                  <div className="min-w-0">
+                  <div className="hidden min-w-0 md:block">
                     <p className="truncate text-sm font-semibold text-white">
                       {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
                     </p>
@@ -503,7 +521,7 @@ export default function AdminLayout() {
           </header>
 
           <aside
-            className={`fixed bottom-0 top-[76px] border-white/15 z-40 transition-all duration-300 shadow-2xl ${
+            className={`fixed bottom-0 top-[76px] z-40 border-white/15 shadow-2xl transition-all duration-300 ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
@@ -518,7 +536,7 @@ export default function AdminLayout() {
               <button
                 type="button"
                 onClick={() => setSidebarOpen((open) => !open)}
-                className={`absolute top-6 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/10 transition hover:scale-105`}
+                className="absolute top-6 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/10 transition hover:scale-105"
                 style={{
                   color: ADMIN_BRAND,
                   [isRtl ? 'left' : 'right']: '-18px',
@@ -529,8 +547,8 @@ export default function AdminLayout() {
               </button>
             )}
 
-            <div className="h-full flex flex-col">
-              <nav className="flex-1 p-3 pt-6 space-y-1 overflow-y-auto">
+            <div className="flex h-full flex-col">
+              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
                 {navItems.map((item) => {
                   const Icon = iconMap[item.key] || LayoutDashboard
                   const active = isActiveLink(item.href)
@@ -561,7 +579,7 @@ export default function AdminLayout() {
                             sidebarOpen || isMobile
                               ? 'ms-auto'
                               : 'absolute -top-1 -end-1'
-                          } bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-bold`}
+                          } flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white`}
                         >
                           {unreadCount > 99 ? '99+' : unreadCount}
                         </span>
@@ -571,18 +589,20 @@ export default function AdminLayout() {
                 })}
               </nav>
 
-              <div className="p-3 border-t border-white/15">
+              <div className="border-t border-white/15 p-3">
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className={`w-full flex items-center gap-3 rounded-xl border border-white/20 bg-white/15 px-3 py-3 text-white transition hover:bg-red-600 hover:border-red-600 ${
+                  className={`flex w-full items-center gap-3 rounded-xl border border-white/20 bg-white/15 px-3 py-3 text-white transition hover:border-red-600 hover:bg-red-600 ${
                     !sidebarOpen && !isMobile ? 'justify-center' : ''
                   }`}
                 >
                   <LogOut size={19} className="shrink-0" />
 
                   {(sidebarOpen || isMobile) && (
-                    <span className="text-sm font-bold">{t.logout}</span>
+                    <span className="text-sm font-bold">
+                      {t.logout}
+                    </span>
                   )}
                 </button>
               </div>
@@ -591,7 +611,7 @@ export default function AdminLayout() {
 
           {isMobile && sidebarOpen && (
             <div
-              className="fixed inset-x-0 bottom-0 top-[76px] bg-black/40 z-30 lg:hidden"
+              className="fixed inset-x-0 bottom-0 top-[76px] z-30 bg-black/40 lg:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
