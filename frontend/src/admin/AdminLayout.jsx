@@ -30,14 +30,14 @@ export const ConfirmContext = React.createContext()
 const confirmStyles = {
   danger: {
     icon: Trash2,
-    iconClass: 'text-red-500 bg-red-50',
-    buttonClass: 'bg-red-500 hover:bg-red-600 text-white',
+    iconClass: 'text-red-600 bg-red-50',
+    buttonClass: 'bg-red-600 hover:bg-red-700 text-white',
     defaultConfirmText: { ar: 'نعم، تابع', en: 'Yes, continue' },
   },
   logout: {
     icon: ShieldAlert,
-    iconClass: 'text-amber-500 bg-amber-50',
-    buttonClass: 'bg-amber-500 hover:bg-amber-600 text-white',
+    iconClass: 'text-red-600 bg-red-50',
+    buttonClass: 'bg-red-600 hover:bg-red-700 text-white',
     defaultConfirmText: { ar: 'تسجيل الخروج', en: 'Logout' },
   },
   primary: {
@@ -105,7 +105,10 @@ function ConfirmModal({ modal, close, isRtl }) {
         </div>
 
         <div className="flex flex-col-reverse sm:flex-row gap-3 justify-end p-6 bg-gray-50/70 rounded-b-2xl">
-          <button onClick={() => close(false)} className="btn-outline justify-center min-w-[120px]">
+          <button
+            onClick={() => close(false)}
+            className="btn-outline justify-center min-w-[120px]"
+          >
             {modal.cancelText}
           </button>
 
@@ -130,7 +133,9 @@ export default function AdminLayout() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false
   )
-  const [adminLang, setAdminLang] = useState(localStorage.getItem('admin_lang') || 'ar')
+  const [adminLang, setAdminLang] = useState(
+    localStorage.getItem('admin_lang') || 'ar'
+  )
   const [unreadCount, setUnreadCount] = useState(0)
 
   const [confirmModal, setConfirmModal] = useState({
@@ -199,7 +204,7 @@ export default function AdminLayout() {
     [isRtl]
   )
 
-  const fetchUnread = useCallback((role = admin?.role) => {
+  const fetchUnread = useCallback((role) => {
     if (role !== 'super_admin') {
       setUnreadCount(0)
       return Promise.resolve()
@@ -209,7 +214,7 @@ export default function AdminLayout() {
       .get('/contact/unread-count')
       .then((data) => setUnreadCount(data?.count || 0))
       .catch(() => {})
-  }, [admin?.role])
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -237,6 +242,8 @@ export default function AdminLayout() {
         if (freshAdmin.role === 'super_admin') {
           fetchUnread(freshAdmin.role)
           interval = setInterval(() => fetchUnread(freshAdmin.role), 30000)
+        } else {
+          setUnreadCount(0)
         }
       } catch (error) {
         if (cancelled) return
@@ -261,12 +268,7 @@ export default function AdminLayout() {
     const handleResize = () => {
       const mobile = window.innerWidth < 1024
       setIsMobile(mobile)
-
-      if (mobile) {
-        setSidebarOpen(false)
-      } else {
-        setSidebarOpen(true)
-      }
+      setSidebarOpen(!mobile)
     }
 
     handleResize()
@@ -277,17 +279,19 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (location.pathname === '/admin/messages') {
-      fetchUnread()
+      fetchUnread(admin?.role)
     }
-  }, [location.pathname, fetchUnread])
+  }, [location.pathname, admin?.role, fetchUnread])
 
   const handleLogout = async () => {
     const confirmed = await requestConfirm({
       title: isRtl ? 'تأكيد تسجيل الخروج' : 'Confirm logout',
       message: isRtl
-        ? 'هل تريد تسجيل الخروج من لوحة الإدارة الآن؟'
-        : 'Do you want to log out of the admin dashboard now?',
+        ? 'هل تريد تسجيل الخروج من لوحة الإدارة؟'
+        : 'Do you want to log out of the admin dashboard?',
       variant: 'logout',
+      confirmText: isRtl ? 'تسجيل الخروج' : 'Logout',
+      cancelText: isRtl ? 'إلغاء' : 'Cancel',
     })
 
     if (!confirmed) return
@@ -363,6 +367,9 @@ export default function AdminLayout() {
     return location.pathname === href || location.pathname.startsWith(`${href}/`)
   }
 
+  const currentPageLabel =
+    navItems.find((item) => isActiveLink(item.href))?.label || t.adminPanel
+
   return (
     <AdminLangContext.Provider value={contextValue}>
       <ConfirmContext.Provider value={contextValue}>
@@ -386,20 +393,25 @@ export default function AdminLayout() {
             <div className="flex items-center justify-between p-4 border-b border-white/15">
               {sidebarOpen && (
                 <div>
-                  <div className="text-white font-bold text-sm">{t.adminPanel}</div>
-                  <div className="text-white/75 text-xs">{t.yemenHeritage}</div>
+                  <div className="text-white font-bold text-sm">
+                    {t.adminPanel}
+                  </div>
+                  <div className="text-white/75 text-xs">
+                    {t.yemenHeritage}
+                  </div>
                 </div>
               )}
 
               <button
                 onClick={() => setSidebarOpen((open) => !open)}
                 className="text-white/70 hover:text-white p-1 transition-colors"
+                aria-label={isRtl ? 'طي القائمة' : 'Toggle sidebar'}
               >
                 {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
               </button>
             </div>
 
-            <nav className="p-3 space-y-1 h-[calc(100vh-200px)] overflow-y-auto">
+            <nav className="p-3 space-y-1 h-[calc(100vh-215px)] overflow-y-auto">
               {navItems.map((item) => {
                 const Icon = iconMap[item.key] || LayoutDashboard
                 const active = isActiveLink(item.href)
@@ -441,15 +453,19 @@ export default function AdminLayout() {
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/85 hover:bg-white/10 hover:text-white transition-colors mb-2"
               >
                 <Globe size={18} />
-                {sidebarOpen && <span className="text-sm font-medium">{t.switchLang}</span>}
+                {sidebarOpen && (
+                  <span className="text-sm font-medium">{t.switchLang}</span>
+                )}
               </button>
 
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white hover:bg-red-500/25 transition-colors"
+                className="w-full flex items-center gap-3 rounded-xl border border-red-100 bg-white/95 px-3 py-2.5 text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
               >
-                <LogOut size={18} />
-                {sidebarOpen && <span className="text-sm font-medium">{t.logout}</span>}
+                <LogOut size={18} className="text-red-600" />
+                {sidebarOpen && (
+                  <span className="text-sm font-bold">{t.logout}</span>
+                )}
               </button>
             </div>
           </aside>
@@ -474,38 +490,84 @@ export default function AdminLayout() {
                     : 'ml-16'
             }`}
           >
-            <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30 shadow-sm">
-              <div className="flex items-center gap-3">
-                {isMobile && (
-                  <button
-                    onClick={() => setSidebarOpen((open) => !open)}
-                    className="text-gray-600 hover:text-primary p-2 rounded-lg transition-colors"
-                    aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
-                  >
-                    {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-                  </button>
-                )}
+            <header className="sticky top-0 z-30 bg-gray-50/80 px-4 py-3 backdrop-blur">
+              <div className="rounded-2xl border border-primary/10 bg-white px-4 py-3 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
+                    {isMobile && (
+                      <button
+                        onClick={() => setSidebarOpen((open) => !open)}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/10 bg-white text-primary shadow-sm transition hover:border-primary hover:bg-primary/5"
+                        aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
+                      >
+                        {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+                      </button>
+                    )}
 
-                <div className="text-sm text-gray-500">
-                  {navItems.find((item) => isActiveLink(item.href))?.label || t.adminPanel}
-                </div>
-              </div>
+                    <div className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-white shadow-sm sm:flex">
+                      <img
+                        src="/logo.png"
+                        alt="Yemen Heritage"
+                        className="h-8 w-auto"
+                        onError={(event) => {
+                          event.currentTarget.style.display = 'none'
+                        }}
+                      />
+                    </div>
 
-              <div className="flex items-center gap-3 text-sm text-gray-600 min-w-0">
-                {admin.role === 'super_admin' && (
-                  <span className="hidden sm:inline-flex text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                    {isRtl ? 'مشرف رئيسي' : 'Super Admin'}
-                  </span>
-                )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wide text-primary">
+                          {t.adminPanel}
+                        </span>
 
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                    <User size={16} className="text-primary" />
+                        {admin.role === 'super_admin' && (
+                          <span className="hidden rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary sm:inline-flex">
+                            {isRtl ? 'مشرف رئيسي' : 'Super Admin'}
+                          </span>
+                        )}
+                      </div>
+
+                      <h1 className="mt-0.5 truncate text-base font-bold text-dark sm:text-lg">
+                        {currentPageLabel}
+                      </h1>
+                    </div>
                   </div>
 
-                  <span className="truncate max-w-[120px] sm:max-w-[220px]">
-                    {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
-                  </span>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={toggleAdminLang}
+                      className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-dark shadow-sm transition hover:border-primary hover:text-primary md:inline-flex"
+                    >
+                      <Globe size={16} className="text-primary" />
+                      {t.switchLang}
+                    </button>
+
+                    <div className="flex min-w-0 items-center gap-2 rounded-full border border-primary/10 bg-primary/5 px-2.5 py-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm">
+                        <User size={16} />
+                      </div>
+
+                      <div className="hidden min-w-0 sm:block">
+                        <p className="truncate text-sm font-semibold text-dark">
+                          {admin?.name ||
+                            admin?.email ||
+                            (isRtl ? 'مشرف' : 'Admin')}
+                        </p>
+
+                        <p className="text-xs text-gray-500">
+                          {admin.role === 'super_admin'
+                            ? isRtl
+                              ? 'مشرف رئيسي'
+                              : 'Super Admin'
+                            : isRtl
+                              ? 'مشرف'
+                              : 'Admin'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </header>
