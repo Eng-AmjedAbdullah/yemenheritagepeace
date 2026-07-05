@@ -281,6 +281,7 @@ export default function ManageSettings() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.phone} name="contact_phone" dir="ltr" />
+
                   <Field
                     label={t.email}
                     name="contact_email"
@@ -291,7 +292,12 @@ export default function ManageSettings() {
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.addressAr} name="address_ar" />
-                  <Field label={t.addressEn} name="address_en" dir="ltr" />
+
+                  <Field
+                    label={t.addressEn}
+                    name="address_en"
+                    dir="ltr"
+                  />
                 </div>
               </div>
             )}
@@ -304,15 +310,17 @@ export default function ManageSettings() {
 
                 <UploadBox
                   value={form.home_about_image_url || ''}
-                  onChange={(value) =>
-                    updateField('home_about_image_url', value)
-                  }
+                  onChange={(value) => updateField('home_about_image_url', value)}
                   folder="site"
                   label={isRtl ? 'صورة قسم من نحن' : 'About Section Image'}
                 />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field label={t.altAr} name="home_about_image_alt_ar" />
+                  <Field
+                    label={t.altAr}
+                    name="home_about_image_alt_ar"
+                  />
+
                   <Field
                     label={t.altEn}
                     name="home_about_image_alt_en"
@@ -404,7 +412,11 @@ export default function ManageSettings() {
                 <SectionTitle>{t.footerText}</SectionTitle>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <TextArea label={t.footerDescAr} name="footer_desc_ar" />
+                  <TextArea
+                    label={t.footerDescAr}
+                    name="footer_desc_ar"
+                  />
+
                   <TextArea
                     label={t.footerDescEn}
                     name="footer_desc_en"
