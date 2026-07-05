@@ -33,7 +33,6 @@ export default function Dashboard() {
     messages: 0,
     heritage: 0,
     partners: 0,
-    hero: 0,
     unreadMessages: 0,
   })
 
@@ -52,7 +51,6 @@ export default function Dashboard() {
       setLoading(true)
 
       const features = getAllowedFeatures(admin.role)
-
       const requests = []
 
       if (features.viewNews) {
@@ -97,13 +95,6 @@ export default function Dashboard() {
         })
       }
 
-      if (features.viewHero) {
-        requests.push({
-          type: 'hero',
-          request: api.get('/hero/all'),
-        })
-      }
-
       const results = await Promise.allSettled(
         requests.map((item) => item.request)
       )
@@ -117,7 +108,6 @@ export default function Dashboard() {
         messages: 0,
         heritage: 0,
         partners: 0,
-        hero: 0,
         unreadMessages: 0,
       }
 
@@ -171,19 +161,27 @@ export default function Dashboard() {
 
     const allCards = getDashboardCards(admin.role, stats, t)
 
-    /*
-      Required fix:
-      If the admin is NOT super_admin, hide these dashboard count cards:
-      - الأخبار
-      - الفعاليات
-    */
+    const withoutHeroSlides = allCards.filter((card) => {
+      const href = String(card.href || '').toLowerCase()
+      const icon = String(card.icon || '').toLowerCase()
+      const label = String(card.label || '').toLowerCase()
+
+      return (
+        href !== '/admin/hero' &&
+        icon !== 'images' &&
+        !label.includes('hero') &&
+        !label.includes('slides') &&
+        !label.includes('واجهة')
+      )
+    })
+
     if (!isSuperAdmin) {
-      return allCards.filter((card) => {
+      return withoutHeroSlides.filter((card) => {
         return card.href !== '/admin/news' && card.href !== '/admin/events'
       })
     }
 
-    return allCards
+    return withoutHeroSlides
   }, [admin?.role, stats, t, isSuperAdmin])
 
   const quickActions = useMemo(() => {
@@ -191,31 +189,18 @@ export default function Dashboard() {
     return getQuickActions(admin.role, t)
   }, [admin?.role, t])
 
-  if (!admin || loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">
-            {isRtl ? 'جارٍ التحميل...' : 'Loading...'}
-          </p>
-        </div>
-      </div>
-    )
-  }
-
   const renderCardIcon = (icon) => {
     const icons = {
-      Newspaper: <Newspaper size={20} className="text-white" />,
-      Calendar: <Calendar size={20} className="text-white" />,
-      Mountain: <Mountain size={20} className="text-white" />,
-      Handshake: <Handshake size={20} className="text-white" />,
-      Images: <Images size={20} className="text-white" />,
-      MessageSquare: <MessageSquare size={20} className="text-white" />,
-      Users: <Users size={20} className="text-white" />,
+      Newspaper: <Newspaper size={19} className="text-white" />,
+      Calendar: <Calendar size={19} className="text-white" />,
+      Mountain: <Mountain size={19} className="text-white" />,
+      Handshake: <Handshake size={19} className="text-white" />,
+      Images: <Images size={19} className="text-white" />,
+      MessageSquare: <MessageSquare size={19} className="text-white" />,
+      Users: <Users size={19} className="text-white" />,
     }
 
-    return icons[icon] || <Activity size={20} className="text-white" />
+    return icons[icon] || <Activity size={19} className="text-white" />
   }
 
   const renderActionIcon = (icon) => {
@@ -233,54 +218,89 @@ export default function Dashboard() {
     return icons[icon] || <Activity size={16} />
   }
 
+  const getLocalizedTitle = (item) => {
+    if (isRtl) return item.title || item.title_en || '—'
+    return item.title_en || item.title || '—'
+  }
+
+  const formatDate = (value) => {
+    if (!value) return t.notSet || '—'
+
+    try {
+      return new Date(value).toLocaleDateString(isRtl ? 'ar-YE' : 'en-US')
+    } catch {
+      return t.notSet || '—'
+    }
+  }
+
+  if (!admin || loading) {
+    return (
+      <div className="flex min-h-[55vh] items-center justify-center py-12">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
+
+          <p className="text-sm text-gray-500">
+            {isRtl ? 'جارٍ التحميل...' : 'Loading...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-dark flex items-center gap-2">
-          <Activity className="text-primary" size={32} />
-          {t.dashboardTitle}
+    <div className="w-full max-w-full overflow-hidden">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-dark sm:text-3xl">
+          <Activity className="shrink-0 text-primary" size={30} />
+          <span className="min-w-0 truncate">
+            {t.dashboardTitle}
+          </span>
         </h1>
 
-        <p className="text-gray-500 text-sm mt-2">
+        <p className="mt-2 text-sm leading-6 text-gray-500">
           {t.dashboardSubtitle}
         </p>
       </div>
 
       {cards.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4 mb-8">
+        <div className="mb-8 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
           {cards.map((card, index) => (
             <Link
               key={`${card.href}-${index}`}
               to={card.href}
-              className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-primary/20 transition-all group relative overflow-hidden"
+              className="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:border-primary/20 hover:shadow-lg sm:p-5"
             >
               <div
                 className={`absolute top-0 ${
                   isRtl ? 'left-0' : 'right-0'
-                } w-20 h-20 bg-gradient-to-br from-primary/5 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+                } h-20 w-20 rounded-bl-full bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
               />
 
-              <div className="relative">
-                <div className="flex items-center justify-between mb-3">
+              <div className="relative flex items-center gap-4 sm:block">
+                <div className="flex shrink-0 items-center justify-between sm:mb-3">
                   <div
-                    className={`w-11 h-11 ${card.color} rounded-xl flex items-center justify-center shadow-md`}
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl shadow-md ${card.color}`}
                   >
                     {renderCardIcon(card.icon)}
                   </div>
-
-                  {card.badge > 0 && (
-                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                      {card.badge}
-                    </span>
-                  )}
                 </div>
 
-                <div className="text-3xl font-bold text-dark mb-1">
-                  {card.value}
-                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="text-3xl font-bold text-dark sm:text-4xl">
+                      {card.value}
+                    </div>
 
-                <div className="text-sm text-gray-500">
-                  {card.label}
+                    {card.badge > 0 && (
+                      <span className="shrink-0 rounded-full bg-red-500 px-2 py-0.5 text-xs font-bold text-white">
+                        {card.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-1 line-clamp-1 text-sm text-gray-500 sm:mt-2">
+                    {card.label}
+                  </div>
                 </div>
               </div>
             </Link>
@@ -288,61 +308,47 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6 mb-8">
+      <div className="mb-8 grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-6">
         {features.viewNews && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-dark text-lg">
-                {t.latestNews}
-              </h2>
-
-              <Link
-                to="/admin/news"
-                className="text-primary text-sm hover:underline flex items-center gap-1"
-              >
-                {t.viewAll}
-                <ExternalLink size={12} />
-              </Link>
-            </div>
+          <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+            <SectionHeader
+              title={t.latestNews}
+              link="/admin/news"
+              linkText={t.viewAll}
+            />
 
             <div className="space-y-3">
               {recentNews.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">
-                  {t.noNews}
-                </p>
+                <EmptyState text={t.noNews} />
               ) : (
                 recentNews.map((item) => (
                   <div
                     key={item.id}
-                    className="flex gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100"
+                    className="flex gap-3 rounded-xl border border-gray-100 p-3 transition-colors hover:bg-gray-50"
                   >
                     {item.image_url ? (
                       <img
                         src={resolveMediaUrl(item.image_url)}
                         alt=""
-                        className="w-16 h-16 object-cover rounded-lg flex-shrink-0"
+                        className="h-16 w-16 shrink-0 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                         <Newspaper size={20} className="text-primary" />
                       </div>
                     )}
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-dark text-sm line-clamp-1">
-                        {isRtl ? item.title : item.title_en || item.title}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="line-clamp-1 text-sm font-medium text-dark">
+                        {getLocalizedTitle(item)}
                       </h3>
 
-                      <p className="text-xs text-gray-400 mt-1">
-                        {item.created_at
-                          ? new Date(item.created_at).toLocaleDateString(
-                              isRtl ? 'ar-YE' : 'en-US'
-                            )
-                          : t.notSet}
+                      <p className="mt-1 text-xs text-gray-400">
+                        {formatDate(item.created_at)}
                       </p>
 
                       <span
-                        className={`inline-block text-xs px-2 py-0.5 rounded-full mt-1 ${
+                        className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${
                           item.published
                             ? 'bg-green-100 text-green-700'
                             : 'bg-gray-100 text-gray-600'
@@ -355,38 +361,28 @@ export default function Dashboard() {
                 ))
               )}
             </div>
-          </div>
+          </section>
         )}
 
         {features.viewEvents && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-dark text-lg">
-                {t.upcomingEvents}
-              </h2>
-
-              <Link
-                to="/admin/events"
-                className="text-primary text-sm hover:underline flex items-center gap-1"
-              >
-                {t.viewAll}
-                <ExternalLink size={12} />
-              </Link>
-            </div>
+          <section className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-6">
+            <SectionHeader
+              title={t.upcomingEvents}
+              link="/admin/events"
+              linkText={t.viewAll}
+            />
 
             <div className="space-y-3">
               {recentEvents.length === 0 ? (
-                <p className="text-gray-400 text-sm text-center py-8">
-                  {t.noEvents}
-                </p>
+                <EmptyState text={t.noEvents} />
               ) : (
                 recentEvents.map((item) => (
                   <div
                     key={item.id}
-                    className="flex gap-3 p-3 rounded-xl hover:bg-gray-50 transition-colors border border-gray-100"
+                    className="flex gap-3 rounded-xl border border-gray-100 p-3 transition-colors hover:bg-gray-50"
                   >
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-lg ${
                         item.type === 'event'
                           ? 'bg-blue-100'
                           : item.type === 'seminar'
@@ -410,62 +406,90 @@ export default function Dashboard() {
                       />
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-dark text-sm line-clamp-1">
-                        {isRtl ? item.title : item.title_en || item.title}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="line-clamp-1 text-sm font-medium text-dark">
+                        {getLocalizedTitle(item)}
                       </h3>
 
-                      <p className="text-xs text-gray-400 mt-1">
-                        {item.event_date
-                          ? new Date(item.event_date).toLocaleDateString(
-                              isRtl ? 'ar-YE' : 'en-US'
-                            )
-                          : t.notSet}
+                      <p className="mt-1 text-xs text-gray-400">
+                        {formatDate(item.event_date)}
                       </p>
                     </div>
                   </div>
                 ))
               )}
             </div>
-          </div>
+          </section>
         )}
       </div>
 
-      <div className="bg-gradient-to-br from-primary/10 via-white to-primary/5 rounded-2xl p-6 shadow-sm border border-primary/20">
-        <h2 className="font-bold text-dark mb-4 text-lg">
-          {t.quickActions}
-        </h2>
+      {quickActions.length > 0 && (
+        <section className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-white to-primary/5 p-4 shadow-sm sm:p-6">
+          <h2 className="mb-4 text-lg font-bold text-dark">
+            {t.quickActions}
+          </h2>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action, index) => {
-            if (action.external) {
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+            {quickActions.map((action, index) => {
+              if (action.external) {
+                return (
+                  <a
+                    key={`${action.href}-${index}`}
+                    href={action.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn-outline justify-center py-3 text-sm"
+                  >
+                    {renderActionIcon(action.icon)}
+                    <span className="truncate">
+                      {action.label}
+                    </span>
+                  </a>
+                )
+              }
+
               return (
-                <a
+                <Link
                   key={`${action.href}-${index}`}
-                  href={action.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-outline text-sm py-3 justify-center"
+                  to={action.href}
+                  className="btn-outline justify-center py-3 text-sm"
                 >
                   {renderActionIcon(action.icon)}
-                  {action.label}
-                </a>
+                  <span className="truncate">
+                    {action.label}
+                  </span>
+                </Link>
               )
-            }
-
-            return (
-              <Link
-                key={`${action.href}-${index}`}
-                to={action.href}
-                className="btn-outline text-sm py-3 justify-center"
-              >
-                {renderActionIcon(action.icon)}
-                {action.label}
-              </Link>
-            )
-          })}
-        </div>
-      </div>
+            })}
+          </div>
+        </section>
+      )}
     </div>
+  )
+}
+
+function SectionHeader({ title, link, linkText }) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <h2 className="line-clamp-1 text-lg font-bold text-dark">
+        {title}
+      </h2>
+
+      <Link
+        to={link}
+        className="inline-flex shrink-0 items-center gap-1 text-sm text-primary hover:underline"
+      >
+        {linkText}
+        <ExternalLink size={12} />
+      </Link>
+    </div>
+  )
+}
+
+function EmptyState({ text }) {
+  return (
+    <p className="py-8 text-center text-sm text-gray-400">
+      {text}
+    </p>
   )
 }
