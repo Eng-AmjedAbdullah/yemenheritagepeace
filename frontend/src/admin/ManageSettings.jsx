@@ -177,9 +177,7 @@ export default function ManageSettings() {
   )
 
   const SectionTitle = ({ children }) => (
-    <h2 className="text-lg font-bold text-dark md:text-xl">
-      {children}
-    </h2>
+    <h2 className="text-lg font-bold text-dark md:text-xl">{children}</h2>
   )
 
   const UploadBox = ({ label, value, onChange, folder, lightBlue = false }) => (
@@ -293,11 +291,7 @@ export default function ManageSettings() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <Field label={t.addressAr} name="address_ar" />
 
-                  <Field
-                    label={t.addressEn}
-                    name="address_en"
-                    dir="ltr"
-                  />
+                  <Field label={t.addressEn} name="address_en" dir="ltr" />
                 </div>
               </div>
             )}
@@ -316,10 +310,7 @@ export default function ManageSettings() {
                 />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field
-                    label={t.altAr}
-                    name="home_about_image_alt_ar"
-                  />
+                  <Field label={t.altAr} name="home_about_image_alt_ar" />
 
                   <Field
                     label={t.altEn}
@@ -412,10 +403,7 @@ export default function ManageSettings() {
                 <SectionTitle>{t.footerText}</SectionTitle>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <TextArea
-                    label={t.footerDescAr}
-                    name="footer_desc_ar"
-                  />
+                  <TextArea label={t.footerDescAr} name="footer_desc_ar" />
 
                   <TextArea
                     label={t.footerDescEn}
