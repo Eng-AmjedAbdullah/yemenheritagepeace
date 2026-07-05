@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import api from '../lib/api'
-import { resolveMediaUrl } from '../lib/media'
 import toast from 'react-hot-toast'
 import ImageUpload from './ImageUpload'
 import { Save } from 'lucide-react'
@@ -8,151 +7,418 @@ import { useLang } from '../App'
 import { useAdminLang } from './adminI18n'
 
 const EMPTY = {
-  site_name_ar:'', site_name_en:'', logo_url:'', favicon_url:'',
-  contact_phone:'', contact_email:'', address_ar:'', address_en:'',
-  footer_desc_ar:'', footer_desc_en:'',
-  social_facebook:'', social_youtube:'', social_linkedin:'', social_x:'',
-  home_about_image_url:'', home_about_image_alt_ar:'', home_about_image_alt_en:'',
-  about_desc_ar:'', about_desc_en:'',
-  vision_ar:'', vision_en:'', mission_ar:'', mission_en:'',
+  site_name_ar: '',
+  site_name_en: '',
+  logo_url: '',
+  favicon_url: '',
+  contact_phone: '',
+  contact_email: '',
+  address_ar: '',
+  address_en: '',
+  footer_desc_ar: '',
+  footer_desc_en: '',
+  social_facebook: '',
+  social_youtube: '',
+  social_linkedin: '',
+  social_x: '',
+  home_about_image_url: '',
+  home_about_image_alt_ar: '',
+  home_about_image_alt_en: '',
+  about_desc_ar: '',
+  about_desc_en: '',
+  vision_ar: '',
+  vision_en: '',
+  mission_ar: '',
+  mission_en: '',
+}
+
+const toastTheme = {
+  success: {
+    duration: 3000,
+    style: {
+      background: '#166534',
+      color: '#ffffff',
+      border: '1px solid #15803d',
+      borderRadius: '12px',
+      fontSize: '14px',
+      padding: '14px 18px',
+      boxShadow: '0 8px 24px rgba(22, 101, 52, 0.25)',
+    },
+    iconTheme: {
+      primary: '#ffffff',
+      secondary: '#166534',
+    },
+  },
+
+  error: {
+    duration: 4000,
+    style: {
+      background: '#7f1d1d',
+      color: '#ffffff',
+      border: '1px solid #991b1b',
+      borderRadius: '12px',
+      fontSize: '14px',
+      padding: '14px 18px',
+      boxShadow: '0 8px 24px rgba(127, 29, 29, 0.25)',
+    },
+    iconTheme: {
+      primary: '#ffffff',
+      secondary: '#7f1d1d',
+    },
+  },
 }
 
 export default function ManageSettings() {
   const { refreshSettings } = useLang()
-  const { t, isRtl }        = useAdminLang()
-  const [form, setForm]       = useState(EMPTY)
+  const { t, isRtl } = useAdminLang()
+
+  const [form, setForm] = useState(EMPTY)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving]   = useState(false)
+  const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState('identity')
 
-  const load = () => {
+  const tabs = [
+    { id: 'identity', label: isRtl ? 'هوية الموقع' : 'Identity' },
+    { id: 'contact', label: isRtl ? 'التواصل' : 'Contact' },
+    { id: 'about', label: isRtl ? 'من نحن' : 'About' },
+    { id: 'social', label: isRtl ? 'السوشيال' : 'Social' },
+    { id: 'footer', label: isRtl ? 'التذييل' : 'Footer' },
+  ]
+
+  const load = async () => {
     setLoading(true)
-    api.get('/settings').then(d=>setForm({...EMPTY,...(d||{})})).catch(()=>setForm(EMPTY)).finally(()=>setLoading(false))
+
+    try {
+      const data = await api.get('/settings')
+      setForm({ ...EMPTY, ...(data || {}) })
+    } catch {
+      setForm(EMPTY)
+    } finally {
+      setLoading(false)
+    }
   }
-  useEffect(load, [])
+
+  useEffect(() => {
+    load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const updateField = (key, value) => {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+    }))
+  }
 
   const save = async () => {
     setSaving(true)
-    try { await api.put('/settings', form); toast.success(t.settingsSaved); refreshSettings?.(); load() }
-    catch(e) { toast.error(e.message) }
-    setSaving(false)
+
+    try {
+      await api.put('/settings', form)
+
+      toast.success(
+        t.settingsSaved ||
+          (isRtl ? 'تم حفظ الإعدادات بنجاح' : 'Settings saved successfully'),
+        toastTheme.success
+      )
+
+      refreshSettings?.()
+      await load()
+    } catch (error) {
+      toast.error(
+        error?.message ||
+          (isRtl ? 'حدث خطأ أثناء حفظ الإعدادات' : 'Failed to save settings'),
+        toastTheme.error
+      )
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const F = ({ label, k, dir, placeholder, type='text' }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <input type={type} value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} className="input-field" dir={dir||''} placeholder={placeholder||''}/>
-    </div>
-  )
-  const TA = ({ label, k, rows=4 }) => (
-    <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <textarea rows={rows} value={form[k]||''} onChange={e=>setForm({...form,[k]:e.target.value})} className="input-field resize-none"/>
+  const Field = ({ label, name, dir, placeholder, type = 'text' }) => (
+    <div className="min-w-0">
+      <label className="mb-2 block text-sm font-semibold text-gray-700">
+        {label}
+      </label>
+
+      <input
+        type={type}
+        value={form[name] || ''}
+        onChange={(event) => updateField(name, event.target.value)}
+        className="input-field block w-full max-w-full min-w-0"
+        dir={dir || ''}
+        placeholder={placeholder || ''}
+      />
     </div>
   )
 
-  const tabs = [
-    { id:'identity', label: isRtl ? 'هوية الموقع' : 'Identity' },
-    { id:'contact',  label: isRtl ? 'التواصل'    : 'Contact'  },
-    { id:'about',    label: isRtl ? 'من نحن'     : 'About'    },
-    { id:'social',   label: isRtl ? 'السوشيال'   : 'Social'   },
-    { id:'footer',   label: isRtl ? 'التذييل'    : 'Footer'   },
-  ]
+  const TextArea = ({ label, name, rows = 4, dir }) => (
+    <div className="min-w-0">
+      <label className="mb-2 block text-sm font-semibold text-gray-700">
+        {label}
+      </label>
+
+      <textarea
+        rows={rows}
+        value={form[name] || ''}
+        onChange={(event) => updateField(name, event.target.value)}
+        className="input-field block w-full max-w-full min-w-0 resize-none"
+        dir={dir || ''}
+      />
+    </div>
+  )
+
+  const SectionTitle = ({ children }) => (
+    <h2 className="text-lg font-bold text-dark md:text-xl">
+      {children}
+    </h2>
+  )
+
+  const UploadBox = ({ label, value, onChange, folder, lightBlue = false }) => (
+    <div
+      className={`max-w-full overflow-hidden rounded-2xl border p-3 sm:p-4 ${
+        lightBlue
+          ? 'border-sky-100 bg-sky-50/80 [&_.bg-white]:!bg-sky-50 [&_img]:max-w-full'
+          : 'border-gray-100 bg-gray-50/60'
+      }`}
+    >
+      <ImageUpload
+        value={value || ''}
+        onChange={onChange}
+        folder={folder}
+        label={label}
+      />
+    </div>
+  )
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-dark">{t.manageSiteSettings}</h1>
-        <button onClick={save} disabled={saving||loading} className="btn-primary"><Save size={16}/>{saving?t.saving:t.save}</button>
+    <div className="w-full max-w-full overflow-hidden">
+      <div className="mb-5 sm:mb-6">
+        <h1 className="text-2xl font-bold text-dark md:text-3xl">
+          {t.manageSiteSettings}
+        </h1>
+
+        <p className="mt-2 text-sm leading-6 text-gray-500 md:text-base">
+          {isRtl
+            ? 'إدارة هوية الموقع ومعلومات التواصل والمحتوى العام'
+            : 'Manage website identity, contact details, and public content'}
+        </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-xl w-fit">
-        {tabs.map(tab=>(
-          <button key={tab.id} onClick={()=>setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab===tab.id?'bg-white shadow text-dark':'text-gray-500 hover:text-dark'}`}>
-            {tab.label}
-          </button>
-        ))}
+      <div className="-mx-4 mb-5 overflow-x-auto px-4 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="inline-flex min-w-max gap-1 rounded-2xl bg-gray-100 p-1">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-all ${
+                activeTab === tab.id
+                  ? 'bg-white text-dark shadow-sm'
+                  : 'text-gray-500 hover:bg-white/60 hover:text-dark'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-        {loading ? <div className="text-center p-10 text-gray-400">{t.loading}</div> : (
+      <div className="max-w-full overflow-hidden rounded-2xl border border-gray-100 bg-white p-4 shadow-sm sm:p-5 md:p-6">
+        {loading ? (
+          <div className="flex min-h-[240px] items-center justify-center text-gray-400">
+            {t.loading}
+          </div>
+        ) : (
           <>
-            {/* FIX: Identity tab */}
-            {activeTab==='identity' && (
-              <div className="space-y-4">
-                <h2 className="font-bold text-dark mb-4">{isRtl ? 'هوية وشعار الموقع' : 'Site Identity & Logo'}</h2>
-                <div className="grid grid-cols-2 gap-4">
-                  <F label={isRtl?'اسم الموقع (عربي)':'Site Name (Arabic)'} k="site_name_ar"/>
-                  <F label={isRtl?'اسم الموقع (إنجليزي)':'Site Name (English)'} k="site_name_en" dir="ltr"/>
+            {activeTab === 'identity' && (
+              <div className="space-y-5">
+                <SectionTitle>
+                  {isRtl ? 'هوية وشعار الموقع' : 'Site Identity & Logo'}
+                </SectionTitle>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field
+                    label={isRtl ? 'اسم الموقع (عربي)' : 'Site Name (Arabic)'}
+                    name="site_name_ar"
+                  />
+
+                  <Field
+                    label={isRtl ? 'اسم الموقع (إنجليزي)' : 'Site Name (English)'}
+                    name="site_name_en"
+                    dir="ltr"
+                  />
                 </div>
-                <ImageUpload value={form.logo_url||''} onChange={v=>setForm({...form,logo_url:v})} folder="site" label={isRtl?'شعار الموقع (Logo)':'Site Logo'}/>
-                <F label={isRtl?'رابط الـ Favicon':'Favicon URL'} k="favicon_url" dir="ltr" placeholder="https://..."/>
+
+                <UploadBox
+                  value={form.logo_url || ''}
+                  onChange={(value) => updateField('logo_url', value)}
+                  folder="site"
+                  lightBlue
+                  label={isRtl ? 'شعار الموقع (Logo)' : 'Site Logo'}
+                />
+
+                <Field
+                  label={isRtl ? 'رابط الـ Favicon' : 'Favicon URL'}
+                  name="favicon_url"
+                  dir="ltr"
+                  placeholder="https://..."
+                />
               </div>
             )}
 
-            {/* Contact tab */}
-            {activeTab==='contact' && (
-              <div className="space-y-4">
-                <h2 className="font-bold text-dark mb-4">{t.contactInfo}</h2>
-                <F label={t.phone} k="contact_phone" dir="ltr"/>
-                <F label={t.email} k="contact_email" dir="ltr" type="email"/>
-                <div className="grid grid-cols-2 gap-4">
-                  <F label={t.addressAr} k="address_ar"/>
-                  <F label={t.addressEn} k="address_en" dir="ltr"/>
+            {activeTab === 'contact' && (
+              <div className="space-y-5">
+                <SectionTitle>{t.contactInfo}</SectionTitle>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label={t.phone} name="contact_phone" dir="ltr" />
+                  <Field
+                    label={t.email}
+                    name="contact_email"
+                    dir="ltr"
+                    type="email"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label={t.addressAr} name="address_ar" />
+                  <Field label={t.addressEn} name="address_en" dir="ltr" />
                 </div>
               </div>
             )}
 
-            {/* FIX: About tab */}
-            {activeTab==='about' && (
-              <div className="space-y-4">
-                <h2 className="font-bold text-dark mb-4">{isRtl?'محتوى صفحة من نحن':'About Page Content'}</h2>
-                <ImageUpload value={form.home_about_image_url||''} onChange={v=>setForm({...form,home_about_image_url:v})} folder="site" label={isRtl?'صورة قسم من نحن':'About Section Image'}/>
-                <div className="grid grid-cols-2 gap-4">
-                  <F label={t.altAr} k="home_about_image_alt_ar"/>
-                  <F label={t.altEn} k="home_about_image_alt_en" dir="ltr"/>
+            {activeTab === 'about' && (
+              <div className="space-y-5">
+                <SectionTitle>
+                  {isRtl ? 'محتوى صفحة من نحن' : 'About Page Content'}
+                </SectionTitle>
+
+                <UploadBox
+                  value={form.home_about_image_url || ''}
+                  onChange={(value) =>
+                    updateField('home_about_image_url', value)
+                  }
+                  folder="site"
+                  label={isRtl ? 'صورة قسم من نحن' : 'About Section Image'}
+                />
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <Field label={t.altAr} name="home_about_image_alt_ar" />
+                  <Field
+                    label={t.altEn}
+                    name="home_about_image_alt_en"
+                    dir="ltr"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <TA label={isRtl?'وصف المنظمة (عربي)':'Organization Description (AR)'} k="about_desc_ar" rows={3}/>
-                  <TA label={isRtl?'وصف المنظمة (إنجليزي)':'Organization Description (EN)'} k="about_desc_en" rows={3}/>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <TextArea
+                    label={
+                      isRtl
+                        ? 'وصف المنظمة (عربي)'
+                        : 'Organization Description (AR)'
+                    }
+                    name="about_desc_ar"
+                    rows={3}
+                  />
+
+                  <TextArea
+                    label={
+                      isRtl
+                        ? 'وصف المنظمة (إنجليزي)'
+                        : 'Organization Description (EN)'
+                    }
+                    name="about_desc_en"
+                    rows={3}
+                    dir="ltr"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <TA label={isRtl?'الرؤية (عربي)':'Vision (Arabic)'} k="vision_ar" rows={2}/>
-                  <TA label={isRtl?'الرؤية (إنجليزي)':'Vision (English)'} k="vision_en" rows={2}/>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <TextArea
+                    label={isRtl ? 'الرؤية (عربي)' : 'Vision (Arabic)'}
+                    name="vision_ar"
+                    rows={2}
+                  />
+
+                  <TextArea
+                    label={isRtl ? 'الرؤية (إنجليزي)' : 'Vision (English)'}
+                    name="vision_en"
+                    rows={2}
+                    dir="ltr"
+                  />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <TA label={isRtl?'الرسالة (عربي)':'Mission (Arabic)'} k="mission_ar" rows={2}/>
-                  <TA label={isRtl?'الرسالة (إنجليزي)':'Mission (English)'} k="mission_en" rows={2}/>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <TextArea
+                    label={isRtl ? 'الرسالة (عربي)' : 'Mission (Arabic)'}
+                    name="mission_ar"
+                    rows={2}
+                  />
+
+                  <TextArea
+                    label={isRtl ? 'الرسالة (إنجليزي)' : 'Mission (English)'}
+                    name="mission_en"
+                    rows={2}
+                    dir="ltr"
+                  />
                 </div>
               </div>
             )}
 
-            {/* Social tab */}
-            {activeTab==='social' && (
-              <div className="space-y-4">
-                <h2 className="font-bold text-dark mb-4">{t.socialLinks}</h2>
-                {[{k:'social_facebook',label:'Facebook'},{k:'social_youtube',label:'YouTube'},{k:'social_linkedin',label:'LinkedIn'},{k:'social_x',label:'X (Twitter)'}].map(({k,label})=>(
-                  <F key={k} label={label} k={k} dir="ltr" placeholder="https://..."/>
-                ))}
+            {activeTab === 'social' && (
+              <div className="space-y-5">
+                <SectionTitle>{t.socialLinks}</SectionTitle>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {[
+                    { name: 'social_facebook', label: 'Facebook' },
+                    { name: 'social_youtube', label: 'YouTube' },
+                    { name: 'social_linkedin', label: 'LinkedIn' },
+                    { name: 'social_x', label: 'X (Twitter)' },
+                  ].map((item) => (
+                    <Field
+                      key={item.name}
+                      label={item.label}
+                      name={item.name}
+                      dir="ltr"
+                      placeholder="https://..."
+                    />
+                  ))}
+                </div>
               </div>
             )}
 
-            {/* Footer tab */}
-            {activeTab==='footer' && (
-              <div className="space-y-4">
-                <h2 className="font-bold text-dark mb-4">{t.footerText}</h2>
-                <TA label={t.footerDescAr} k="footer_desc_ar"/>
-                <TA label={t.footerDescEn} k="footer_desc_en"/>
+            {activeTab === 'footer' && (
+              <div className="space-y-5">
+                <SectionTitle>{t.footerText}</SectionTitle>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <TextArea label={t.footerDescAr} name="footer_desc_ar" />
+                  <TextArea
+                    label={t.footerDescEn}
+                    name="footer_desc_en"
+                    dir="ltr"
+                  />
+                </div>
               </div>
             )}
           </>
         )}
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <button onClick={save} disabled={saving||loading} className="btn-primary"><Save size={16}/>{saving?t.saving:t.saveSettings}</button>
+      <div className="mt-5 flex justify-end pb-2">
+        <button
+          onClick={save}
+          disabled={saving || loading}
+          className="btn-primary w-full justify-center sm:w-auto"
+        >
+          <Save size={16} />
+          {saving
+            ? t.saving
+            : t.saveSettings || t.save || (isRtl ? 'حفظ' : 'Save')}
+        </button>
       </div>
     </div>
   )
