@@ -99,26 +99,27 @@ export default function AdminLogin() {
   return (
     <div
       dir={isRtl ? 'rtl' : 'ltr'}
-      className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/5 flex items-center justify-center px-4 py-8"
+      // Added 'relative' here so the absolute button positions itself to the screen edges
+      className="relative min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/5 flex items-center justify-center px-4 py-8"
       style={{
         fontFamily: isRtl
           ? "'Noto Kufi Arabic', sans-serif"
           : "'Inter', 'Exo 2', sans-serif",
       }}
     >
-      <div className="w-full max-w-md">
-        {/* Swapped logic: justify-end for Arabic (Right), justify-start for English (Left) */}
-        <div className={`mb-8 flex ${isRtl ? 'justify-end' : 'justify-start'}`}>
-          <button
-            type="button"
-            onClick={() => setUiLang((lang) => (lang === 'ar' ? 'en' : 'ar'))}
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-md transition hover:border-primary hover:shadow-lg"
-          >
-            <span>{txt.switchLang}</span>
-            <Globe size={15} className="text-primary" />
-          </button>
-        </div>
+      {/* Absolute positioning: Extreme Top-Right for Arabic, Extreme Top-Left for English */}
+      <div className={`absolute top-6 ${isRtl ? 'right-6' : 'left-6'}`}>
+        <button
+          type="button"
+          onClick={() => setUiLang((lang) => (lang === 'ar' ? 'en' : 'ar'))}
+          className="inline-flex items-center justify-center gap-2 rounded-full border border-primary/20 bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-md transition hover:border-primary hover:shadow-lg"
+        >
+          <span>{txt.switchLang}</span>
+          <Globe size={15} className="text-primary" />
+        </button>
+      </div>
 
+      <div className="w-full max-w-md">
         <div className="overflow-hidden rounded-3xl bg-white shadow-2xl border border-primary/10">
           <div className="bg-gradient-to-r from-primary to-primary-dark px-6 py-8 sm:px-8 text-center">
             <img
