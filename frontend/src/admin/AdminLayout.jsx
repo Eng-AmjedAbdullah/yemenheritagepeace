@@ -447,19 +447,24 @@ export default function AdminLayout() {
             className="fixed inset-x-0 top-0 z-50 h-[76px] border-b border-white/15 shadow-lg"
             style={{ backgroundColor: ADMIN_BRAND }}
           >
-            <div className="flex h-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6">
-              <div className="flex min-w-0 items-center gap-3 lg:gap-4">
-                {isMobile && (
-                  <button
-                    type="button"
-                    onClick={() => setSidebarOpen((open) => !open)}
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white transition hover:bg-white/25"
-                    aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
-                  >
-                    {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-                  </button>
-                )}
-
+            <div
+              className={`flex h-full items-center justify-between gap-3 px-3 sm:px-4 md:px-6 ${
+                isMobile
+                  ? isRtl
+                    ? 'flex-row-reverse'
+                    : 'flex-row'
+                  : ''
+              }`}
+            >
+              <div
+                className={`flex min-w-0 items-center gap-3 md:gap-4 ${
+                  isMobile
+                    ? isRtl
+                      ? 'order-2'
+                      : 'order-1'
+                    : ''
+                }`}
+              >
                 <img
                   src="/logowhite.png"
                   alt="Yemen Heritage"
@@ -480,43 +485,58 @@ export default function AdminLayout() {
                 </div>
               </div>
 
-              <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+              {isMobile && (
                 <button
                   type="button"
-                  onClick={toggleAdminLang}
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white/90 transition hover:bg-white/20 hover:text-white"
+                  onClick={() => setSidebarOpen((open) => !open)}
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/15 text-white transition hover:bg-white/25 ${
+                    isRtl ? 'order-1' : 'order-2'
+                  }`}
+                  aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
                 >
-                  <Globe size={17} />
-                  <span className="hidden sm:inline">
-                    {t.switchLang}
-                  </span>
+                  {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
                 </button>
+              )}
 
-                <div className="hidden min-w-0 items-center gap-2 sm:flex">
-                  <div
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white"
-                    style={{ color: ADMIN_BRAND }}
+              {!isMobile && (
+                <div className="flex min-w-0 items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={toggleAdminLang}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-white/90 transition hover:text-white"
                   >
-                    <User size={17} />
-                  </div>
+                    <Globe size={17} />
+                    <span className="hidden sm:inline">
+                      {t.switchLang}
+                    </span>
+                  </button>
 
-                  <div className="hidden min-w-0 md:block">
-                    <p className="truncate text-sm font-semibold text-white">
-                      {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
-                    </p>
+                  <div className="hidden min-w-0 items-center gap-2 sm:flex">
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white"
+                      style={{ color: ADMIN_BRAND }}
+                    >
+                      <User size={17} />
+                    </div>
 
-                    <p className="text-xs text-white/75">
-                      {admin.role === 'super_admin'
-                        ? isRtl
-                          ? 'مشرف رئيسي'
-                          : 'Super Admin'
-                        : isRtl
-                          ? 'مشرف'
-                          : 'Admin'}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">
+                        {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
+                      </p>
+
+                      <p className="text-xs text-white/75">
+                        {admin.role === 'super_admin'
+                          ? isRtl
+                            ? 'مشرف رئيسي'
+                            : 'Super Admin'
+                          : isRtl
+                            ? 'مشرف'
+                            : 'Admin'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           </header>
 
@@ -548,6 +568,19 @@ export default function AdminLayout() {
             )}
 
             <div className="flex h-full flex-col">
+              {isMobile && (
+                <div className="border-b border-white/15 p-3">
+                  <button
+                    type="button"
+                    onClick={toggleAdminLang}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/15 px-3 py-3 text-sm font-bold text-white transition hover:bg-white/25"
+                  >
+                    <Globe size={18} />
+                    <span>{t.switchLang}</span>
+                  </button>
+                </div>
+              )}
+
               <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
                 {navItems.map((item) => {
                   const Icon = iconMap[item.key] || LayoutDashboard
