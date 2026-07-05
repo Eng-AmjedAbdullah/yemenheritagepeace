@@ -1,10 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect, useState, createContext, useContext } from 'react'
 import { Toaster } from 'react-hot-toast'
+
 import { translations } from './lib/i18n'
 import api from './lib/api'
+
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+
 import Home from './pages/Home'
 import About from './pages/About'
 import News from './pages/News'
@@ -12,6 +15,7 @@ import Events from './pages/Events'
 import Fields from './pages/Fields'
 import HeritageLive from './pages/HeritageLive'
 import Contact from './pages/Contact'
+
 import AdminLogin from './admin/AdminLogin'
 import AdminLayout from './admin/AdminLayout'
 import Dashboard from './admin/Dashboard'
@@ -28,20 +32,45 @@ import ManageSettings from './admin/ManageSettings'
 export const AppContext = createContext()
 export const useLang = () => useContext(AppContext)
 
+function PublicLayout() {
+  return (
+    <>
+      <Navbar />
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/news" element={<News />} />
+        <Route path="/events" element={<Events />} />
+        <Route path="/fields" element={<Fields />} />
+        <Route path="/heritage-life" element={<HeritageLive />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
+      <Footer />
+    </>
+  )
+}
+
 export default function App() {
   const [lang, setLang] = useState('ar')
-  const t = translations[lang]
-  const dir = lang === 'ar' ? 'rtl' : 'ltr'
-  const toggleLang = () => setLang(l => l === 'ar' ? 'en' : 'ar')
-
   const [settings, setSettings] = useState(null)
   const [settingsLoading, setSettingsLoading] = useState(true)
 
+  const t = translations[lang]
+  const dir = lang === 'ar' ? 'rtl' : 'ltr'
+
+  const toggleLang = () => {
+    setLang((currentLang) => (currentLang === 'ar' ? 'en' : 'ar'))
+  }
+
   const refreshSettings = async () => {
     setSettingsLoading(true)
+
     try {
-      const s = await api.get('/settings')
-      setSettings(s)
+      const siteSettings = await api.get('/settings')
+      setSettings(siteSettings)
     } catch {
       setSettings(null)
     } finally {
@@ -51,11 +80,20 @@ export default function App() {
 
   useEffect(() => {
     refreshSettings()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
-    <AppContext.Provider value={{ lang, t, dir, toggleLang, settings, settingsLoading, refreshSettings }}>
+    <AppContext.Provider
+      value={{
+        lang,
+        t,
+        dir,
+        toggleLang,
+        settings,
+        settingsLoading,
+        refreshSettings,
+      }}
+    >
       <div dir={dir} className={lang === 'ar' ? 'font-ar' : 'font-en'}>
         <BrowserRouter>
           <Toaster
@@ -63,35 +101,60 @@ export default function App() {
             gutter={10}
             toastOptions={{
               duration: 3500,
+
               style: {
                 borderRadius: '12px',
                 fontSize: '14px',
-                fontWeight: '500',
+                fontWeight: '600',
                 padding: '14px 18px',
                 maxWidth: '420px',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                color: '#ffffff',
+                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.22)',
               },
+
               success: {
+                duration: 3000,
                 style: {
-                  background: '#f0fdf4',
-                  color: '#166534',
-                  border: '1px solid #bbf7d0',
+                  background: '#166534',
+                  color: '#ffffff',
+                  border: '1px solid #15803d',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  padding: '14px 18px',
+                  maxWidth: '420px',
+                  boxShadow: '0 10px 30px rgba(22, 101, 52, 0.28)',
                 },
-                iconTheme: { primary: '#16a34a', secondary: '#f0fdf4' },
+                iconTheme: {
+                  primary: '#ffffff',
+                  secondary: '#166534',
+                },
               },
+
               error: {
                 duration: 4500,
                 style: {
-                  background: '#fff',
-                  color: '#991b1b',
-                  border: '1px solid #fecaca',
+                  background: '#7f1d1d',
+                  color: '#ffffff',
+                  border: '1px solid #991b1b',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  padding: '14px 18px',
+                  maxWidth: '420px',
+                  boxShadow: '0 10px 30px rgba(127, 29, 29, 0.28)',
                 },
-                iconTheme: { primary: '#dc2626', secondary: '#fff' },
+                iconTheme: {
+                  primary: '#ffffff',
+                  secondary: '#7f1d1d',
+                },
               },
             }}
           />
+
           <Routes>
             <Route path="/admin/login" element={<AdminLogin />} />
+
             <Route path="/admin/*" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="news" element={<ManageNews />} />
@@ -103,23 +166,10 @@ export default function App() {
               <Route path="admins" element={<ManageAdmins />} />
               <Route path="messages" element={<ManageMessages />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="*" element={<Navigate to="/admin" replace />} />
             </Route>
-            <Route path="/*" element={
-              <>
-                <Navbar />
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/about" element={<About />} />
-                  <Route path="/news" element={<News />} />
-                  <Route path="/events" element={<Events />} />
-                  <Route path="/fields" element={<Fields />} />
-                  <Route path="/heritage-life" element={<HeritageLive />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="*" element={<Navigate to="/" />} />
-                </Routes>
-                <Footer />
-              </>
-            } />
+
+            <Route path="/*" element={<PublicLayout />} />
           </Routes>
         </BrowserRouter>
       </div>
