@@ -27,6 +27,8 @@ import api from '../lib/api'
 
 export const ConfirmContext = React.createContext()
 
+const NAV_HEIGHT = 72
+
 const toastTheme = {
   success: {
     duration: 3000,
@@ -287,7 +289,9 @@ export default function AdminLayout() {
         clearAdminSession()
 
         toast.error(
-          isRtl ? 'انتهت الجلسة، سجل الدخول مرة أخرى' : 'Session expired, please login again',
+          isRtl
+            ? 'انتهت الجلسة، سجل الدخول مرة أخرى'
+            : 'Session expired, please login again',
           toastTheme.error
         )
 
@@ -413,10 +417,81 @@ export default function AdminLayout() {
         >
           <ConfirmModal modal={confirmModal} close={closeConfirm} isRtl={isRtl} />
 
+          {/* Full-width top navbar above the sidebar */}
+          <header className="fixed inset-x-0 top-0 z-50 h-[72px] bg-[#073B4C] border-b border-white/10 shadow-lg">
+            <div className="h-full px-4 md:px-6 flex items-center justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-3">
+                {isMobile && (
+                  <button
+                    type="button"
+                    onClick={() => setSidebarOpen((open) => !open)}
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-white transition hover:bg-white/15"
+                    aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
+                  >
+                    {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                  </button>
+                )}
+
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                  <img
+                    src="/logowhite.png"
+                    alt="Yemen Heritage"
+                    className="h-8 w-auto"
+                    onError={(event) => {
+                      event.currentTarget.style.display = 'none'
+                    }}
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <h1 className="truncate text-sm font-bold text-white sm:text-base">
+                    منظمة تراث اليمن لأجل السلام
+                  </h1>
+                  <p className="mt-0.5 truncate text-xs font-medium text-white/70 sm:text-sm">
+                    Yemen Heritage for Peace Organization
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex min-w-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={toggleAdminLang}
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/15"
+                >
+                  <Globe size={16} />
+                  <span className="hidden sm:inline">{t.switchLang}</span>
+                </button>
+
+                <div className="hidden sm:flex min-w-0 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-[#073B4C]">
+                    <User size={16} />
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-white">
+                      {admin?.name || admin?.email || (isRtl ? 'مشرف' : 'Admin')}
+                    </p>
+                    <p className="text-xs text-white/60">
+                      {admin.role === 'super_admin'
+                        ? isRtl
+                          ? 'مشرف رئيسي'
+                          : 'Super Admin'
+                        : isRtl
+                          ? 'مشرف'
+                          : 'Admin'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {/* Sidebar starts below navbar and uses the same dark color */}
           <aside
-            className={`fixed top-0 h-full bg-gradient-to-b from-primary-dark via-primary to-primary-light border-white/15 z-40 transition-all duration-300 shadow-2xl ${
+            className={`fixed bottom-0 top-[72px] bg-[#073B4C] border-white/10 z-40 transition-all duration-300 shadow-2xl ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
-            } ${isMobile ? 'w-72' : sidebarOpen ? 'w-64' : 'w-16'} ${
+            } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
                 ? isRtl
                   ? 'translate-x-full'
@@ -424,179 +499,93 @@ export default function AdminLayout() {
                 : 'translate-x-0'
             }`}
           >
-            <div className="flex items-center justify-between p-4 border-b border-white/15">
-              {sidebarOpen && (
-                <div>
-                  <div className="text-white font-bold text-sm">
-                    {t.adminPanel}
-                  </div>
-                  <div className="text-white/75 text-xs">
-                    {t.yemenHeritage}
-                  </div>
-                </div>
-              )}
+            <div className="h-full flex flex-col">
+              <div className="hidden lg:flex items-center justify-end p-3 border-b border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen((open) => !open)}
+                  className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white/80 transition hover:bg-white/10 hover:text-white"
+                  aria-label={isRtl ? 'طي القائمة' : 'Toggle sidebar'}
+                >
+                  {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
+                </button>
+              </div>
 
-              <button
-                onClick={() => setSidebarOpen((open) => !open)}
-                className="text-white/70 hover:text-white p-1 transition-colors"
-                aria-label={isRtl ? 'طي القائمة' : 'Toggle sidebar'}
-              >
-                {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-              </button>
-            </div>
+              <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+                {navItems.map((item) => {
+                  const Icon = iconMap[item.key] || LayoutDashboard
+                  const active = isActiveLink(item.href)
 
-            <nav className="p-3 space-y-1 h-[calc(100vh-215px)] overflow-y-auto">
-              {navItems.map((item) => {
-                const Icon = iconMap[item.key] || LayoutDashboard
-                const active = isActiveLink(item.href)
+                  return (
+                    <Link
+                      key={item.key}
+                      to={item.href}
+                      onClick={() => isMobile && setSidebarOpen(false)}
+                      className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
+                        active
+                          ? 'bg-white text-[#073B4C] shadow-sm'
+                          : 'text-white/75 hover:bg-white/10 hover:text-white'
+                      } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
+                    >
+                      <Icon size={19} className="shrink-0" />
 
-                return (
-                  <Link
-                    key={item.key}
-                    to={item.href}
-                    onClick={() => isMobile && setSidebarOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all relative ${
-                      active
-                        ? 'bg-white text-primary-dark shadow-sm'
-                        : 'text-white/85 hover:bg-white/10 hover:text-white'
-                    }`}
-                  >
-                    <Icon size={18} className="shrink-0" />
+                      {(sidebarOpen || isMobile) && (
+                        <span className="text-sm font-semibold">{item.label}</span>
+                      )}
 
-                    {sidebarOpen && (
-                      <span className="text-sm font-medium">{item.label}</span>
-                    )}
+                      {item.key === 'messages' && unreadCount > 0 && (
+                        <span
+                          className={`${
+                            sidebarOpen || isMobile
+                              ? 'ms-auto'
+                              : 'absolute -top-1 -end-1'
+                          } bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-bold`}
+                        >
+                          {unreadCount > 99 ? '99+' : unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                  )
+                })}
+              </nav>
 
-                    {item.key === 'messages' && unreadCount > 0 && (
-                      <span
-                        className={`${
-                          sidebarOpen ? 'ms-auto' : 'absolute -top-1 -end-1'
-                        } bg-red-500 text-white text-xs rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 font-bold`}
-                      >
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </Link>
-                )
-              })}
-            </nav>
-
-            <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-white/15 bg-primary-dark/25 backdrop-blur-sm">
-              <button
-                onClick={toggleAdminLang}
-                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-white/85 hover:bg-white/10 hover:text-white transition-colors mb-2"
-              >
-                <Globe size={18} />
-                {sidebarOpen && (
-                  <span className="text-sm font-medium">{t.switchLang}</span>
-                )}
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 rounded-xl border border-red-100 bg-white/95 px-3 py-2.5 text-red-600 shadow-sm transition-colors hover:bg-red-50 hover:text-red-700"
-              >
-                <LogOut size={18} className="text-red-600" />
-                {sidebarOpen && (
-                  <span className="text-sm font-bold">{t.logout}</span>
-                )}
-              </button>
+              <div className="p-3 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className={`w-full flex items-center gap-3 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-3 text-red-200 transition hover:bg-red-500/20 hover:text-white ${
+                    !sidebarOpen && !isMobile ? 'justify-center' : ''
+                  }`}
+                >
+                  <LogOut size={19} className="shrink-0" />
+                  {(sidebarOpen || isMobile) && (
+                    <span className="text-sm font-bold">{t.logout}</span>
+                  )}
+                </button>
+              </div>
             </div>
           </aside>
 
           {isMobile && sidebarOpen && (
             <div
-              className="fixed inset-0 bg-black/40 z-30 lg:hidden"
+              className="fixed inset-x-0 bottom-0 top-[72px] bg-black/40 z-30 lg:hidden"
               onClick={() => setSidebarOpen(false)}
             />
           )}
 
           <main
-            className={`transition-all duration-300 min-h-screen ${
+            className={`min-h-screen pt-[72px] transition-all duration-300 ${
               isMobile
                 ? 'ml-0 mr-0'
                 : sidebarOpen
                   ? isRtl
-                    ? 'mr-64'
-                    : 'ml-64'
+                    ? 'mr-72'
+                    : 'ml-72'
                   : isRtl
-                    ? 'mr-16'
-                    : 'ml-16'
+                    ? 'mr-20'
+                    : 'ml-20'
             }`}
           >
-            <header className="sticky top-0 z-30 bg-gray-50/80 px-4 py-3 backdrop-blur">
-              <div className="rounded-2xl border border-primary/10 bg-white px-4 py-3 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-3">
-                    {isMobile && (
-                      <button
-                        onClick={() => setSidebarOpen((open) => !open)}
-                        className="flex h-10 w-10 items-center justify-center rounded-full border border-primary/10 bg-white text-primary shadow-sm transition hover:border-primary hover:bg-primary/5"
-                        aria-label={isRtl ? 'قائمة التنقل' : 'Toggle sidebar'}
-                      >
-                        {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
-                      </button>
-                    )}
-
-                    <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-primary/10 bg-white shadow-sm sm:flex">
-                      <img
-                        src="/logo.png"
-                        alt="Yemen Heritage"
-                        className="h-9 w-auto"
-                        onError={(event) => {
-                          event.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
-
-                    <div className="min-w-0">
-                      <h1 className="truncate text-sm font-bold text-dark sm:text-base">
-                        منظمة تراث اليمن لأجل السلام
-                      </h1>
-                      <p className="mt-0.5 truncate text-xs font-semibold text-primary sm:text-sm">
-                        Yemen Heritage for Peace Organization
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex min-w-0 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={toggleAdminLang}
-                      className="hidden items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-dark shadow-sm transition hover:border-primary hover:text-primary md:inline-flex"
-                    >
-                      <Globe size={16} className="text-primary" />
-                      {t.switchLang}
-                    </button>
-
-                    <div className="flex min-w-0 items-center gap-2 rounded-full border border-primary/10 bg-primary/5 px-2.5 py-2">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-primary shadow-sm">
-                        <User size={16} />
-                      </div>
-
-                      <div className="hidden min-w-0 sm:block">
-                        <p className="truncate text-sm font-semibold text-dark">
-                          {admin?.name ||
-                            admin?.email ||
-                            (isRtl ? 'مشرف' : 'Admin')}
-                        </p>
-
-                        <p className="text-xs text-gray-500">
-                          {admin.role === 'super_admin'
-                            ? isRtl
-                              ? 'مشرف رئيسي'
-                              : 'Super Admin'
-                            : isRtl
-                              ? 'مشرف'
-                              : 'Admin'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </header>
-
             <div className="p-4 md:p-6">
               <Outlet />
             </div>
