@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { createContext, useCallback, useEffect, useState } from 'react'
 import { Outlet, Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
@@ -25,7 +25,7 @@ import { adminTranslations, AdminLangContext } from './adminI18n'
 import { getSidebarItems, canAccessPage } from './adminPermissions'
 import api from '../lib/api'
 
-export const ConfirmContext = React.createContext()
+export const ConfirmContext = createContext(null)
 
 const confirmStyles = {
   danger: {
@@ -518,7 +518,7 @@ export default function AdminLayout() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold uppercase tracking-wide text-primary">
-                          {t.adminPanel}
+                          {isRtl ? 'منظمة تراث اليمن لأجل السلام' : 'Yemen Heritage for Peace Organization'}
                         </span>
 
                         {admin.role === 'super_admin' && (
