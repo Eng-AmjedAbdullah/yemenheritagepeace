@@ -403,6 +403,7 @@ export default function AdminLayout() {
     messages: MessageSquare,
     partners: Handshake,
     hero: Images,
+    gallery: Images,
     settings: Settings,
   }
 
