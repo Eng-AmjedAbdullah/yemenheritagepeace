@@ -55,7 +55,7 @@ app.use('/api/upload', require('./routes/upload'))
 app.use('/api/settings', require('./routes/settings'))
 app.use('/api/partners', require('./routes/partners'))
 app.use('/api/hero', require('./routes/hero'))
-
+app.use('/api/gallery', require('./routes/gallery'))
 app.get('/api/health', async (req, res) => {
   let dbOk = false
   try {
