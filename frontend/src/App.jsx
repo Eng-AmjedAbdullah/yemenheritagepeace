@@ -28,6 +28,9 @@ import Profile from './admin/Profile'
 import ManagePartners from './admin/ManagePartners'
 import ManageHero from './admin/ManageHero'
 import ManageSettings from './admin/ManageSettings'
+import PhotoGallery from './pages/PhotoGallery'
+import VideoGallery from './pages/VideoGallery'
+import ManageGallery from './admin/ManageGallery'
 
 export const AppContext = createContext()
 export const useLang = () => useContext(AppContext)
@@ -46,6 +49,8 @@ function PublicLayout() {
         <Route path="/heritage-life" element={<HeritageLive />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/photo-gallery" element={<PhotoGallery />} />
+        <Route path="/video-gallery" element={<VideoGallery />} />
       </Routes>
 
       <Footer />
@@ -165,10 +170,10 @@ export default function App() {
               <Route path="settings" element={<ManageSettings />} />
               <Route path="admins" element={<ManageAdmins />} />
               <Route path="messages" element={<ManageMessages />} />
-              <Route path="profile" element={<Profile />} />
+              <Route path="profile" element={<Profile />} />            
+        <Route path="gallery" element={<ManageGallery />} />
               <Route path="*" element={<Navigate to="/admin" replace />} />
             </Route>
-
             <Route path="/*" element={<PublicLayout />} />
           </Routes>
         </BrowserRouter>
