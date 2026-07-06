@@ -58,18 +58,28 @@ export default function Navbar() {
   const labels = useMemo(
     () => ({
       mediaCenter:
-        t.nav.media_center || t.nav.mediaCenter || (isRtl ? 'المركز الإعلامي' : 'Media Center'),
+        t.nav.media_center ||
+        t.nav.mediaCenter ||
+        (isRtl ? 'المركز الإعلامي' : 'Media Center'),
+
       eventsActivities:
         t.nav.events_activities ||
         t.nav.eventsActivities ||
         (isRtl ? 'الفعاليات والأنشطة' : 'Events & Activities'),
-      seminars: t.nav.seminars || (isRtl ? 'الندوات' : 'Seminars'),
-      projects: t.nav.projects || (isRtl ? 'المشاريع' : 'Projects'),
+
+      seminars:
+        t.nav.seminars ||
+        (isRtl ? 'الندوات' : 'Seminars'),
+
+      projects:
+        t.nav.projects ||
+        (isRtl ? 'المشاريع' : 'Projects'),
+
       photoGallery:
         t.nav.photo_gallery ||
         t.nav.photoGallery ||
-        t.nav.gallery ||
         (isRtl ? 'معرض الصور' : 'Photo Gallery'),
+
       videoGallery:
         t.nav.video_gallery ||
         t.nav.videoGallery ||
@@ -85,9 +95,10 @@ export default function Navbar() {
         { label: labels.eventsActivities, href: '/events' },
         { label: labels.seminars, href: '/events?type=seminar' },
         { label: labels.projects, href: '/events?type=project' },
-        { label: labels.photoGallery, href: '/gallery?type=photos' },
-        { label: labels.videoGallery, href: '/gallery?type=videos' },
+        { label: labels.photoGallery, href: '/photo-gallery' },
+        { label: labels.videoGallery, href: '/video-gallery' },
       ],
+
       fields: [
         { label: t.nav.heritage_field, href: '/fields?f=heritage' },
         {
@@ -103,6 +114,7 @@ export default function Navbar() {
         { label: t.nav.culture, href: '/fields?f=culture' },
         { label: t.nav.environment, href: '/fields?f=environment' },
       ],
+
       heritage_life: [
         { label: t.nav.tangible, href: '/heritage-life?type=tangible' },
         { label: t.nav.intangible, href: '/heritage-life?type=intangible' },
@@ -159,11 +171,11 @@ export default function Navbar() {
     (dropdowns[key] || []).some((item) => isActiveQueryLink(item.href))
 
   const toggleDesktopDropdown = (key) => {
-    setOpenDrop((open) => (open === key ? null : key))
+    setOpenDrop((current) => (current === key ? null : key))
   }
 
   const toggleMobileDropdown = (key) => {
-    setMobileDrop((open) => (open === key ? null : key))
+    setMobileDrop((current) => (current === key ? null : key))
   }
 
   const handleAdminClick = () => {
@@ -177,7 +189,7 @@ export default function Navbar() {
         className="fixed left-0 right-0 top-0 z-50 bg-white transition-all duration-300"
         dir={isRtl ? 'rtl' : 'ltr'}
       >
-        {/* Desktop Top Bar */}
+        {/* DESKTOP TOP BAR */}
         <div className="hidden bg-primary px-4 py-4 md:block">
           <div className="flex w-full items-center justify-between gap-4 px-4">
             <Link to="/" className="flex min-w-0 items-center gap-3">
@@ -235,10 +247,10 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Main Nav */}
+        {/* MAIN NAV */}
         <div className="bg-white md:border-b md:border-gray-200 md:shadow-sm">
           <div className="w-full px-0 py-0 md:px-4 md:py-3">
-            {/* Desktop Nav */}
+            {/* DESKTOP NAV */}
             <div className="hidden w-full items-center justify-between gap-3 rounded-[999px] border border-gray-200 bg-white px-4 py-2 shadow-sm md:flex">
               <div className="flex min-w-[260px] flex-1 flex-wrap items-center justify-center gap-3">
                 <NavLink
@@ -318,7 +330,7 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Mobile Top Bar */}
+            {/* MOBILE TOP BAR */}
             <div className="w-full md:hidden">
               <div className="flex min-h-[56px] w-full items-center justify-between gap-2 bg-primary px-3 py-2">
                 <Link
@@ -338,21 +350,9 @@ export default function Navbar() {
 
                 <div className="order-2 flex min-w-0 flex-1 items-center justify-center gap-1 px-1">
                   <MobileSocialLink
-                    href={settings?.social_facebook}
-                    label="Facebook"
-                    icon={<Facebook size={14} />}
-                  />
-
-                  <MobileSocialLink
-                    href={settings?.social_youtube}
-                    label="YouTube"
-                    icon={<Youtube size={14} />}
-                  />
-
-                  <MobileSocialLink
-                    href={settings?.social_linkedin}
-                    label="LinkedIn"
-                    icon={<Linkedin size={14} />}
+                    href={settings?.social_instagram}
+                    label="Instagram"
+                    icon={<Instagram size={14} />}
                   />
 
                   <MobileSocialLink
@@ -362,9 +362,21 @@ export default function Navbar() {
                   />
 
                   <MobileSocialLink
-                    href={settings?.social_instagram}
-                    label="Instagram"
-                    icon={<Instagram size={14} />}
+                    href={settings?.social_linkedin}
+                    label="LinkedIn"
+                    icon={<Linkedin size={14} />}
+                  />
+
+                  <MobileSocialLink
+                    href={settings?.social_youtube}
+                    label="YouTube"
+                    icon={<Youtube size={14} />}
+                  />
+
+                  <MobileSocialLink
+                    href={settings?.social_facebook}
+                    label="Facebook"
+                    icon={<Facebook size={14} />}
                   />
                 </div>
 
@@ -490,6 +502,7 @@ function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
     }
 
     document.addEventListener('mousedown', handler)
+
     return () => document.removeEventListener('mousedown', handler)
   }, [open, onToggle])
 
@@ -513,7 +526,11 @@ function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
       {open && (
         <div className="dropdown-menu">
           {items.map((item, index) => (
-            <Link key={`${item.href}-${index}`} to={item.href} className="dropdown-item">
+            <Link
+              key={`${item.href}-${index}`}
+              to={item.href}
+              className="dropdown-item"
+            >
               {item.parent && (
                 <span className="block text-xs text-primary/60">
                   {item.parent} /
