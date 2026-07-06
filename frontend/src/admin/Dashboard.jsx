@@ -33,6 +33,7 @@ export default function Dashboard() {
     messages: 0,
     heritage: 0,
     partners: 0,
+    gallery: 0,
     unreadMessages: 0,
   })
 
@@ -95,6 +96,13 @@ export default function Dashboard() {
         })
       }
 
+      if (features.viewGallery) {
+        requests.push({
+          type: 'gallery',
+          request: api.get('/gallery/all'),
+        })
+      }
+
       const results = await Promise.allSettled(
         requests.map((item) => item.request)
       )
@@ -108,6 +116,7 @@ export default function Dashboard() {
         messages: 0,
         heritage: 0,
         partners: 0,
+        gallery: 0,
         unreadMessages: 0,
       }
 
@@ -163,30 +172,25 @@ export default function Dashboard() {
 
     const withoutHeroSlides = allCards.filter((card) => {
       const href = String(card.href || '').toLowerCase()
-      const icon = String(card.icon || '').toLowerCase()
       const label = String(card.label || '').toLowerCase()
 
       return (
         href !== '/admin/hero' &&
-        icon !== 'images' &&
+        !label.includes('hero slides') &&
         !label.includes('hero') &&
-        !label.includes('slides') &&
         !label.includes('واجهة')
       )
     })
 
-    if (!isSuperAdmin) {
-      return withoutHeroSlides.filter((card) => {
-        return card.href !== '/admin/news' && card.href !== '/admin/events'
-      })
-    }
-
     return withoutHeroSlides
-  }, [admin?.role, stats, t, isSuperAdmin])
+  }, [admin?.role, stats, t])
 
   const quickActions = useMemo(() => {
     if (!admin?.role) return []
-    return getQuickActions(admin.role, t)
+
+    const actions = getQuickActions(admin.role, t)
+
+    return actions.filter((action) => action.href !== '/admin/hero')
   }, [admin?.role, t])
 
   const renderCardIcon = (icon) => {
@@ -252,6 +256,7 @@ export default function Dashboard() {
       <div className="mb-6 sm:mb-8">
         <h1 className="flex items-center gap-2 text-2xl font-bold text-dark sm:text-3xl">
           <Activity className="shrink-0 text-primary" size={30} />
+
           <span className="min-w-0 truncate">
             {t.dashboardTitle}
           </span>
@@ -441,6 +446,7 @@ export default function Dashboard() {
                     className="btn-outline justify-center py-3 text-sm"
                   >
                     {renderActionIcon(action.icon)}
+
                     <span className="truncate">
                       {action.label}
                     </span>
@@ -455,6 +461,7 @@ export default function Dashboard() {
                   className="btn-outline justify-center py-3 text-sm"
                 >
                   {renderActionIcon(action.icon)}
+
                   <span className="truncate">
                     {action.label}
                   </span>
