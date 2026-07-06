@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 
 const DEFAULT_LOGO = '/logo.png'
+const WHITE_LOGO = '/logowhite.png'
 
 const XIcon = ({ size = 16, className = '' }) => (
   <svg
@@ -23,16 +24,19 @@ const XIcon = ({ size = 16, className = '' }) => (
     height={size}
     className={className}
     fill="currentColor"
+    aria-hidden="true"
   >
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 )
 
 export default function Navbar() {
-  const { t, toggleLang, settings } = useLang()
+  const { t, toggleLang, settings, lang } = useLang()
+  const isRtl = lang === 'ar'
 
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openDrop, setOpenDrop] = useState(null)
+  const [mobileDrop, setMobileDrop] = useState(null)
   const [logoSrc, setLogoSrc] = useState(DEFAULT_LOGO)
 
   const navigate = useNavigate()
@@ -41,20 +45,48 @@ export default function Navbar() {
   useEffect(() => {
     setMobileOpen(false)
     setOpenDrop(null)
+    setMobileDrop(null)
   }, [location.pathname, location.search])
 
   useEffect(() => {
-    setLogoSrc(resolveMediaUrl(settings?.logo_url?.trim() || '') || DEFAULT_LOGO)
+    const uploadedLogo = resolveMediaUrl(settings?.logo_url?.trim() || '')
+    setLogoSrc(uploadedLogo || DEFAULT_LOGO)
   }, [settings?.logo_url])
 
   const navText = 'nav-link-dark'
 
+  const labels = useMemo(
+    () => ({
+      mediaCenter:
+        t.nav.media_center || t.nav.mediaCenter || (isRtl ? 'المركز الإعلامي' : 'Media Center'),
+      eventsActivities:
+        t.nav.events_activities ||
+        t.nav.eventsActivities ||
+        (isRtl ? 'الفعاليات والأنشطة' : 'Events & Activities'),
+      seminars: t.nav.seminars || (isRtl ? 'الندوات' : 'Seminars'),
+      projects: t.nav.projects || (isRtl ? 'المشاريع' : 'Projects'),
+      photoGallery:
+        t.nav.photo_gallery ||
+        t.nav.photoGallery ||
+        t.nav.gallery ||
+        (isRtl ? 'معرض الصور' : 'Photo Gallery'),
+      videoGallery:
+        t.nav.video_gallery ||
+        t.nav.videoGallery ||
+        (isRtl ? 'معرض الفيديو' : 'Video Gallery'),
+    }),
+    [t, isRtl]
+  )
+
   const dropdowns = useMemo(
     () => ({
-      activities: [
-        { label: t.nav.events, href: '/events' },
-        { label: t.nav.seminars, href: '/events?type=seminar' },
-        { label: t.nav.projects, href: '/events?type=project' },
+      media_center: [
+        { label: t.nav.news, href: '/news' },
+        { label: labels.eventsActivities, href: '/events' },
+        { label: labels.seminars, href: '/events?type=seminar' },
+        { label: labels.projects, href: '/events?type=project' },
+        { label: labels.photoGallery, href: '/gallery?type=photos' },
+        { label: labels.videoGallery, href: '/gallery?type=videos' },
       ],
       fields: [
         { label: t.nav.heritage_field, href: '/fields?f=heritage' },
@@ -76,7 +108,31 @@ export default function Navbar() {
         { label: t.nav.intangible, href: '/heritage-life?type=intangible' },
       ],
     }),
-    [t]
+    [t, labels]
+  )
+
+  const mobileLinks = useMemo(
+    () => [
+      { label: t.nav.home, href: '/' },
+      { label: t.nav.about, href: '/about' },
+      {
+        label: labels.mediaCenter,
+        key: 'media_center',
+        children: dropdowns.media_center,
+      },
+      {
+        label: t.nav.fields,
+        key: 'fields',
+        children: dropdowns.fields,
+      },
+      {
+        label: t.nav.heritage_life,
+        key: 'heritage_life',
+        children: dropdowns.heritage_life,
+      },
+      { label: t.nav.contact, href: '/contact' },
+    ],
+    [t, labels, dropdowns]
   )
 
   const isActiveQueryLink = (to) => {
@@ -102,50 +158,74 @@ export default function Navbar() {
   const dropdownActive = (key) =>
     (dropdowns[key] || []).some((item) => isActiveQueryLink(item.href))
 
+  const toggleDesktopDropdown = (key) => {
+    setOpenDrop((open) => (open === key ? null : key))
+  }
+
+  const toggleMobileDropdown = (key) => {
+    setMobileDrop((open) => (open === key ? null : key))
+  }
+
+  const handleAdminClick = () => {
+    setMobileOpen(false)
+    navigate('/admin/login')
+  }
+
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white transition-all duration-300">
+      <nav
+        className="fixed left-0 right-0 top-0 z-50 bg-white transition-all duration-300"
+        dir={isRtl ? 'rtl' : 'ltr'}
+      >
         {/* Desktop Top Bar */}
         <div className="hidden bg-primary px-4 py-4 md:block">
-          <div className="flex w-full items-center justify-between px-4">
-            <div className="flex items-center gap-3">
+          <div className="flex w-full items-center justify-between gap-4 px-4">
+            <Link to="/" className="flex min-w-0 items-center gap-3">
               <img
-                src="/logowhite.png"
+                src={WHITE_LOGO}
                 alt={settings?.site_name_en || settings?.site_name_ar || 'logo'}
-                className="h-12 w-auto"
+                className="h-12 w-auto shrink-0"
+                onError={(event) => {
+                  event.currentTarget.src = logoSrc
+                }}
               />
 
-              <div className="flex flex-col leading-tight text-white">
-                <span className="text-base font-semibold">
+              <div className="flex min-w-0 flex-col leading-tight text-white">
+                <span className="truncate text-base font-semibold">
                   منظمة تراث اليمن لأجل السلام
                 </span>
-                <span className="text-sm text-white/80">
+
+                <span className="truncate text-sm text-white/80">
                   Yemen Heritage for Peace Organization
                 </span>
               </div>
-            </div>
+            </Link>
 
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <SocialLink
                 href={settings?.social_facebook}
                 label="Facebook"
                 icon={<Facebook size={18} />}
               />
+
               <SocialLink
                 href={settings?.social_youtube}
                 label="YouTube"
                 icon={<Youtube size={18} />}
               />
+
               <SocialLink
                 href={settings?.social_linkedin}
                 label="LinkedIn"
                 icon={<Linkedin size={18} />}
               />
+
               <SocialLink
                 href={settings?.social_x}
                 label="X"
                 icon={<XIcon size={18} />}
               />
+
               <SocialLink
                 href={settings?.social_instagram}
                 label="Instagram"
@@ -180,25 +260,12 @@ export default function Navbar() {
                   {t.nav.about}
                 </NavLink>
 
-                <NavLink
-                  to="/news"
-                  className={({ isActive }) =>
-                    `${navText} ${isActive ? 'active' : ''}`
-                  }
-                >
-                  {t.nav.news}
-                </NavLink>
-
                 <DropMenu
-                  label={t.nav.activities}
-                  items={dropdowns.activities}
-                  open={openDrop === 'activities'}
-                  onToggle={() =>
-                    setOpenDrop((open) =>
-                      open === 'activities' ? null : 'activities'
-                    )
-                  }
-                  active={dropdownActive('activities')}
+                  label={labels.mediaCenter}
+                  items={dropdowns.media_center}
+                  open={openDrop === 'media_center'}
+                  onToggle={() => toggleDesktopDropdown('media_center')}
+                  active={dropdownActive('media_center')}
                   navText={navText}
                 />
 
@@ -206,9 +273,7 @@ export default function Navbar() {
                   label={t.nav.fields}
                   items={dropdowns.fields}
                   open={openDrop === 'fields'}
-                  onToggle={() =>
-                    setOpenDrop((open) => (open === 'fields' ? null : 'fields'))
-                  }
+                  onToggle={() => toggleDesktopDropdown('fields')}
                   active={dropdownActive('fields')}
                   navText={navText}
                 />
@@ -217,11 +282,7 @@ export default function Navbar() {
                   label={t.nav.heritage_life}
                   items={dropdowns.heritage_life}
                   open={openDrop === 'heritage_life'}
-                  onToggle={() =>
-                    setOpenDrop((open) =>
-                      open === 'heritage_life' ? null : 'heritage_life'
-                    )
-                  }
+                  onToggle={() => toggleDesktopDropdown('heritage_life')}
                   active={dropdownActive('heritage_life')}
                   navText={navText}
                 />
@@ -236,8 +297,9 @@ export default function Navbar() {
                 </NavLink>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
+                  type="button"
                   onClick={toggleLang}
                   className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
                 >
@@ -246,6 +308,7 @@ export default function Navbar() {
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => navigate('/admin/login')}
                   className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
                 >
@@ -255,38 +318,49 @@ export default function Navbar() {
               </div>
             </div>
 
-            {/* Mobile Top Bar - full width, no white side padding */}
+            {/* Mobile Top Bar */}
             <div className="w-full md:hidden">
-              <div className="flex min-h-[52px] w-full items-center justify-between gap-2 bg-primary px-3 py-2">
-                <div className="shrink-0">
+              <div className="flex min-h-[56px] w-full items-center justify-between gap-2 bg-primary px-3 py-2">
+                <Link
+                  to="/"
+                  className="order-1 flex shrink-0 items-center"
+                  aria-label={settings?.site_name_en || settings?.site_name_ar || 'Home'}
+                >
                   <img
-                    src="/logowhite.png"
+                    src={WHITE_LOGO}
                     alt={settings?.site_name_en || settings?.site_name_ar || 'logo'}
-                    className="block h-8 w-auto"
+                    className="block h-9 w-auto"
+                    onError={(event) => {
+                      event.currentTarget.src = logoSrc
+                    }}
                   />
-                </div>
+                </Link>
 
-                <div className="flex flex-1 items-center justify-center gap-1.5 px-1">
+                <div className="order-2 flex min-w-0 flex-1 items-center justify-center gap-1 px-1">
                   <MobileSocialLink
                     href={settings?.social_facebook}
                     label="Facebook"
                     icon={<Facebook size={14} />}
                   />
+
                   <MobileSocialLink
                     href={settings?.social_youtube}
                     label="YouTube"
                     icon={<Youtube size={14} />}
                   />
+
                   <MobileSocialLink
                     href={settings?.social_linkedin}
                     label="LinkedIn"
                     icon={<Linkedin size={14} />}
                   />
+
                   <MobileSocialLink
                     href={settings?.social_x}
                     label="X"
                     icon={<XIcon size={14} />}
                   />
+
                   <MobileSocialLink
                     href={settings?.social_instagram}
                     label="Instagram"
@@ -294,57 +368,62 @@ export default function Navbar() {
                   />
                 </div>
 
-                <div className="shrink-0">
-                  <button
-                    type="button"
-                    className="block p-1 text-white"
-                    onClick={() => setMobileOpen((open) => !open)}
-                    aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-                  >
-                    {mobileOpen ? <X size={24} /> : <Menu size={24} />}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="order-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white transition hover:bg-white/15"
+                  onClick={() => setMobileOpen((open) => !open)}
+                  aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+                >
+                  {mobileOpen ? <X size={25} /> : <Menu size={25} />}
+                </button>
               </div>
             </div>
           </div>
 
           {mobileOpen && (
-            <div className="max-h-[80vh] overflow-y-auto border-t border-gray-200 bg-white px-4 pb-4 shadow-xl md:hidden">
-              {[
-                { label: t.nav.home, href: '/' },
-                { label: t.nav.about, href: '/about' },
-                { label: t.nav.news, href: '/news' },
-                { label: t.nav.events, href: '/events' },
-                { label: t.nav.fields, href: '/fields' },
-                { label: t.nav.heritage_life, href: '/heritage-life' },
-                { label: t.nav.contact, href: '/contact' },
-              ].map((item) => (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  className={[
-                    'block border-b border-gray-200 py-3 text-dark transition-colors',
-                    isActiveQueryLink(item.href)
-                      ? 'font-semibold text-primary'
-                      : 'hover:text-primary',
-                  ].join(' ')}
-                >
-                  {item.label}
-                </Link>
-              ))}
+            <div className="max-h-[82vh] overflow-y-auto border-t border-gray-200 bg-white px-4 pb-4 shadow-xl md:hidden">
+              <div className="pt-2">
+                {mobileLinks.map((item) => {
+                  if (item.children) {
+                    return (
+                      <MobileDropMenu
+                        key={item.key}
+                        label={item.label}
+                        items={item.children}
+                        open={mobileDrop === item.key}
+                        active={dropdownActive(item.key)}
+                        onToggle={() => toggleMobileDropdown(item.key)}
+                        isActiveQueryLink={isActiveQueryLink}
+                      />
+                    )
+                  }
 
-              <div className="mt-4 flex gap-3">
+                  return (
+                    <MobileNavItem
+                      key={item.href}
+                      to={item.href}
+                      active={isActiveQueryLink(item.href)}
+                    >
+                      {item.label}
+                    </MobileNavItem>
+                  )
+                })}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <button
+                  type="button"
                   onClick={toggleLang}
-                  className="btn-outline inline-flex flex-1 items-center justify-center gap-2 py-2 text-sm"
+                  className="btn-outline inline-flex items-center justify-center gap-2 py-2 text-sm"
                 >
                   <Globe size={16} />
                   {t.nav.lang}
                 </button>
 
                 <button
-                  onClick={() => navigate('/admin/login')}
-                  className="btn-primary inline-flex flex-1 items-center justify-center gap-2 py-2 text-sm"
+                  type="button"
+                  onClick={handleAdminClick}
+                  className="btn-primary inline-flex items-center justify-center gap-2 py-2 text-sm"
                 >
                   <ShieldCheck size={16} />
                   {t.nav.admin}
@@ -355,19 +434,28 @@ export default function Navbar() {
         </div>
       </nav>
 
-      <div className="h-[52px] md:h-[120px]" aria-hidden="true" />
+      <div className="h-[56px] md:h-[120px]" aria-hidden="true" />
     </>
   )
 }
 
+function normalizeHref(href) {
+  const value = String(href || '').trim()
+  if (!value || value === '#') return ''
+  return value
+}
+
 function SocialLink({ href, label, icon }) {
+  const url = normalizeHref(href)
+  if (!url) return null
+
   return (
     <a
-      href={href || '#'}
+      href={url}
       target="_blank"
       rel="noreferrer"
       aria-label={label}
-      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm"
+      className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-primary shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       {icon}
     </a>
@@ -375,9 +463,12 @@ function SocialLink({ href, label, icon }) {
 }
 
 function MobileSocialLink({ href, label, icon }) {
+  const url = normalizeHref(href)
+  if (!url) return null
+
   return (
     <a
-      href={href || '#'}
+      href={url}
       target="_blank"
       rel="noreferrer"
       aria-label={label}
@@ -389,7 +480,7 @@ function MobileSocialLink({ href, label, icon }) {
 }
 
 function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
-  const ref = useRef()
+  const ref = useRef(null)
 
   useEffect(() => {
     const handler = (event) => {
@@ -399,17 +490,18 @@ function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
     }
 
     document.addEventListener('mousedown', handler)
-
     return () => document.removeEventListener('mousedown', handler)
   }, [open, onToggle])
 
   return (
     <div className="relative" ref={ref}>
       <button
+        type="button"
         onClick={onToggle}
         className={`nav-link ${active ? 'active' : ''} flex items-center gap-1 ${navText}`}
       >
         {label}
+
         <ChevronDown
           size={14}
           className={`transition-transform duration-200 ${
@@ -421,12 +513,83 @@ function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
       {open && (
         <div className="dropdown-menu">
           {items.map((item, index) => (
-            <Link key={index} to={item.href} className="dropdown-item">
+            <Link key={`${item.href}-${index}`} to={item.href} className="dropdown-item">
               {item.parent && (
                 <span className="block text-xs text-primary/60">
                   {item.parent} /
                 </span>
               )}
+
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MobileNavItem({ to, active, children }) {
+  return (
+    <Link
+      to={to}
+      className={[
+        'block border-b border-gray-200 py-3 text-dark transition-colors',
+        active ? 'font-semibold text-primary' : 'hover:text-primary',
+      ].join(' ')}
+    >
+      {children}
+    </Link>
+  )
+}
+
+function MobileDropMenu({
+  label,
+  items,
+  open,
+  active,
+  onToggle,
+  isActiveQueryLink,
+}) {
+  return (
+    <div className="border-b border-gray-200">
+      <button
+        type="button"
+        onClick={onToggle}
+        className={[
+          'flex w-full items-center justify-between gap-3 py-3 text-dark transition-colors',
+          active ? 'font-semibold text-primary' : 'hover:text-primary',
+        ].join(' ')}
+      >
+        <span>{label}</span>
+
+        <ChevronDown
+          size={16}
+          className={`shrink-0 transition-transform duration-200 ${
+            open ? 'rotate-180' : ''
+          }`}
+        />
+      </button>
+
+      {open && (
+        <div className="pb-2">
+          {items.map((item, index) => (
+            <Link
+              key={`${item.href}-${index}`}
+              to={item.href}
+              className={[
+                'block rounded-xl px-3 py-2 text-sm transition-colors',
+                isActiveQueryLink(item.href)
+                  ? 'bg-primary/10 font-semibold text-primary'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-primary',
+              ].join(' ')}
+            >
+              {item.parent && (
+                <span className="block text-xs text-primary/60">
+                  {item.parent} /
+                </span>
+              )}
+
               {item.label}
             </Link>
           ))}
