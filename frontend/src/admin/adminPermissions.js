@@ -21,6 +21,7 @@ export const PERMISSIONS = {
       '/admin/heritage',
       '/admin/partners',
       '/admin/hero',
+      '/admin/gallery',
       '/admin/settings',
       '/admin/messages',
       '/admin/admins',
@@ -33,21 +34,26 @@ export const PERMISSIONS = {
       viewHeritage: true,
       viewPartners: true,
       viewHero: true,
+      viewGallery: true,
       viewSettings: true,
       viewMessages: true,
       viewAdmins: true,
       viewProfile: true,
+
       manageAdmins: true,
       manageSettings: true,
       manageMessages: true,
+      manageGallery: true,
     },
   },
+
   [ADMIN_ROLES.ADMIN]: {
     pages: [
       '/admin',
       '/admin/dashboard',
       '/admin/news',
       '/admin/events',
+      '/admin/gallery',
       '/admin/profile',
     ],
     features: {
@@ -57,13 +63,16 @@ export const PERMISSIONS = {
       viewHeritage: false,
       viewPartners: false,
       viewHero: false,
+      viewGallery: true,
       viewSettings: false,
       viewMessages: false,
       viewAdmins: false,
       viewProfile: true,
+
       manageAdmins: false,
       manageSettings: false,
       manageMessages: false,
+      manageGallery: true,
     },
   },
 }
@@ -74,7 +83,13 @@ export const PERMISSIONS = {
 export const canAccessPage = (role, page) => {
   const rolePerms = PERMISSIONS[role]
   if (!rolePerms) return false
-  return rolePerms.pages.includes(page)
+
+  if (rolePerms.pages.includes(page)) return true
+
+  return rolePerms.pages.some((allowedPage) => {
+    if (allowedPage === '/admin') return false
+    return page.startsWith(`${allowedPage}/`)
+  })
 }
 
 /**
@@ -87,7 +102,7 @@ export const hasFeature = (role, feature) => {
 }
 
 /**
- * Get allowed pages for role (for sidebar)
+ * Get allowed pages for role
  */
 export const getAllowedPages = (role) => {
   const rolePerms = PERMISSIONS[role]
@@ -148,6 +163,15 @@ export const getSidebarItems = (role, t) => {
       featureKey: 'viewHero',
     },
     {
+      key: 'gallery',
+      href: '/admin/gallery',
+      label:
+        t.manageGallery ||
+        t.gallery ||
+        (t.lang === 'en' ? 'Gallery' : 'المعرض'),
+      featureKey: 'viewGallery',
+    },
+    {
       key: 'settings',
       href: '/admin/settings',
       label: t.siteSettings,
@@ -185,7 +209,7 @@ export const getDashboardCards = (role, stats, t) => {
   const allCards = [
     {
       label: t.news,
-      value: stats.news,
+      value: stats.news || 0,
       icon: 'Newspaper',
       color: 'bg-blue-500',
       href: '/admin/news',
@@ -193,7 +217,7 @@ export const getDashboardCards = (role, stats, t) => {
     },
     {
       label: t.events,
-      value: stats.events,
+      value: stats.events || 0,
       icon: 'Calendar',
       color: 'bg-green-500',
       href: '/admin/events',
@@ -201,7 +225,7 @@ export const getDashboardCards = (role, stats, t) => {
     },
     {
       label: t.heritageLife,
-      value: stats.heritage,
+      value: stats.heritage || 0,
       icon: 'Mountain',
       color: 'bg-amber-500',
       href: '/admin/heritage',
@@ -209,32 +233,35 @@ export const getDashboardCards = (role, stats, t) => {
     },
     {
       label: t.partners,
-      value: stats.partners,
+      value: stats.partners || 0,
       icon: 'Handshake',
       color: 'bg-sky-500',
       href: '/admin/partners',
       featureKey: 'viewPartners',
     },
     {
-      label: t.heroSlides,
-      value: stats.hero,
+      label:
+        t.gallery ||
+        t.manageGallery ||
+        (t.lang === 'en' ? 'Gallery' : 'المعرض'),
+      value: stats.gallery || 0,
       icon: 'Images',
       color: 'bg-teal-500',
-      href: '/admin/hero',
-      featureKey: 'viewHero',
+      href: '/admin/gallery',
+      featureKey: 'viewGallery',
     },
     {
       label: t.messages,
-      value: stats.messages,
+      value: stats.messages || 0,
       icon: 'MessageSquare',
       color: 'bg-primary',
       href: '/admin/messages',
-      badge: stats.unreadMessages,
+      badge: stats.unreadMessages || 0,
       featureKey: 'viewMessages',
     },
     {
       label: t.admins,
-      value: stats.admins,
+      value: stats.admins || 0,
       icon: 'Users',
       color: 'bg-slate-500',
       href: '/admin/admins',
@@ -281,6 +308,15 @@ export const getQuickActions = (role, t) => {
       icon: 'Images',
       href: '/admin/hero',
       featureKey: 'viewHero',
+    },
+    {
+      label:
+        t.manageGallery ||
+        t.gallery ||
+        (t.lang === 'en' ? 'Manage Gallery' : 'إدارة المعرض'),
+      icon: 'Images',
+      href: '/admin/gallery',
+      featureKey: 'viewGallery',
     },
     {
       label: t.siteSettings,
