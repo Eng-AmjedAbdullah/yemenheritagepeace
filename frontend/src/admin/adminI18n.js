@@ -9,6 +9,7 @@ export const adminTranslations = {
     heritage: 'تراثنا حياة',
     partners: 'الشركاء',
     heroSlides: 'صور الواجهة',
+    gallery: 'المعرض',
     siteSettings: 'إعدادات الموقع',
     messages: 'الرسائل',
     admins: 'المشرفون',
@@ -37,6 +38,14 @@ export const adminTranslations = {
     viewAll: 'عرض الكل',
     viewSite: 'عرض الموقع',
     quickActions: 'إجراءات سريعة',
+    preview: 'معاينة',
+    open: 'فتح',
+    close: 'إغلاق',
+    yes: 'نعم',
+    no: 'لا',
+    upload: 'رفع',
+    change: 'تغيير',
+    remove: 'إزالة',
 
     // Status labels
     all: 'الكل',
@@ -45,6 +54,8 @@ export const adminTranslations = {
     published: 'منشور',
     draft: 'مسودة',
     hidden: 'مخفي',
+    visible: 'ظاهر',
+    public: 'عام',
 
     // Form labels
     title: 'العنوان',
@@ -53,6 +64,7 @@ export const adminTranslations = {
     content: 'المحتوى',
     contentAr: 'المحتوى (عربي)',
     contentEn: 'المحتوى (إنجليزي)',
+    description: 'الوصف',
     descriptionAr: 'الوصف (عربي)',
     descriptionEn: 'الوصف (إنجليزي)',
     image: 'الصورة',
@@ -62,6 +74,7 @@ export const adminTranslations = {
     categoryEn: 'التصنيف (إنجليزي)',
     status: 'الحالة',
     order: 'الترتيب',
+    sortOrder: 'الترتيب',
     required: 'مطلوب',
 
     // News management
@@ -121,6 +134,42 @@ export const adminTranslations = {
     partnerNameEn: 'الاسم (إنجليزي)',
     websiteUrl: 'رابط الموقع (اختياري)',
     activePublic: 'نشط (ظاهر للعامة)',
+
+    // Gallery management
+    manageGallery: 'إدارة المعرض',
+    addGallery: 'إضافة عنصر',
+    addGalleryItem: 'إضافة عنصر للمعرض',
+    editGallery: 'تعديل عنصر المعرض',
+    editGalleryItem: 'تعديل عنصر المعرض',
+    galleryItems: 'عناصر المعرض',
+    noGallery: 'لا توجد عناصر في المعرض',
+    noGalleryItems: 'لا توجد عناصر في المعرض',
+    galleryImage: 'صورة المعرض',
+    galleryThumbnail: 'الصورة المصغرة',
+    galleryType: 'نوع العنصر',
+    itemType: 'نوع العنصر',
+    typePhoto: 'صورة',
+    typeVideo: 'فيديو',
+    photo: 'صورة',
+    photos: 'الصور',
+    video: 'فيديو',
+    videos: 'الفيديو',
+    videoUrl: 'رابط الفيديو',
+    videoThumbnail: 'صورة مصغرة للفيديو',
+    thumbnailUrl: 'رابط الصورة المصغرة',
+    imageUrl: 'رابط الصورة',
+    showOnWebsite: 'إظهار في الموقع',
+    activeGalleryItem: 'نشط (ظاهر للعامة)',
+    searchGallery: 'بحث في المعرض...',
+    galleryTitleRequired: 'عنوان العنصر مطلوب',
+    galleryImageRequired: 'صورة المعرض مطلوبة',
+    videoUrlRequired: 'رابط الفيديو مطلوب',
+    gallerySaved: 'تم حفظ عنصر المعرض',
+    galleryDeleted: 'تم حذف عنصر المعرض',
+    deleteGalleryItem: 'حذف هذا العنصر من المعرض؟',
+    totalGallery: 'إجمالي عناصر المعرض',
+    totalPhotos: 'إجمالي الصور',
+    totalVideos: 'إجمالي الفيديوهات',
 
     // Hero slides management
     manageHero: 'إدارة صور الواجهة',
@@ -183,8 +232,10 @@ export const adminTranslations = {
     role: 'الدور',
     superAdmin: 'مشرف رئيسي',
     regularAdmin: 'مشرف',
+
     // New password min
     min8Chars: '8 أحرف على الأقل',
+
     // Hero CTA
     ctaLink: 'رابط الزر (CTA)',
     ctaSection: 'زر الاستجابة (اختياري)',
@@ -210,6 +261,7 @@ export const adminTranslations = {
     noNews: 'لا توجد أخبار',
     heritageLife: 'تراث حياة',
   },
+
   en: {
     // Sidebar navigation
     dashboard: 'Dashboard',
@@ -218,6 +270,7 @@ export const adminTranslations = {
     heritage: 'Heritage Life',
     partners: 'Partners',
     heroSlides: 'Hero Slides',
+    gallery: 'Gallery',
     siteSettings: 'Site Settings',
     messages: 'Messages',
     admins: 'Administrators',
@@ -246,6 +299,14 @@ export const adminTranslations = {
     viewAll: 'View All',
     viewSite: 'View Site',
     quickActions: 'Quick Actions',
+    preview: 'Preview',
+    open: 'Open',
+    close: 'Close',
+    yes: 'Yes',
+    no: 'No',
+    upload: 'Upload',
+    change: 'Change',
+    remove: 'Remove',
 
     // Status labels
     all: 'All',
@@ -254,6 +315,8 @@ export const adminTranslations = {
     published: 'Published',
     draft: 'Draft',
     hidden: 'Hidden',
+    visible: 'Visible',
+    public: 'Public',
 
     // Form labels
     title: 'Title',
@@ -262,6 +325,7 @@ export const adminTranslations = {
     content: 'Content',
     contentAr: 'Content (Arabic)',
     contentEn: 'Content (English)',
+    description: 'Description',
     descriptionAr: 'Description (Arabic)',
     descriptionEn: 'Description (English)',
     image: 'Image',
@@ -271,6 +335,7 @@ export const adminTranslations = {
     categoryEn: 'Category (English)',
     status: 'Status',
     order: 'Order',
+    sortOrder: 'Order',
     required: 'Required',
 
     // News management
@@ -330,6 +395,42 @@ export const adminTranslations = {
     partnerNameEn: 'Name (English)',
     websiteUrl: 'Website URL (optional)',
     activePublic: 'Active (visible to public)',
+
+    // Gallery management
+    manageGallery: 'Manage Gallery',
+    addGallery: 'Add Item',
+    addGalleryItem: 'Add Gallery Item',
+    editGallery: 'Edit Gallery Item',
+    editGalleryItem: 'Edit Gallery Item',
+    galleryItems: 'Gallery Items',
+    noGallery: 'No gallery items',
+    noGalleryItems: 'No gallery items',
+    galleryImage: 'Gallery Image',
+    galleryThumbnail: 'Thumbnail',
+    galleryType: 'Item Type',
+    itemType: 'Item Type',
+    typePhoto: 'Photo',
+    typeVideo: 'Video',
+    photo: 'Photo',
+    photos: 'Photos',
+    video: 'Video',
+    videos: 'Videos',
+    videoUrl: 'Video URL',
+    videoThumbnail: 'Video Thumbnail',
+    thumbnailUrl: 'Thumbnail URL',
+    imageUrl: 'Image URL',
+    showOnWebsite: 'Show on website',
+    activeGalleryItem: 'Active (visible to public)',
+    searchGallery: 'Search gallery...',
+    galleryTitleRequired: 'Gallery item title is required',
+    galleryImageRequired: 'Gallery image is required',
+    videoUrlRequired: 'Video URL is required',
+    gallerySaved: 'Gallery item saved',
+    galleryDeleted: 'Gallery item deleted',
+    deleteGalleryItem: 'Delete this gallery item?',
+    totalGallery: 'Total Gallery Items',
+    totalPhotos: 'Total Photos',
+    totalVideos: 'Total Videos',
 
     // Hero slides management
     manageHero: 'Manage Hero Slides',
@@ -392,8 +493,10 @@ export const adminTranslations = {
     role: 'Role',
     superAdmin: 'Super Admin',
     regularAdmin: 'Admin',
+
     // New password min
     min8Chars: 'Minimum 8 characters',
+
     // Hero CTA
     ctaLink: 'CTA Button Link',
     ctaSection: 'Call-To-Action (optional)',
@@ -426,8 +529,10 @@ export const AdminLangContext = createContext(null)
 
 export const useAdminLang = () => {
   const context = useContext(AdminLangContext)
+
   if (!context) {
     throw new Error('useAdminLang must be used within AdminLangProvider')
   }
+
   return context
 }
