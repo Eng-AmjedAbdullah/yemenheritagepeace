@@ -4,6 +4,7 @@ import {
   Building2,
   Eye,
   Gem,
+  Goal,
   HeartHandshake,
   FlaskConical,
   ShieldCheck,
@@ -13,8 +14,6 @@ import {
   BookOpen,
   Compass,
   Mail,
-  Target,
-  ArrowUpRight,
 } from 'lucide-react'
 
 const ACCENT = '#18a2be'
@@ -165,7 +164,6 @@ export default function About() {
     <main dir={isRtl ? 'rtl' : 'ltr'} className="overflow-hidden">
       <PageHeader title={t.nav.about} subtitle={headerSubtitle} />
 
-      {/* WHO WE ARE */}
       <section className="bg-white py-14">
         <div className="mx-auto max-w-6xl px-4">
           <h2 className="mb-8 text-2xl font-black text-dark md:text-3xl">
@@ -192,7 +190,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* VISION / MISSION / GOALS */}
       <section className="bg-gray-50 py-14">
         <div className="mx-auto max-w-5xl px-4">
           <div className="space-y-5">
@@ -204,11 +201,7 @@ export default function About() {
               <p>{mission}</p>
             </InfoPanel>
 
-            <InfoPanel
-              Icon={GoalsIcon}
-              title={isRtl ? 'الأهداف' : 'Goals'}
-              customIcon
-            >
+            <InfoPanel Icon={Goal} title={isRtl ? 'الأهداف' : 'Goals'}>
               <div className="space-y-3">
                 {goals.map((goal, index) => (
                   <div
@@ -230,7 +223,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* VALUES */}
       <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4">
           <SectionHeading
@@ -249,10 +241,7 @@ export default function About() {
                   <value.Icon size={22} className="text-primary" />
                 </div>
 
-                <h3
-                  className="mb-2 text-lg font-bold"
-                  style={{ color: ACCENT }}
-                >
+                <h3 className="mb-2 text-lg font-bold" style={{ color: ACCENT }}>
                   {value.label}
                 </h3>
 
@@ -307,16 +296,12 @@ function InfoCard({ Icon, title, text }) {
   )
 }
 
-function InfoPanel({ Icon, title, children, customIcon = false }) {
+function InfoPanel({ Icon, title, children }) {
   return (
     <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <IconBox>
-          {customIcon ? (
-            <Icon />
-          ) : (
-            <Icon size={22} className="text-primary" />
-          )}
+          <Icon size={24} className="text-primary" />
         </IconBox>
 
         <h3
@@ -340,19 +325,6 @@ function IconBox({ children, className = '' }) {
       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 ${className}`}
     >
       {children}
-    </div>
-  )
-}
-
-function GoalsIcon() {
-  return (
-    <div className="relative flex h-8 w-8 items-center justify-center text-primary">
-      <Target size={30} strokeWidth={2.4} />
-      <ArrowUpRight
-        size={18}
-        strokeWidth={3}
-        className="absolute -right-1 -top-1"
-      />
     </div>
   )
 }
