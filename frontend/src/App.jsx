@@ -50,6 +50,11 @@ const INITIAL_PUBLIC_DATA = {
   partners: [],
 }
 
+function getInitialLang() {
+  const savedLang = localStorage.getItem('yhpo_lang')
+  return savedLang === 'en' ? 'en' : 'ar'
+}
+
 function PublicLayout() {
   return (
     <>
@@ -138,7 +143,7 @@ function normalizeArray(value) {
 }
 
 export default function App() {
-  const [lang, setLang] = useState('ar')
+  const [lang, setLang] = useState(getInitialLang)
 
   const [settings, setSettings] = useState(null)
   const [settingsLoading, setSettingsLoading] = useState(false)
@@ -151,6 +156,13 @@ export default function App() {
 
   const t = translations[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
+
+  useEffect(() => {
+    localStorage.setItem('yhpo_lang', lang)
+    document.documentElement.lang = lang
+    document.documentElement.dir = dir
+    document.body.dir = dir
+  }, [lang, dir])
 
   const toggleLang = () => {
     setLang((currentLang) => (currentLang === 'ar' ? 'en' : 'ar'))
