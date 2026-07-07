@@ -87,10 +87,11 @@ export default function ManageNews() {
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
 
+  const [searchTerm, setSearchTerm] = useState('')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
 
-  const hasDateFilter = Boolean(dateFrom || dateTo)
+  const hasActiveFilter = Boolean(searchTerm.trim() || dateFrom || dateTo)
 
   const load = async () => {
     setLoading(true)
@@ -112,6 +113,19 @@ export default function ManageNews() {
   useEffect(() => {
     let filtered = [...items]
 
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase().trim()
+
+      filtered = filtered.filter((item) => {
+        return (
+          item.title?.toLowerCase().includes(query) ||
+          item.title_en?.toLowerCase().includes(query) ||
+          item.category?.toLowerCase().includes(query) ||
+          item.category_en?.toLowerCase().includes(query)
+        )
+      })
+    }
+
     if (dateFrom) {
       filtered = filtered.filter((item) => {
         const itemDate = getInputDate(item.created_at)
@@ -127,7 +141,7 @@ export default function ManageNews() {
     }
 
     setFilteredItems(filtered)
-  }, [items, dateFrom, dateTo])
+  }, [items, searchTerm, dateFrom, dateTo])
 
   const updateForm = (key, value) => {
     setForm((current) => ({
@@ -136,7 +150,8 @@ export default function ManageNews() {
     }))
   }
 
-  const resetDateFilter = () => {
+  const resetFilters = () => {
+    setSearchTerm('')
     setDateFrom('')
     setDateTo('')
   }
@@ -283,7 +298,7 @@ export default function ManageNews() {
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            {hasDateFilter
+            {hasActiveFilter
               ? isRtl
                 ? `${t.totalNews}: ${items.length} — النتائج: ${filteredItems.length}`
                 : `${t.totalNews}: ${items.length} — Results: ${filteredItems.length}`
@@ -302,7 +317,24 @@ export default function ManageNews() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_180px_180px_auto] lg:items-end">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'بحث' : 'Search'}
+            </label>
+
+            <input
+              type="text"
+              placeholder={t.searchNews}
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className={`input-field h-12 w-full px-4 ${
+                isRtl ? 'text-right' : 'text-left'
+              }`}
+              dir={isRtl ? 'rtl' : 'ltr'}
+            />
+          </div>
+
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               {isRtl ? 'من تاريخ' : 'From Date'}
@@ -331,13 +363,13 @@ export default function ManageNews() {
             />
           </div>
 
-          {hasDateFilter && (
+          {hasActiveFilter && (
             <button
               type="button"
-              onClick={resetDateFilter}
+              onClick={resetFilters}
               className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100"
-              aria-label={isRtl ? 'مسح فلتر التاريخ' : 'Clear date filter'}
-              title={isRtl ? 'مسح فلتر التاريخ' : 'Clear date filter'}
+              aria-label={isRtl ? 'مسح الفلاتر' : 'Clear filters'}
+              title={isRtl ? 'مسح الفلاتر' : 'Clear filters'}
             >
               <X size={18} />
             </button>
