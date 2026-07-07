@@ -35,27 +35,19 @@ const TYPE_ICONS = {
   training: GraduationCap,
 }
 
+const VALID_TYPES = ['all', 'event', 'seminar', 'project', 'training']
 const LONG_TEXT_LIMIT = 160
-
-function formatEventDate(value, isRtl) {
-  if (!value) return ''
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-
-  return date.toLocaleDateString(isRtl ? 'ar-YE' : 'en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
 
 export default function Events() {
   const { t, lang } = useLang()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const typeFromUrl = searchParams.get('type') || 'all'
 
   const [events, setEvents] = useState([])
-  const [activeType, setActiveType] = useState(searchParams.get('type') || 'all')
+  const [activeType, setActiveType] = useState(
+    VALID_TYPES.includes(typeFromUrl) ? typeFromUrl : 'all'
+  )
   const [dateFilter, setDateFilter] = useState('latest')
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -64,8 +56,9 @@ export default function Events() {
   const isRtl = lang === 'ar'
 
   useEffect(() => {
-    setActiveType(searchParams.get('type') || 'all')
-  }, [searchParams])
+    const nextType = VALID_TYPES.includes(typeFromUrl) ? typeFromUrl : 'all'
+    setActiveType(nextType)
+  }, [typeFromUrl])
 
   useEffect(() => {
     let cancelled = false
@@ -119,7 +112,7 @@ export default function Events() {
     const normalizedSearch = search.trim().toLowerCase()
 
     const result = events.filter((item) => {
-      const matchesType = activeType === 'all' || item.type === activeType
+      const matchesType = activeType === 'all' || item?.type === activeType
 
       const title = getEventTitle(item, isRtl).toLowerCase()
       const location = getEventLocation(item, isRtl).toLowerCase()
@@ -132,7 +125,7 @@ export default function Events() {
         content.includes(normalizedSearch)
 
       const matchesDate = matchesDateFilter(
-        item.event_date || item.created_at,
+        item?.event_date || item?.created_at,
         dateFilter
       )
 
@@ -154,15 +147,47 @@ export default function Events() {
   const tabs = [
     { key: 'all', label: isRtl ? 'الكل' : 'All' },
     { key: 'event', label: isRtl ? 'فعاليات' : 'Events' },
-    { key: 'seminar', label: t.nav.seminars },
-    { key: 'project', label: t.nav.projects },
-    { key: 'training', label: isRtl ? 'تدريب' : 'Training' },
+    {
+      key: 'seminar',
+      label: t.nav.seminars || (isRtl ? 'الندوات' : 'Seminars'),
+    },
+    {
+      key: 'project',
+      label: t.nav.projects || (isRtl ? 'المشاريع' : 'Projects'),
+    },
+    {
+      key: 'training',
+      label: t.nav.training || (isRtl ? 'تدريب' : 'Training'),
+    },
   ]
+
+  const handleTypeChange = (type) => {
+    const nextType = VALID_TYPES.includes(type) ? type : 'all'
+    setActiveType(nextType)
+
+    const params = new URLSearchParams(searchParams)
+
+    if (nextType === 'all') {
+      params.delete('type')
+    } else {
+      params.set('type', nextType)
+    }
+
+    setSearchParams(params)
+  }
 
   const clearFilters = () => {
     setSearch('')
     setDateFilter('latest')
+    setActiveType('all')
+
+    const params = new URLSearchParams(searchParams)
+    params.delete('type')
+    setSearchParams(params)
   }
+
+  const hasActiveFilters =
+    search.trim() || dateFilter !== 'latest' || activeType !== 'all'
 
   return (
     <main>
@@ -245,7 +270,7 @@ export default function Events() {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => setActiveType(tab.key)}
+                onClick={() => handleTypeChange(tab.key)}
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                   activeType === tab.key
                     ? 'bg-primary text-white shadow-md shadow-primary/30'
@@ -268,7 +293,7 @@ export default function Events() {
             </div>
           ) : (
             <>
-              {(search || dateFilter !== 'latest') && (
+              {hasActiveFilters && (
                 <div className="mb-5 flex flex-wrap items-center justify-center gap-3 text-sm">
                   <p className="text-gray-500">
                     {isRtl
@@ -288,18 +313,19 @@ export default function Events() {
 
               <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((item) => {
-                  const Icon = TYPE_ICONS[item.type] || Calendar
-                  const colorClass = TYPE_COLORS[item.type] || TYPE_COLORS.event
-                  const typeLabel = isRtl
-                    ? TYPE_LABELS[item.type]?.ar || item.type
-                    : TYPE_LABELS[item.type]?.en || item.type
+                  const Icon = TYPE_ICONS[item?.type] || Calendar
+                  const colorClass = TYPE_COLORS[item?.type] || TYPE_COLORS.event
 
-                  const imageSrc = resolveMediaUrl(item.image_url)
+                  const typeLabel = isRtl
+                    ? TYPE_LABELS[item?.type]?.ar || item?.type || ''
+                    : TYPE_LABELS[item?.type]?.en || item?.type || ''
+
+                  const imageSrc = resolveMediaUrl(item?.image_url)
                   const title = getEventTitle(item, isRtl)
                   const location = getEventLocation(item, isRtl)
                   const content = getEventContent(item, isRtl)
                   const formattedDate = formatEventDate(
-                    item.event_date || item.created_at,
+                    item?.event_date || item?.created_at,
                     isRtl
                   )
                   const isLong = content.length > LONG_TEXT_LIMIT
@@ -329,11 +355,13 @@ export default function Events() {
 
                           <div className="absolute inset-0 bg-gradient-to-t from-dark/60 to-transparent" />
 
-                          <span
-                            className={`absolute start-3 top-3 rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`}
-                          >
-                            {typeLabel}
-                          </span>
+                          {typeLabel && (
+                            <span
+                              className={`absolute start-3 top-3 rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`}
+                            >
+                              {typeLabel}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <div className="flex h-44 items-center justify-center bg-gray-100 text-gray-400">
@@ -342,7 +370,7 @@ export default function Events() {
                       )}
 
                       <div className="p-5">
-                        {!imageSrc && (
+                        {!imageSrc && typeLabel && (
                           <span
                             className={`mb-3 inline-block rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`}
                           >
@@ -417,18 +445,18 @@ export default function Events() {
 }
 
 function EventDetailsModal({ item, isRtl, onClose }) {
-  const Icon = TYPE_ICONS[item.type] || Calendar
-  const colorClass = TYPE_COLORS[item.type] || TYPE_COLORS.event
+  const Icon = TYPE_ICONS[item?.type] || Calendar
+  const colorClass = TYPE_COLORS[item?.type] || TYPE_COLORS.event
 
   const typeLabel = isRtl
-    ? TYPE_LABELS[item.type]?.ar || item.type
-    : TYPE_LABELS[item.type]?.en || item.type
+    ? TYPE_LABELS[item?.type]?.ar || item?.type || ''
+    : TYPE_LABELS[item?.type]?.en || item?.type || ''
 
   const title = getEventTitle(item, isRtl)
   const location = getEventLocation(item, isRtl)
   const content = getEventContent(item, isRtl)
-  const imageSrc = resolveMediaUrl(item.image_url)
-  const formattedDate = formatEventDate(item.event_date || item.created_at, isRtl)
+  const imageSrc = resolveMediaUrl(item?.image_url)
+  const formattedDate = formatEventDate(item?.event_date || item?.created_at, isRtl)
 
   return (
     <div
@@ -459,11 +487,13 @@ function EventDetailsModal({ item, isRtl, onClose }) {
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
-            <span
-              className={`absolute bottom-4 start-5 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${colorClass}`}
-            >
-              {typeLabel}
-            </span>
+            {typeLabel && (
+              <span
+                className={`absolute bottom-4 start-5 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${colorClass}`}
+              >
+                {typeLabel}
+              </span>
+            )}
           </div>
         ) : (
           <div className="flex h-52 items-center justify-center rounded-t-3xl bg-gray-100 text-gray-400">
@@ -521,6 +551,19 @@ function getEventTime(item) {
   const value = item?.event_date || item?.created_at || 0
   const time = new Date(value).getTime()
   return Number.isNaN(time) ? 0 : time
+}
+
+function formatEventDate(value, isRtl) {
+  if (!value) return ''
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+
+  return date.toLocaleDateString(isRtl ? 'ar-YE' : 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
 }
 
 function matchesDateFilter(date, filter) {
