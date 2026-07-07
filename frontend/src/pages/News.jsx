@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useLang } from '../App'
 import api from '../lib/api'
 import { resolveMediaUrl } from '../lib/media'
-import { Search, Newspaper, Calendar, X } from 'lucide-react'
+import { Search, Newspaper, Calendar, X, SlidersHorizontal } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 
 const DEFAULT_NEWS_IMAGE =
@@ -12,6 +13,7 @@ const LONG_TEXT_LIMIT = 180
 
 export default function News() {
   const { t, lang } = useLang()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [news, setNews] = useState([])
   const [search, setSearch] = useState('')
@@ -47,11 +49,21 @@ export default function News() {
   }, [])
 
   useEffect(() => {
+    const selectedId = searchParams.get('selected')
+    if (!selectedId || news.length === 0) return
+
+    const found = news.find((item) => String(item.id) === String(selectedId))
+    if (found) {
+      setSelectedNews(found)
+    }
+  }, [searchParams, news])
+
+  useEffect(() => {
     if (!selectedNews) return
 
     const handleEscape = (event) => {
       if (event.key === 'Escape') {
-        setSelectedNews(null)
+        closeNews()
       }
     }
 
@@ -91,12 +103,22 @@ export default function News() {
     })
   }, [news, search, dateFilter, isRtl])
 
+  const hasActiveFilters = search.trim() || dateFilter !== 'latest'
+
   const openNews = (item) => {
     setSelectedNews(item)
+
+    const params = new URLSearchParams(searchParams)
+    params.set('selected', item.id)
+    setSearchParams(params, { replace: true })
   }
 
   const closeNews = () => {
     setSelectedNews(null)
+
+    const params = new URLSearchParams(searchParams)
+    params.delete('selected')
+    setSearchParams(params, { replace: true })
   }
 
   const clearFilters = () => {
@@ -114,66 +136,70 @@ export default function News() {
             : 'Latest updates and announcements'
         }
       >
-        <div className="mx-auto grid max-w-4xl gap-3 md:grid-cols-[1.5fr_1fr]">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
-              size={18}
-              style={{ [isRtl ? 'right' : 'left']: '14px' }}
-            />
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-2xl border border-gray-200 bg-white/90 p-2 shadow-sm backdrop-blur">
+            <div className="grid gap-2 md:grid-cols-[1fr_210px]">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
+                  size={17}
+                  style={{ [isRtl ? 'right' : 'left']: '13px' }}
+                />
 
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder={isRtl ? 'ابحث في الأخبار...' : 'Search news...'}
-              className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 text-dark placeholder-gray-400 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              style={{
-                paddingLeft: isRtl ? '14px' : '46px',
-                paddingRight: isRtl ? '46px' : '14px',
-              }}
-            />
-          </div>
+                <input
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder={isRtl ? 'ابحث في الأخبار...' : 'Search news...'}
+                  className="h-10 w-full rounded-xl border border-transparent bg-gray-50 text-sm text-dark placeholder-gray-400 transition-all focus:border-primary/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  style={{
+                    paddingLeft: isRtl ? '14px' : '42px',
+                    paddingRight: isRtl ? '42px' : '14px',
+                  }}
+                />
+              </div>
 
-          <div className="relative">
-            <Calendar
-              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
-              size={17}
-              style={{ [isRtl ? 'right' : 'left']: '14px' }}
-            />
+              <div className="relative">
+                <Calendar
+                  className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                  style={{ [isRtl ? 'right' : 'left']: '13px' }}
+                />
 
-            <select
-              value={dateFilter}
-              onChange={(event) => setDateFilter(event.target.value)}
-              className="h-12 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 text-dark transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              style={{
-                paddingLeft: isRtl ? '14px' : '44px',
-                paddingRight: isRtl ? '44px' : '14px',
-              }}
-            >
-              <option value="latest">
-                {isRtl ? 'الأحدث أولاً' : 'Latest first'}
-              </option>
+                <select
+                  value={dateFilter}
+                  onChange={(event) => setDateFilter(event.target.value)}
+                  className="h-10 w-full appearance-none rounded-xl border border-transparent bg-gray-50 text-sm font-medium text-gray-700 transition-all focus:border-primary/30 focus:bg-white focus:outline-none focus:ring-2 focus:ring-primary/10"
+                  style={{
+                    paddingLeft: isRtl ? '12px' : '40px',
+                    paddingRight: isRtl ? '40px' : '12px',
+                  }}
+                >
+                  <option value="latest">
+                    {isRtl ? 'الأحدث أولاً' : 'Latest first'}
+                  </option>
 
-              <option value="oldest">
-                {isRtl ? 'الأقدم أولاً' : 'Oldest first'}
-              </option>
+                  <option value="oldest">
+                    {isRtl ? 'الأقدم أولاً' : 'Oldest first'}
+                  </option>
 
-              <option value="today">
-                {isRtl ? 'أخبار اليوم' : 'Today'}
-              </option>
+                  <option value="today">
+                    {isRtl ? 'أخبار اليوم' : 'Today'}
+                  </option>
 
-              <option value="this_week">
-                {isRtl ? 'هذا الأسبوع' : 'This week'}
-              </option>
+                  <option value="this_week">
+                    {isRtl ? 'هذا الأسبوع' : 'This week'}
+                  </option>
 
-              <option value="this_month">
-                {isRtl ? 'هذا الشهر' : 'This month'}
-              </option>
+                  <option value="this_month">
+                    {isRtl ? 'هذا الشهر' : 'This month'}
+                  </option>
 
-              <option value="this_year">
-                {isRtl ? 'هذا العام' : 'This year'}
-              </option>
-            </select>
+                  <option value="this_year">
+                    {isRtl ? 'هذا العام' : 'This year'}
+                  </option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
       </PageHeader>
@@ -191,18 +217,22 @@ export default function News() {
             </div>
           ) : (
             <>
-              {(search || dateFilter !== 'latest') && (
-                <div className="mb-5 flex flex-wrap items-center justify-center gap-3 text-sm">
-                  <p className="text-gray-500">
-                    {isRtl
-                      ? `${filtered.length} نتيجة`
-                      : `${filtered.length} results`}
-                  </p>
+              {hasActiveFilters && (
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-4 py-3 text-sm shadow-sm">
+                  <div className="flex items-center gap-2 text-gray-500">
+                    <SlidersHorizontal size={15} className="text-primary" />
+
+                    <span>
+                      {isRtl
+                        ? `${filtered.length} نتيجة`
+                        : `${filtered.length} results`}
+                    </span>
+                  </div>
 
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="rounded-full border border-primary/20 bg-white px-4 py-1.5 font-semibold text-primary transition hover:bg-primary hover:text-white"
+                    className="inline-flex h-8 items-center rounded-full border border-primary/20 px-3 text-xs font-semibold text-primary transition hover:bg-primary hover:text-white"
                   >
                     {isRtl ? 'مسح الفلتر' : 'Clear filter'}
                   </button>
@@ -423,13 +453,12 @@ function matchesDateFilter(date, filter) {
 function formatDate(date, isRtl) {
   if (!date) return '—'
 
-  try {
-    return new Date(date).toLocaleDateString(isRtl ? 'ar-YE' : 'en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    })
-  } catch {
-    return '—'
-  }
+  const parsedDate = new Date(date)
+  if (Number.isNaN(parsedDate.getTime())) return '—'
+
+  return parsedDate.toLocaleDateString(isRtl ? 'ar-YE' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
 }
