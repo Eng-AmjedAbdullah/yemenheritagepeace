@@ -347,3 +347,67 @@ select.input-field {
   background: white;
   clip-path: ellipse(55% 100% at 50% 100%);
 }
+/* YHPO Preloader */
+.yhpo-preloader-ring {
+  border-top-color: var(--primary);
+  border-right-color: var(--primary);
+  animation: yhpoSpin 1.25s linear infinite;
+}
+
+.yhpo-preloader-ring-reverse {
+  border-bottom-color: var(--primary);
+  border-left-color: var(--primary);
+  animation: yhpoSpinReverse 1.8s linear infinite;
+}
+
+.yhpo-preloader-logo {
+  animation: yhpoLogoPulse 1.8s ease-in-out infinite;
+}
+
+.yhpo-preloader-glow {
+  animation: yhpoGlow 1.8s ease-in-out infinite;
+}
+
+@keyframes yhpoSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes yhpoSpinReverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes yhpoLogoPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+@keyframes yhpoGlow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 0.8;
+    transform: scale(1.15);
+  }
+  }
