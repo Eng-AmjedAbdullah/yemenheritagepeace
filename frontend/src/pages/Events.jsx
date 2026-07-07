@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Briefcase,
   Search,
+  X,
 } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 
@@ -34,6 +35,8 @@ const TYPE_ICONS = {
   training: GraduationCap,
 }
 
+const LONG_TEXT_LIMIT = 160
+
 function formatEventDate(value, isRtl) {
   if (!value) return ''
 
@@ -50,20 +53,29 @@ function formatEventDate(value, isRtl) {
 export default function Events() {
   const { t, lang } = useLang()
   const [searchParams] = useSearchParams()
+
   const [events, setEvents] = useState([])
   const [activeType, setActiveType] = useState(searchParams.get('type') || 'all')
+  const [dateFilter, setDateFilter] = useState('latest')
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [selectedEvent, setSelectedEvent] = useState(null)
 
   const isRtl = lang === 'ar'
+
+  useEffect(() => {
+    setActiveType(searchParams.get('type') || 'all')
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
 
     async function loadEvents() {
       setLoading(true)
+
       try {
         const data = await api.get('/events')
+
         if (!cancelled) {
           setEvents(Array.isArray(data) ? data : [])
         }
@@ -85,22 +97,59 @@ export default function Events() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!selectedEvent) return
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setSelectedEvent(null)
+      }
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [selectedEvent])
+
   const filtered = useMemo(() => {
-    return events.filter((item) => {
+    const normalizedSearch = search.trim().toLowerCase()
+
+    const result = events.filter((item) => {
       const matchesType = activeType === 'all' || item.type === activeType
 
-      const title = isRtl ? item.title : (item.title_en || item.title || '')
-      const location = isRtl ? item.location : (item.location_en || item.location || '')
-      const normalizedSearch = search.trim().toLowerCase()
+      const title = getEventTitle(item, isRtl).toLowerCase()
+      const location = getEventLocation(item, isRtl).toLowerCase()
+      const content = getEventContent(item, isRtl).toLowerCase()
 
       const matchesSearch =
         !normalizedSearch ||
-        title?.toLowerCase().includes(normalizedSearch) ||
-        location?.toLowerCase().includes(normalizedSearch)
+        title.includes(normalizedSearch) ||
+        location.includes(normalizedSearch) ||
+        content.includes(normalizedSearch)
 
-      return matchesType && matchesSearch
+      const matchesDate = matchesDateFilter(
+        item.event_date || item.created_at,
+        dateFilter
+      )
+
+      return matchesType && matchesSearch && matchesDate
     })
-  }, [events, activeType, search, isRtl])
+
+    return result.sort((a, b) => {
+      const dateA = getEventTime(a)
+      const dateB = getEventTime(b)
+
+      if (dateFilter === 'oldest') {
+        return dateA - dateB
+      }
+
+      return dateB - dateA
+    })
+  }, [events, activeType, search, dateFilter, isRtl])
 
   const tabs = [
     { key: 'all', label: isRtl ? 'الكل' : 'All' },
@@ -109,6 +158,11 @@ export default function Events() {
     { key: 'project', label: t.nav.projects },
     { key: 'training', label: isRtl ? 'تدريب' : 'Training' },
   ]
+
+  const clearFilters = () => {
+    setSearch('')
+    setDateFilter('latest')
+  }
 
   return (
     <main>
@@ -120,37 +174,82 @@ export default function Events() {
             : 'Events, seminars, projects and training programs'
         }
       >
-        <div className="relative max-w-lg mx-auto">
-          <Search
-            className="absolute top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            size={18}
-            style={{ [isRtl ? 'right' : 'left']: '14px' }}
-          />
+        <div className="mx-auto grid max-w-4xl gap-3 md:grid-cols-[1.5fr_1fr]">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
+              size={18}
+              style={{ [isRtl ? 'right' : 'left']: '14px' }}
+            />
 
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={isRtl ? 'ابحث في الفعاليات...' : 'Search events...'}
-            className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 text-dark placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/15 transition-all"
-            style={{
-              paddingLeft: isRtl ? '14px' : '46px',
-              paddingRight: isRtl ? '46px' : '14px',
-            }}
-          />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={isRtl ? 'ابحث في الفعاليات...' : 'Search events...'}
+              className="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 text-dark placeholder-gray-400 transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              style={{
+                paddingLeft: isRtl ? '14px' : '46px',
+                paddingRight: isRtl ? '46px' : '14px',
+              }}
+            />
+          </div>
+
+          <div className="relative">
+            <Calendar
+              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
+              size={17}
+              style={{ [isRtl ? 'right' : 'left']: '14px' }}
+            />
+
+            <select
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
+              className="h-12 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 text-dark transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
+              style={{
+                paddingLeft: isRtl ? '14px' : '44px',
+                paddingRight: isRtl ? '44px' : '14px',
+              }}
+            >
+              <option value="latest">
+                {isRtl ? 'الأحدث أولاً' : 'Latest first'}
+              </option>
+
+              <option value="oldest">
+                {isRtl ? 'الأقدم أولاً' : 'Oldest first'}
+              </option>
+
+              <option value="today">
+                {isRtl ? 'اليوم' : 'Today'}
+              </option>
+
+              <option value="this_week">
+                {isRtl ? 'هذا الأسبوع' : 'This week'}
+              </option>
+
+              <option value="this_month">
+                {isRtl ? 'هذا الشهر' : 'This month'}
+              </option>
+
+              <option value="this_year">
+                {isRtl ? 'هذا العام' : 'This year'}
+              </option>
+            </select>
+          </div>
         </div>
       </PageHeader>
 
-      <section className="py-12 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-wrap gap-2 justify-center mb-8">
+      <section className="bg-gray-50 py-12">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-8 flex flex-wrap justify-center gap-2">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
+                type="button"
                 onClick={() => setActiveType(tab.key)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
+                className={`rounded-full px-4 py-2 text-sm font-semibold transition-all duration-200 ${
                   activeType === tab.key
                     ? 'bg-primary text-white shadow-md shadow-primary/30'
-                    : 'bg-white text-gray-600 hover:bg-primary/10 border border-gray-200'
+                    : 'border border-gray-200 bg-white text-gray-600 hover:bg-primary/10'
                 }`}
               >
                 {tab.label}
@@ -159,58 +258,85 @@ export default function Events() {
           </div>
 
           {loading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((item) => (
                 <div
-                  key={i}
-                  className="bg-white rounded-2xl h-56 animate-pulse border border-gray-100"
+                  key={item}
+                  className="h-56 animate-pulse rounded-2xl border border-gray-100 bg-white"
                 />
               ))}
             </div>
           ) : (
             <>
-              {search && (
-                <p className="text-gray-500 text-sm mb-4 text-center">
-                  {isRtl ? `${filtered.length} نتيجة` : `${filtered.length} results`}
-                </p>
+              {(search || dateFilter !== 'latest') && (
+                <div className="mb-5 flex flex-wrap items-center justify-center gap-3 text-sm">
+                  <p className="text-gray-500">
+                    {isRtl
+                      ? `${filtered.length} نتيجة`
+                      : `${filtered.length} results`}
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="rounded-full border border-primary/20 bg-white px-4 py-1.5 font-semibold text-primary transition hover:bg-primary hover:text-white"
+                  >
+                    {isRtl ? 'مسح الفلتر' : 'Clear filter'}
+                  </button>
+                </div>
               )}
 
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
                 {filtered.map((item) => {
                   const Icon = TYPE_ICONS[item.type] || Calendar
                   const colorClass = TYPE_COLORS[item.type] || TYPE_COLORS.event
                   const typeLabel = isRtl
-                    ? (TYPE_LABELS[item.type]?.ar || item.type)
-                    : (TYPE_LABELS[item.type]?.en || item.type)
+                    ? TYPE_LABELS[item.type]?.ar || item.type
+                    : TYPE_LABELS[item.type]?.en || item.type
 
                   const imageSrc = resolveMediaUrl(item.image_url)
-                  const title = isRtl ? item.title : (item.title_en || item.title)
-                  const location = isRtl ? item.location : (item.location_en || item.location)
-                  const content = isRtl ? item.content : (item.content_en || item.content)
-                  const formattedDate = formatEventDate(item.event_date, isRtl)
+                  const title = getEventTitle(item, isRtl)
+                  const location = getEventLocation(item, isRtl)
+                  const content = getEventContent(item, isRtl)
+                  const formattedDate = formatEventDate(
+                    item.event_date || item.created_at,
+                    isRtl
+                  )
+                  const isLong = content.length > LONG_TEXT_LIMIT
 
                   return (
-                    <div
+                    <article
                       key={item.id}
-                      className="card-hover bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedEvent(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault()
+                          setSelectedEvent(item)
+                        }
+                      }}
+                      className="card-hover group cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm outline-none transition focus:ring-4 focus:ring-primary/15"
                     >
                       {imageSrc ? (
-                        <div className="relative overflow-hidden h-44">
+                        <div className="relative h-44 overflow-hidden">
                           <img
                             src={imageSrc}
                             alt={title || typeLabel}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                             loading="lazy"
                           />
+
                           <div className="absolute inset-0 bg-gradient-to-t from-dark/60 to-transparent" />
+
                           <span
-                            className={`absolute top-3 start-3 text-xs font-semibold px-2.5 py-1 rounded-full border ${colorClass}`}
+                            className={`absolute start-3 top-3 rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`}
                           >
                             {typeLabel}
                           </span>
                         </div>
                       ) : (
-                        <div className="h-44 flex items-center justify-center bg-gray-100 text-gray-400">
+                        <div className="flex h-44 items-center justify-center bg-gray-100 text-gray-400">
                           <Icon size={28} />
                         </div>
                       )}
@@ -218,17 +344,17 @@ export default function Events() {
                       <div className="p-5">
                         {!imageSrc && (
                           <span
-                            className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-full border mb-3 ${colorClass}`}
+                            className={`mb-3 inline-block rounded-full border px-2.5 py-1 text-xs font-semibold ${colorClass}`}
                           >
                             {typeLabel}
                           </span>
                         )}
 
-                        <h3 className="font-bold text-dark text-base leading-snug mb-3">
+                        <h3 className="mb-3 line-clamp-2 text-base font-bold leading-snug text-dark">
                           {title}
                         </h3>
 
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-3 flex-wrap">
+                        <div className="mb-3 flex flex-wrap items-center gap-4 text-xs text-gray-500">
                           {formattedDate && (
                             <span className="flex items-center gap-1">
                               <Calendar size={12} className="text-primary" />
@@ -245,12 +371,25 @@ export default function Events() {
                         </div>
 
                         {content && (
-                          <p className="text-gray-500 text-sm line-clamp-2">
+                          <p className="mb-3 line-clamp-2 whitespace-pre-line text-sm leading-6 text-gray-500">
                             {content}
                           </p>
                         )}
+
+                        {isLong && (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              setSelectedEvent(item)
+                            }}
+                            className="inline-flex text-sm font-semibold text-primary transition hover:text-primary-dark hover:underline"
+                          >
+                            {isRtl ? 'اقرأ المزيد' : 'Read more'}
+                          </button>
+                        )}
                       </div>
-                    </div>
+                    </article>
                   )
                 })}
               </div>
@@ -258,13 +397,170 @@ export default function Events() {
           )}
 
           {!loading && filtered.length === 0 && (
-            <div className="text-center py-16">
-              <Calendar size={40} className="text-gray-300 mx-auto mb-3" />
+            <div className="py-16 text-center">
+              <Calendar size={40} className="mx-auto mb-3 text-gray-300" />
               <p className="text-gray-400">{t.no_items}</p>
             </div>
           )}
         </div>
       </section>
+
+      {selectedEvent && (
+        <EventDetailsModal
+          item={selectedEvent}
+          isRtl={isRtl}
+          onClose={() => setSelectedEvent(null)}
+        />
+      )}
     </main>
   )
+}
+
+function EventDetailsModal({ item, isRtl, onClose }) {
+  const Icon = TYPE_ICONS[item.type] || Calendar
+  const colorClass = TYPE_COLORS[item.type] || TYPE_COLORS.event
+
+  const typeLabel = isRtl
+    ? TYPE_LABELS[item.type]?.ar || item.type
+    : TYPE_LABELS[item.type]?.en || item.type
+
+  const title = getEventTitle(item, isRtl)
+  const location = getEventLocation(item, isRtl)
+  const content = getEventContent(item, isRtl)
+  const imageSrc = resolveMediaUrl(item.image_url)
+  const formattedDate = formatEventDate(item.event_date || item.created_at, isRtl)
+
+  return (
+    <div
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <article
+        dir={isRtl ? 'rtl' : 'ltr'}
+        className="relative max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={isRtl ? 'إغلاق' : 'Close'}
+          className="absolute end-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 text-dark shadow-md transition hover:bg-primary hover:text-white"
+        >
+          <X size={20} />
+        </button>
+
+        {imageSrc ? (
+          <div className="relative h-64 overflow-hidden rounded-t-3xl md:h-80">
+            <img
+              src={imageSrc}
+              alt={title || typeLabel}
+              className="h-full w-full object-cover"
+            />
+
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+
+            <span
+              className={`absolute bottom-4 start-5 rounded-full border px-4 py-1.5 text-sm font-semibold shadow-sm ${colorClass}`}
+            >
+              {typeLabel}
+            </span>
+          </div>
+        ) : (
+          <div className="flex h-52 items-center justify-center rounded-t-3xl bg-gray-100 text-gray-400">
+            <Icon size={44} />
+          </div>
+        )}
+
+        <div className="p-5 md:p-8">
+          <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            {formattedDate && (
+              <span className="flex items-center gap-1">
+                <Calendar size={15} className="text-primary" />
+                {formattedDate}
+              </span>
+            )}
+
+            {location && (
+              <span className="flex items-center gap-1">
+                <MapPin size={15} className="text-primary" />
+                {location}
+              </span>
+            )}
+          </div>
+
+          <h2 className="mb-5 text-2xl font-bold leading-relaxed text-dark md:text-3xl">
+            {title}
+          </h2>
+
+          {content && (
+            <div className="whitespace-pre-line text-base leading-9 text-gray-600">
+              {content}
+            </div>
+          )}
+        </div>
+      </article>
+    </div>
+  )
+}
+
+function getEventTitle(item, isRtl) {
+  return isRtl ? item?.title || '' : item?.title_en || item?.title || ''
+}
+
+function getEventLocation(item, isRtl) {
+  return isRtl
+    ? item?.location || ''
+    : item?.location_en || item?.location || ''
+}
+
+function getEventContent(item, isRtl) {
+  return isRtl ? item?.content || '' : item?.content_en || item?.content || ''
+}
+
+function getEventTime(item) {
+  const value = item?.event_date || item?.created_at || 0
+  const time = new Date(value).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
+
+function matchesDateFilter(date, filter) {
+  if (filter === 'latest' || filter === 'oldest') return true
+
+  const itemDate = new Date(date)
+  if (Number.isNaN(itemDate.getTime())) return false
+
+  const now = new Date()
+
+  const itemYear = itemDate.getFullYear()
+  const itemMonth = itemDate.getMonth()
+  const itemDay = itemDate.getDate()
+
+  const nowYear = now.getFullYear()
+  const nowMonth = now.getMonth()
+  const nowDay = now.getDate()
+
+  if (filter === 'today') {
+    return itemYear === nowYear && itemMonth === nowMonth && itemDay === nowDay
+  }
+
+  if (filter === 'this_month') {
+    return itemYear === nowYear && itemMonth === nowMonth
+  }
+
+  if (filter === 'this_year') {
+    return itemYear === nowYear
+  }
+
+  if (filter === 'this_week') {
+    const startOfWeek = new Date(now)
+    startOfWeek.setHours(0, 0, 0, 0)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 7)
+
+    return itemDate >= startOfWeek && itemDate < endOfWeek
+  }
+
+  return true
 }
