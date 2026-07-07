@@ -361,6 +361,15 @@ select.input-field {
   animation: yhpoSpinReverse 1.8s linear infinite;
 }
 
+/* Logo wrapper without white circle, border, padding, or shadow. */
+.yhpo-preloader-logo-shell {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+}
+
 /* Keep logo static. Only the surrounding rings/glow animate. */
 .yhpo-preloader-logo {
   animation: none !important;
