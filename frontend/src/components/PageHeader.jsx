@@ -6,7 +6,7 @@ export default function PageHeader({ title, subtitle, children }) {
 
   return (
     <section
-      className="relative pt-8 sm:pt-10 md:pt-12 pb-8 md:pb-10 bg-gradient-to-b from-gray-50 to-white overflow-hidden"
+      className="relative pt-8 sm:pt-10 md:pt-20 lg:pt-24 pb-8 md:pb-10 bg-gradient-to-b from-gray-50 to-white overflow-hidden"
       style={{ scrollMarginTop: '8rem' }}
     >
       <div className="absolute inset-0 pointer-events-none">
