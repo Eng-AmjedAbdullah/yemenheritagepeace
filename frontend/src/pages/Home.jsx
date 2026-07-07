@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useLang } from '../App'
+import api from '../lib/api'
 import { resolveMediaUrl } from '../lib/media'
 import {
   ArrowLeft,
@@ -15,15 +16,10 @@ import {
   ChevronRight,
   Newspaper,
   Sparkles,
-  Leaf,
-  Building2,
   Eye,
   Gem,
-  HeartHandshake,
-  FlaskConical,
-  ShieldCheck,
-  Network,
-  Compass,
+  Heart,
+  Leaf,
   Mail,
 } from 'lucide-react'
 
@@ -83,16 +79,6 @@ const DEFAULT_HERO_SLIDE = {
   alt_en: 'Al-Qahira Castle - Taiz (Yemen)',
 }
 
-const DEFAULT_ABOUT_IMAGE =
-  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
-
-function normalizeArray(value) {
-  if (Array.isArray(value)) return value
-  if (Array.isArray(value?.data)) return value.data
-  if (Array.isArray(value?.items)) return value.items
-  return []
-}
-
 function SectionTitle({ children, align = 'center' }) {
   const isStart = align === 'start'
 
@@ -116,49 +102,34 @@ function SectionTitle({ children, align = 'center' }) {
 }
 
 export default function Home() {
-  const { t, lang, settings, publicData, refreshPublicData } = useLang()
-
+  const { t, lang, settings } = useLang()
   const isRtl = lang === 'ar'
 
+  const [heroSlides, setHeroSlides] = useState([])
   const [heroIdx, setHeroIdx] = useState(0)
+  const [news, setNews] = useState([])
+  const [events, setEvents] = useState([])
+  const [partners, setPartners] = useState([])
   const [partnerErrors, setPartnerErrors] = useState({})
 
   const Arrow = isRtl ? ArrowLeft : ArrowRight
   const ChevronDir = isRtl ? ChevronLeft : ChevronRight
   const goals = GOALS_DATA[lang] || GOALS_DATA.ar
 
-  const heroSlides = useMemo(
-    () => normalizeArray(publicData?.heroSlides),
-    [publicData?.heroSlides]
-  )
-
-  const news = useMemo(
-    () => normalizeArray(publicData?.news),
-    [publicData?.news]
-  )
-
-  const events = useMemo(
-    () => normalizeArray(publicData?.events),
-    [publicData?.events]
-  )
-
-  const partners = useMemo(
-    () => normalizeArray(publicData?.partners),
-    [publicData?.partners]
+  const heroSlidesData = useMemo(
+    () => (heroSlides.length > 0 ? heroSlides : [DEFAULT_HERO_SLIDE]),
+    [heroSlides]
   )
 
   const latestNews = useMemo(() => {
-    return [...news].sort((a, b) => getDateTime(b?.created_at) - getDateTime(a?.created_at))
+    return [...news].sort(
+      (a, b) => getDateTime(b?.created_at) - getDateTime(a?.created_at)
+    )
   }, [news])
 
   const latestEvents = useMemo(() => {
     return [...events].sort((a, b) => getEventTime(b) - getEventTime(a))
   }, [events])
-
-  const heroSlidesData = useMemo(
-    () => (heroSlides.length > 0 ? heroSlides : [DEFAULT_HERO_SLIDE]),
-    [heroSlides]
-  )
 
   const heroAlt = useMemo(() => {
     const img = heroSlidesData[heroIdx] || DEFAULT_HERO_SLIDE
@@ -166,60 +137,24 @@ export default function Home() {
   }, [heroIdx, isRtl, heroSlidesData])
 
   const whoIntro = isRtl
-    ? 'منظمة تراث اليمن لأجل السلام منظمة مجتمع مدني غير ربحية، مقرها الرئيسي في محافظة تعز، تعمل على صون التراث اليمني وربطه بالمعرفة والتنمية والسلام.'
-    : 'Yemen Heritage for Peace Organization is a non-profit civil society organization headquartered in Taiz, working to preserve Yemeni heritage and connect it with knowledge, development, and peace.'
+    ? 'منظمة تراث اليمن لأجل السلام هي منظمة مجتمع مدني غير ربحية، مقرها الرئيسي في محافظة تعز، الجمهورية اليمنية.'
+    : 'Yemen Heritage for Peace Organization is a non-profit civil society organization headquartered in Taiz Governorate, Republic of Yemen.'
 
   const whoFocus = isRtl
     ? 'تعمل المنظمة في مجالات الثقافة والعلوم والتنمية البيئية والسياحية، وتسعى إلى تحويل التراث اليمني إلى مساحة معرفة وسلام وتنمية تشارك فيها المؤسسات والمجتمعات المحلية.'
-    : 'The organization works in culture, science, environmental development, and tourism development, seeking to turn Yemeni heritage into a shared space for knowledge, peace, and development.'
+    : 'The organization works in culture, science, environmental development, and tourism development, seeking to turn Yemeni heritage into a space for knowledge, peace, and development shared by institutions and local communities.'
 
-  const whoCards = isRtl
-    ? [
-        {
-          Icon: Landmark,
-          title: 'الإطار القانوني',
-          text: 'تأسست المنظمة عام 2025م، وصرح لها رسميًا في يناير 2026م بموجب التصريح رقم 11م/2026م.',
-        },
-        {
-          Icon: Building2,
-          title: 'الهيكل المؤسسي',
-          text: 'تعمل المنظمة عبر هيكل مؤسسي يضم قيادة ومجالس إدارية واستشارية وفريقًا إداريًا مؤهلًا.',
-        },
-        {
-          Icon: Network,
-          title: 'العلاقات والشراكات',
-          text: 'تبني المنظمة شراكات مع السلطات المحلية والجامعات والمراكز البحثية والجهات الثقافية والمجتمعية.',
-        },
-      ]
-    : [
-        {
-          Icon: Landmark,
-          title: 'Legal Framework',
-          text: 'The organization was founded in 2025 and officially licensed in January 2026 under Permit No. 11M/2026.',
-        },
-        {
-          Icon: Building2,
-          title: 'Institutional Structure',
-          text: 'The organization works through an institutional structure with leadership, administrative and advisory bodies, and a qualified team.',
-        },
-        {
-          Icon: Network,
-          title: 'Relations & Partnerships',
-          text: 'The organization builds partnerships with local authorities, universities, research centers, cultural bodies, and community actors.',
-        },
-      ]
-
-  const visionMissionValues = isRtl
+  const aboutCards = isRtl
     ? [
         {
           Icon: Eye,
           title: 'الرؤية',
-          text: 'أن يكون التراث اليمني مصدرًا حيًا للوعي والسلام والتنمية وبناء مجتمع أكثر معرفة وتعاونًا واستدامة.',
+          text: 'أن يكون التراث اليمني مصدرًا حيًا للوعي والسلام والتنمية، وأن تصبح الهوية الحضارية اليمنية قوة فاعلة في بناء مجتمع أكثر معرفة وتعاونًا واستدامة.',
         },
         {
           Icon: Mail,
           title: 'الرسالة',
-          text: 'صون التراث اليمني المادي وغير المادي وتعزيز البحث والمعرفة وتمكين المجتمع من حماية الهوية الثقافية.',
+          text: 'صون التراث اليمني المادي وغير المادي، وتعزيز البحث والمعرفة، وتمكين المجتمع من المشاركة في حماية الهوية الثقافية.',
         },
         {
           Icon: Gem,
@@ -231,12 +166,12 @@ export default function Home() {
         {
           Icon: Eye,
           title: 'Vision',
-          text: 'To make Yemeni heritage a living source of awareness, peace, development, and a more knowledgeable, cooperative, and sustainable society.',
+          text: 'To make Yemeni heritage a living source of awareness, peace, and development for a more knowledgeable, cooperative, and sustainable society.',
         },
         {
           Icon: Mail,
           title: 'Mission',
-          text: 'To preserve Yemen’s tangible and intangible heritage, promote knowledge, and empower communities to protect cultural identity.',
+          text: 'To preserve Yemen’s tangible and intangible heritage, promote research and knowledge, and empower communities to protect cultural identity.',
         },
         {
           Icon: Gem,
@@ -245,79 +180,47 @@ export default function Home() {
         },
       ]
 
-  const valuePreview = isRtl
-    ? [
-        {
-          Icon: Compass,
-          label: 'الهوية',
-          desc: 'التراث ذاكرة حية تعزز الانتماء وتصل الأجيال بجذورها.',
-        },
-        {
-          Icon: HeartHandshake,
-          label: 'السلام',
-          desc: 'الثقافة مساحة للتقارب والحوار والعمل المشترك.',
-        },
-        {
-          Icon: BookOpen,
-          label: 'المعرفة',
-          desc: 'نستند إلى البحث والخبرة في فهم التراث وتوثيقه.',
-        },
-        {
-          Icon: FlaskConical,
-          label: 'الابتكار',
-          desc: 'نوظف العلم والتقنيات الحديثة لخدمة التراث والتنمية.',
-        },
-        {
-          Icon: ShieldCheck,
-          label: 'الشفافية',
-          desc: 'نلتزم بالحوكمة والمساءلة والعمل المؤسسي الواضح.',
-        },
-        {
-          Icon: Leaf,
-          label: 'الاستدامة',
-          desc: 'نصمم مبادرات تراعي الإنسان والبيئة واستمرار الأثر.',
-        },
-      ]
-    : [
-        {
-          Icon: Compass,
-          label: 'Identity',
-          desc: 'Heritage is a living memory that strengthens belonging and connects generations to their roots.',
-        },
-        {
-          Icon: HeartHandshake,
-          label: 'Peace',
-          desc: 'Culture is a space for dialogue, cooperation, and shared community action.',
-        },
-        {
-          Icon: BookOpen,
-          label: 'Knowledge',
-          desc: 'We rely on research and expertise to understand, document, and share heritage.',
-        },
-        {
-          Icon: FlaskConical,
-          label: 'Innovation',
-          desc: 'We use science and modern tools to serve heritage and community development.',
-        },
-        {
-          Icon: ShieldCheck,
-          label: 'Transparency',
-          desc: 'We are committed to governance, accountability, and clear institutional work.',
-        },
-        {
-          Icon: Leaf,
-          label: 'Sustainability',
-          desc: 'We design initiatives that respect people, the environment, and long-term impact.',
-        },
-      ]
-
   useEffect(() => {
-    if (publicData?.loaded) return
+    let alive = true
 
-    refreshPublicData?.().catch((error) => {
-      console.error('Failed to refresh public home data:', error)
+    Promise.allSettled([
+      api.get('/hero'),
+      api.get('/news?limit=100'),
+      api.get('/events?limit=100'),
+      api.get('/partners'),
+    ]).then(([heroResult, newsResult, eventsResult, partnersResult]) => {
+      if (!alive) return
+
+      setHeroSlides(
+        heroResult.status === 'fulfilled' && Array.isArray(heroResult.value)
+          ? heroResult.value
+          : []
+      )
+
+      setNews(
+        newsResult.status === 'fulfilled' && Array.isArray(newsResult.value)
+          ? newsResult.value
+          : []
+      )
+
+      setEvents(
+        eventsResult.status === 'fulfilled' && Array.isArray(eventsResult.value)
+          ? eventsResult.value
+          : []
+      )
+
+      setPartners(
+        partnersResult.status === 'fulfilled' &&
+          Array.isArray(partnersResult.value)
+          ? partnersResult.value
+          : []
+      )
     })
-  }, [publicData?.loaded, refreshPublicData])
+
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     setHeroIdx(0)
@@ -327,7 +230,7 @@ export default function Home() {
     if (heroSlidesData.length <= 1) return
 
     const timer = setInterval(() => {
-      setHeroIdx((currentIndex) => (currentIndex + 1) % heroSlidesData.length)
+      setHeroIdx((index) => (index + 1) % heroSlidesData.length)
     }, 6500)
 
     return () => clearInterval(timer)
@@ -486,7 +389,7 @@ export default function Home() {
 
       {/* Who We Are */}
       <section className="bg-white py-14">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 md:grid-cols-2">
           <div>
             <div className="mb-6">
               <SectionTitle align="start">
@@ -494,64 +397,41 @@ export default function Home() {
               </SectionTitle>
             </div>
 
-            <div className="mb-6 rounded-2xl border border-gray-100 bg-gray-50 p-5 shadow-sm sm:p-6">
+            <div className="mb-6 rounded-2xl border border-gray-100 bg-gray-50 p-6 shadow-sm">
               <div className="space-y-4 text-base leading-relaxed text-gray-600">
                 <p>{whoIntro}</p>
                 <p>{whoFocus}</p>
               </div>
             </div>
 
-            <div className="mb-8 grid gap-4 md:grid-cols-3">
-              {whoCards.map((card, index) => {
-                const Icon = card.Icon
-
-                return (
-                  <div
-                    key={index}
-                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-                  >
-                    <IconBox className="mb-4">
-                      <Icon size={21} className="text-primary" />
-                    </IconBox>
-
-                    <h3 className="mb-2 text-base font-bold text-primary">
-                      {card.title}
-                    </h3>
-
-                    <p className="text-sm leading-7 text-gray-500">
-                      {card.text}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-3">
-              {visionMissionValues.map((item, index) => {
+            <div className="mb-8 space-y-3">
+              {aboutCards.map((item, index) => {
                 const Icon = item.Icon
 
                 return (
                   <div
                     key={index}
-                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+                    className="flex items-start gap-3 rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition hover:border-primary/30 hover:bg-primary/5"
                   >
-                    <IconBox className="mb-4">
-                      <Icon size={22} className="text-primary" />
-                    </IconBox>
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
+                      <Icon size={20} className="text-primary" />
+                    </div>
 
-                    <h3 className="mb-2 text-base font-bold text-primary">
-                      {item.title}
-                    </h3>
+                    <div>
+                      <p className="mb-1 text-sm font-bold text-dark">
+                        {item.title}
+                      </p>
 
-                    <p className="text-sm leading-7 text-gray-500">
-                      {item.text}
-                    </p>
+                      <p className="text-sm leading-relaxed text-gray-600">
+                        {item.text}
+                      </p>
+                    </div>
                   </div>
                 )
               })}
             </div>
 
-            <div className="mt-8 flex justify-center md:justify-start">
+            <div className="flex justify-center">
               <Link to="/about" className="btn-primary">
                 {t.about_short.more}
                 <Arrow size={16} />
@@ -561,34 +441,37 @@ export default function Home() {
 
           <div className="relative">
             <img
-              src={resolveMediaUrl(aboutImageUrl) || DEFAULT_ABOUT_IMAGE}
+              src={
+                resolveMediaUrl(aboutImageUrl) ||
+                'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
+              }
               alt={
                 aboutAlt ||
                 (isRtl
                   ? 'العمارة اليمنية التاريخية'
                   : 'Historic Yemeni Architecture')
               }
-              className="h-[460px] w-full rounded-3xl object-cover shadow-xl"
+              className="h-80 w-full rounded-2xl object-cover shadow-xl"
               loading="lazy"
             />
 
             <div className="absolute -bottom-5 -start-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                  <HeartHandshake size={18} className="text-primary" />
+                  <Heart size={18} className="text-primary" />
                 </div>
 
                 <div>
                   <p className="text-sm font-bold text-dark">
                     {isRtl
-                      ? 'التراث مساحة سلام ومعرفة'
-                      : 'Heritage as Peace & Knowledge'}
+                      ? 'حماية التراث اليمني'
+                      : 'Protecting Yemeni Heritage'}
                   </p>
 
                   <p className="mt-0.5 text-xs text-gray-400">
                     {isRtl
-                      ? 'هوية وتنمية للأجيال القادمة'
-                      : 'Identity and development for generations'}
+                      ? 'من أجل الأجيال القادمة'
+                      : 'For future generations'}
                   </p>
                 </div>
               </div>
@@ -597,48 +480,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Values Preview */}
-      <section className="bg-gray-50 py-14">
-        <div className="mx-auto max-w-7xl px-4">
-          <div className="mb-10 flex flex-col items-center text-center">
-            <SectionTitle>{isRtl ? 'قيمنا' : 'Our Values'}</SectionTitle>
-
-            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-gray-500">
-              {isRtl
-                ? 'قيمنا تنطلق من الهوية والسلام والمعرفة والابتكار والشفافية والاستدامة، وتنعكس في كل مبادرة ننفذها.'
-                : 'Our values are rooted in identity, peace, knowledge, innovation, transparency, and sustainability, and are reflected in every initiative we implement.'}
-            </p>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {valuePreview.map((value, index) => {
-              const Icon = value.Icon
-
-              return (
-                <div
-                  key={index}
-                  className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-                >
-                  <IconBox className="mb-4">
-                    <Icon size={22} className="text-primary" />
-                  </IconBox>
-
-                  <h3 className="mb-2 text-lg font-bold text-primary">
-                    {value.label}
-                  </h3>
-
-                  <p className="text-sm leading-7 text-gray-500">
-                    {value.desc}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </section>
-
       {/* Goals */}
-      <section className="bg-white py-14">
+      <section className="bg-gray-50 py-14">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-10 flex flex-col items-center text-center">
             <SectionTitle>
@@ -685,7 +528,7 @@ export default function Home() {
       </section>
 
       {/* Heritage Life */}
-      <section className="bg-gray-50 py-14">
+      <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-10 flex flex-col items-center text-center">
             <SectionTitle>{t.heritage_life_title}</SectionTitle>
@@ -752,7 +595,7 @@ export default function Home() {
       </section>
 
       {/* News */}
-      <section className="bg-white py-14">
+      <section className="bg-gray-50 py-14">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-10 flex items-end justify-between">
             <SectionTitle align="start">{t.latest_news}</SectionTitle>
@@ -837,7 +680,7 @@ export default function Home() {
       </section>
 
       {/* Events */}
-      <section className="bg-gray-50 py-14">
+      <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-10 flex items-end justify-between">
             <SectionTitle align="start">
@@ -939,7 +782,7 @@ export default function Home() {
       </section>
 
       {/* Partners */}
-      <section className="bg-white py-14">
+      <section className="bg-gray-50 py-14">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-10 flex flex-col items-center text-center">
             <SectionTitle>{t.partners_title}</SectionTitle>
@@ -999,16 +842,6 @@ export default function Home() {
         </div>
       </section>
     </main>
-  )
-}
-
-function IconBox({ children, className = '' }) {
-  return (
-    <div
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 ${className}`}
-    >
-      {children}
-    </div>
   )
 }
 
