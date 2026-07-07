@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import { resolveMediaUrl } from '../lib/media'
 import api from '../lib/api'
 import toast from 'react-hot-toast'
@@ -72,6 +72,20 @@ function isPublished(value) {
   return value === true || value === 1 || value === '1'
 }
 
+function getTypeLabel(type, isRtl) {
+  return typeMap[type]?.[isRtl ? 'ar' : 'en'] || type || '—'
+}
+
+function getInputDate(value) {
+  if (!value) return ''
+
+  try {
+    return String(value).split('T')[0]
+  } catch {
+    return ''
+  }
+}
+
 export default function ManageEvents() {
   const { t, isRtl } = useAdminLang()
   const { requestConfirm } = useContext(ConfirmContext)
@@ -82,6 +96,11 @@ export default function ManageEvents() {
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
+
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -99,6 +118,61 @@ export default function ManageEvents() {
   useEffect(() => {
     load()
   }, [])
+
+  const filteredItems = useMemo(() => {
+    let nextItems = [...items]
+
+    const query = searchTerm.trim().toLowerCase()
+
+    if (query) {
+      nextItems = nextItems.filter((item) => {
+        const searchableText = [
+          item.title,
+          item.title_en,
+          item.content,
+          item.content_en,
+          item.location,
+          item.location_en,
+          item.type,
+          getTypeLabel(item.type, isRtl),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase()
+
+        return searchableText.includes(query)
+      })
+    }
+
+    if (typeFilter !== 'all') {
+      nextItems = nextItems.filter((item) => item.type === typeFilter)
+    }
+
+    if (dateFrom) {
+      nextItems = nextItems.filter((item) => {
+        const itemDate = getInputDate(item.event_date)
+        return itemDate && itemDate >= dateFrom
+      })
+    }
+
+    if (dateTo) {
+      nextItems = nextItems.filter((item) => {
+        const itemDate = getInputDate(item.event_date)
+        return itemDate && itemDate <= dateTo
+      })
+    }
+
+    return nextItems
+  }, [items, searchTerm, typeFilter, dateFrom, dateTo, isRtl])
+
+  const eventCount = items.filter((item) => item.type === 'event').length
+  const seminarCount = items.filter((item) => item.type === 'seminar').length
+  const projectCount = items.filter((item) => item.type === 'project').length
+  const trainingCount = items.filter((item) => item.type === 'training').length
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || typeFilter !== 'all' || dateFrom || dateTo
+  )
 
   const updateForm = (key, value) => {
     setForm((current) => ({
@@ -120,7 +194,7 @@ export default function ManageEvents() {
       content: item.content || '',
       content_en: item.content_en || '',
       type: item.type || 'event',
-      event_date: item.event_date?.split('T')[0] || '',
+      event_date: getInputDate(item.event_date),
       location: item.location || '',
       location_en: item.location_en || '',
       image_url: item.image_url || '',
@@ -135,6 +209,13 @@ export default function ManageEvents() {
     setModal(false)
     setForm(EMPTY)
     setEditId(null)
+  }
+
+  const resetFilters = () => {
+    setSearchTerm('')
+    setTypeFilter('all')
+    setDateFrom('')
+    setDateTo('')
   }
 
   const handleSave = async () => {
@@ -214,7 +295,7 @@ export default function ManageEvents() {
   }
 
   const getTypeName = (type) => {
-    return typeMap[type]?.[isRtl ? 'ar' : 'en'] || type || '—'
+    return getTypeLabel(type, isRtl)
   }
 
   const getTitle = (item) => {
@@ -247,8 +328,8 @@ export default function ManageEvents() {
 
           <p className="mt-1 text-sm text-gray-500">
             {isRtl
-              ? 'إدارة الفعاليات والندوات والمشاريع والتدريبات'
-              : 'Manage events, seminars, projects, and trainings'}
+              ? `إدارة الفعاليات والندوات والمشاريع والتدريبات — النتائج: ${filteredItems.length} من ${items.length}`
+              : `Manage events, seminars, projects, and trainings — ${filteredItems.length} of ${items.length} shown`}
           </p>
         </div>
 
@@ -262,14 +343,108 @@ export default function ManageEvents() {
         </button>
       </div>
 
+      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_220px_180px_180px_auto] lg:items-end">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'بحث' : 'Search'}
+            </label>
+
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={
+                isRtl
+                  ? 'ابحث بالعنوان أو الموقع أو الوصف...'
+                  : 'Search by title, location, or description...'
+              }
+              className={`input-field h-12 w-full px-4 ${
+                isRtl ? 'text-right' : 'text-left'
+              }`}
+              dir={isRtl ? 'rtl' : 'ltr'}
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'التصنيف' : 'Category'}
+            </label>
+
+            <select
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value)}
+              className="input-field h-12 w-full"
+            >
+              <option value="all">
+                {isRtl ? `كل التصنيفات (${items.length})` : `All categories (${items.length})`}
+              </option>
+              <option value="event">
+                {getTypeName('event')} ({eventCount})
+              </option>
+              <option value="seminar">
+                {getTypeName('seminar')} ({seminarCount})
+              </option>
+              <option value="project">
+                {getTypeName('project')} ({projectCount})
+              </option>
+              <option value="training">
+                {getTypeName('training')} ({trainingCount})
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'من تاريخ' : 'From Date'}
+            </label>
+
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+              className="input-field h-12 w-full"
+              dir="ltr"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'إلى تاريخ' : 'To Date'}
+            </label>
+
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+              className="input-field h-12 w-full"
+              dir="ltr"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            className={`h-12 rounded-xl px-4 text-sm font-semibold transition ${
+              hasActiveFilters
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'cursor-not-allowed bg-gray-100 text-gray-400'
+            }`}
+          >
+            {isRtl ? 'إعادة ضبط' : 'Reset'}
+          </button>
+        </div>
+      </div>
+
       <div className="md:hidden">
         {loading ? (
           <EmptyState text={t.loading} />
-        ) : items.length === 0 ? (
-          <EmptyState text={t.noEvents} />
+        ) : filteredItems.length === 0 ? (
+          <EmptyState text={isRtl ? 'لا توجد نتائج مطابقة' : 'No matching results'} />
         ) : (
           <div className="space-y-3">
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <div
                 key={item.id}
                 className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
@@ -387,14 +562,14 @@ export default function ManageEvents() {
                     {t.loading}
                   </td>
                 </tr>
-              ) : items.length === 0 ? (
+              ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-gray-400">
-                    {t.noEvents}
+                    {isRtl ? 'لا توجد نتائج مطابقة' : 'No matching results'}
                   </td>
                 </tr>
               ) : (
-                items.map((item) => (
+                filteredItems.map((item) => (
                   <tr
                     key={item.id}
                     className="border-b border-gray-50 transition hover:bg-gray-50/70"
@@ -483,7 +658,7 @@ export default function ManageEvents() {
           className="modal-overlay"
           onClick={(event) => event.target === event.currentTarget && closeModal()}
         >
-          <div className="modal-box w-[calc(100vw-24px)] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="modal-box max-h-[90vh] w-[calc(100vw-24px)] max-w-3xl overflow-y-auto">
             <div className="flex items-center justify-between border-b p-4 sm:p-6">
               <h2 className="text-lg font-bold text-dark sm:text-xl">
                 {editId ? t.editEvent : t.addEvent}
@@ -533,10 +708,10 @@ export default function ManageEvents() {
                     onChange={(event) => updateForm('type', event.target.value)}
                     className="input-field"
                   >
-                    <option value="event">{t.typeEvent}</option>
-                    <option value="seminar">{t.typeSeminar}</option>
-                    <option value="project">{t.typeProject}</option>
-                    <option value="training">{t.typeTraining}</option>
+                    <option value="event">{t.typeEvent || getTypeName('event')}</option>
+                    <option value="seminar">{t.typeSeminar || getTypeName('seminar')}</option>
+                    <option value="project">{t.typeProject || getTypeName('project')}</option>
+                    <option value="training">{t.typeTraining || getTypeName('training')}</option>
                   </select>
                 </div>
 
