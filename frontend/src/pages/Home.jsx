@@ -16,13 +16,11 @@ import {
   Newspaper,
   Sparkles,
   Leaf,
-  Building2,
   Eye,
   Gem,
   HeartHandshake,
   FlaskConical,
   ShieldCheck,
-  Network,
   Compass,
   Mail,
 } from 'lucide-react'
@@ -148,7 +146,9 @@ export default function Home() {
   )
 
   const latestNews = useMemo(() => {
-    return [...news].sort((a, b) => getDateTime(b?.created_at) - getDateTime(a?.created_at))
+    return [...news].sort(
+      (a, b) => getDateTime(b?.created_at) - getDateTime(a?.created_at)
+    )
   }, [news])
 
   const latestEvents = useMemo(() => {
@@ -166,50 +166,14 @@ export default function Home() {
   }, [heroIdx, isRtl, heroSlidesData])
 
   const whoIntro = isRtl
-    ? 'منظمة تراث اليمن لأجل السلام منظمة مجتمع مدني غير ربحية، مقرها الرئيسي في محافظة تعز، تعمل على صون التراث اليمني وربطه بالمعرفة والتنمية والسلام.'
-    : 'Yemen Heritage for Peace Organization is a non-profit civil society organization headquartered in Taiz, working to preserve Yemeni heritage and connect it with knowledge, development, and peace.'
+    ? 'منظمة تراث اليمن لأجل السلام منظمة مجتمع مدني غير ربحية، مقرها الرئيسي في محافظة تعز، تعمل من أجل صون التراث اليمني وربطه بالمعرفة والتنمية والسلام المجتمعي.'
+    : 'Yemen Heritage for Peace Organization is a non-profit civil society organization headquartered in Taiz, working to preserve Yemeni heritage and connect it with knowledge, development, and community peace.'
 
   const whoFocus = isRtl
     ? 'تعمل المنظمة في مجالات الثقافة والعلوم والتنمية البيئية والسياحية، وتسعى إلى تحويل التراث اليمني إلى مساحة معرفة وسلام وتنمية تشارك فيها المؤسسات والمجتمعات المحلية.'
     : 'The organization works in culture, science, environmental development, and tourism development, seeking to turn Yemeni heritage into a shared space for knowledge, peace, and development.'
 
-  const whoCards = isRtl
-    ? [
-        {
-          Icon: Landmark,
-          title: 'الإطار القانوني',
-          text: 'تأسست المنظمة عام 2025م، وصرح لها رسميًا في يناير 2026م بموجب التصريح رقم 11م/2026م.',
-        },
-        {
-          Icon: Building2,
-          title: 'الهيكل المؤسسي',
-          text: 'تعمل المنظمة عبر هيكل مؤسسي يضم قيادة ومجالس إدارية واستشارية وفريقًا إداريًا مؤهلًا.',
-        },
-        {
-          Icon: Network,
-          title: 'العلاقات والشراكات',
-          text: 'تبني المنظمة شراكات مع السلطات المحلية والجامعات والمراكز البحثية والجهات الثقافية والمجتمعية.',
-        },
-      ]
-    : [
-        {
-          Icon: Landmark,
-          title: 'Legal Framework',
-          text: 'The organization was founded in 2025 and officially licensed in January 2026 under Permit No. 11M/2026.',
-        },
-        {
-          Icon: Building2,
-          title: 'Institutional Structure',
-          text: 'The organization works through an institutional structure with leadership, administrative and advisory bodies, and a qualified team.',
-        },
-        {
-          Icon: Network,
-          title: 'Relations & Partnerships',
-          text: 'The organization builds partnerships with local authorities, universities, research centers, cultural bodies, and community actors.',
-        },
-      ]
-
-  const visionMissionValues = isRtl
+  const homeAboutCards = isRtl
     ? [
         {
           Icon: Eye,
@@ -231,7 +195,7 @@ export default function Home() {
         {
           Icon: Eye,
           title: 'Vision',
-          text: 'To make Yemeni heritage a living source of awareness, peace, development, and a more knowledgeable, cooperative, and sustainable society.',
+          text: 'To make Yemeni heritage a living source of awareness, peace, development, and a more knowledgeable and sustainable society.',
         },
         {
           Icon: Mail,
@@ -241,7 +205,7 @@ export default function Home() {
         {
           Icon: Gem,
           title: 'Values',
-          text: 'We believe in identity, peace, knowledge, innovation, transparency, and sustainability as foundations of our institutional work.',
+          text: 'We believe in identity, peace, knowledge, innovation, transparency, and sustainability as foundations of our work.',
         },
       ]
 
@@ -501,39 +465,14 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="mb-8 grid gap-4 md:grid-cols-3">
-              {whoCards.map((card, index) => {
-                const Icon = card.Icon
-
-                return (
-                  <div
-                    key={index}
-                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
-                  >
-                    <IconBox className="mb-4">
-                      <Icon size={21} className="text-primary" />
-                    </IconBox>
-
-                    <h3 className="mb-2 text-base font-bold text-primary">
-                      {card.title}
-                    </h3>
-
-                    <p className="text-sm leading-7 text-gray-500">
-                      {card.text}
-                    </p>
-                  </div>
-                )
-              })}
-            </div>
-
             <div className="grid gap-4 sm:grid-cols-3">
-              {visionMissionValues.map((item, index) => {
+              {homeAboutCards.map((item, index) => {
                 const Icon = item.Icon
 
                 return (
                   <div
                     key={index}
-                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
+                    className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
                   >
                     <IconBox className="mb-4">
                       <Icon size={22} className="text-primary" />
