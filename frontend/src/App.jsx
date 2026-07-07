@@ -7,6 +7,7 @@ import api from './lib/api'
 
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
+import Preloader from './components/Preloader'
 
 import Home from './pages/Home'
 import About from './pages/About'
@@ -15,6 +16,8 @@ import Events from './pages/Events'
 import Fields from './pages/Fields'
 import HeritageLive from './pages/HeritageLive'
 import Contact from './pages/Contact'
+import PhotoGallery from './pages/PhotoGallery'
+import VideoGallery from './pages/VideoGallery'
 
 import AdminLogin from './admin/AdminLogin'
 import AdminLayout from './admin/AdminLayout'
@@ -28,11 +31,9 @@ import Profile from './admin/Profile'
 import ManagePartners from './admin/ManagePartners'
 import ManageHero from './admin/ManageHero'
 import ManageSettings from './admin/ManageSettings'
-import PhotoGallery from './pages/PhotoGallery'
-import VideoGallery from './pages/VideoGallery'
 import ManageGallery from './admin/ManageGallery'
 
-export const AppContext = createContext()
+export const AppContext = createContext(null)
 export const useLang = () => useContext(AppContext)
 
 function PublicLayout() {
@@ -48,9 +49,9 @@ function PublicLayout() {
         <Route path="/fields" element={<Fields />} />
         <Route path="/heritage-life" element={<HeritageLive />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
         <Route path="/photo-gallery" element={<PhotoGallery />} />
         <Route path="/video-gallery" element={<VideoGallery />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
       <Footer />
@@ -58,10 +59,68 @@ function PublicLayout() {
   )
 }
 
+function AppToaster() {
+  return (
+    <Toaster
+      position="top-center"
+      gutter={10}
+      toastOptions={{
+        duration: 3500,
+        style: {
+          borderRadius: '12px',
+          fontSize: '14px',
+          fontWeight: '600',
+          padding: '14px 18px',
+          maxWidth: '420px',
+          color: '#ffffff',
+          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.22)',
+        },
+        success: {
+          duration: 3000,
+          style: {
+            background: '#166534',
+            color: '#ffffff',
+            border: '1px solid #15803d',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+            padding: '14px 18px',
+            maxWidth: '420px',
+            boxShadow: '0 10px 30px rgba(22, 101, 52, 0.28)',
+          },
+          iconTheme: {
+            primary: '#ffffff',
+            secondary: '#166534',
+          },
+        },
+        error: {
+          duration: 4500,
+          style: {
+            background: '#7f1d1d',
+            color: '#ffffff',
+            border: '1px solid #991b1b',
+            borderRadius: '12px',
+            fontSize: '14px',
+            fontWeight: '600',
+            padding: '14px 18px',
+            maxWidth: '420px',
+            boxShadow: '0 10px 30px rgba(127, 29, 29, 0.28)',
+          },
+          iconTheme: {
+            primary: '#ffffff',
+            secondary: '#7f1d1d',
+          },
+        },
+      }}
+    />
+  )
+}
+
 export default function App() {
   const [lang, setLang] = useState('ar')
   const [settings, setSettings] = useState(null)
   const [settingsLoading, setSettingsLoading] = useState(true)
+  const [settingsError, setSettingsError] = useState(null)
 
   const t = translations[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
@@ -72,12 +131,15 @@ export default function App() {
 
   const refreshSettings = async () => {
     setSettingsLoading(true)
+    setSettingsError(null)
 
     try {
       const siteSettings = await api.get('/settings')
       setSettings(siteSettings)
-    } catch {
+    } catch (error) {
+      console.error('Failed to load site settings:', error)
       setSettings(null)
+      setSettingsError(error)
     } finally {
       setSettingsLoading(false)
     }
@@ -87,96 +149,61 @@ export default function App() {
     refreshSettings()
   }, [])
 
+  const contextValue = {
+    lang,
+    t,
+    dir,
+    toggleLang,
+    settings,
+    settingsLoading,
+    settingsError,
+    refreshSettings,
+  }
+
   return (
-    <AppContext.Provider
-      value={{
-        lang,
-        t,
-        dir,
-        toggleLang,
-        settings,
-        settingsLoading,
-        refreshSettings,
-      }}
-    >
+    <AppContext.Provider value={contextValue}>
       <div dir={dir} className={lang === 'ar' ? 'font-ar' : 'font-en'}>
-        <BrowserRouter>
-          <Toaster
-            position="top-center"
-            gutter={10}
-            toastOptions={{
-              duration: 3500,
+        {settingsLoading ? (
+          <>
+            <Preloader lang={lang} settings={settings} />
+            <AppToaster />
+          </>
+        ) : settingsError ? (
+          <>
+            <Preloader
+              lang={lang}
+              settings={settings}
+              error
+              onRetry={refreshSettings}
+            />
+            <AppToaster />
+          </>
+        ) : (
+          <BrowserRouter>
+            <AppToaster />
 
-              style: {
-                borderRadius: '12px',
-                fontSize: '14px',
-                fontWeight: '600',
-                padding: '14px 18px',
-                maxWidth: '420px',
-                color: '#ffffff',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.22)',
-              },
+            <Routes>
+              <Route path="/admin/login" element={<AdminLogin />} />
 
-              success: {
-                duration: 3000,
-                style: {
-                  background: '#166534',
-                  color: '#ffffff',
-                  border: '1px solid #15803d',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  padding: '14px 18px',
-                  maxWidth: '420px',
-                  boxShadow: '0 10px 30px rgba(22, 101, 52, 0.28)',
-                },
-                iconTheme: {
-                  primary: '#ffffff',
-                  secondary: '#166534',
-                },
-              },
+              <Route path="/admin/*" element={<AdminLayout />}>
+                <Route index element={<Dashboard />} />
+                <Route path="news" element={<ManageNews />} />
+                <Route path="events" element={<ManageEvents />} />
+                <Route path="heritage" element={<ManageHeritage />} />
+                <Route path="partners" element={<ManagePartners />} />
+                <Route path="hero" element={<ManageHero />} />
+                <Route path="settings" element={<ManageSettings />} />
+                <Route path="admins" element={<ManageAdmins />} />
+                <Route path="messages" element={<ManageMessages />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="gallery" element={<ManageGallery />} />
+                <Route path="*" element={<Navigate to="/admin" replace />} />
+              </Route>
 
-              error: {
-                duration: 4500,
-                style: {
-                  background: '#7f1d1d',
-                  color: '#ffffff',
-                  border: '1px solid #991b1b',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  padding: '14px 18px',
-                  maxWidth: '420px',
-                  boxShadow: '0 10px 30px rgba(127, 29, 29, 0.28)',
-                },
-                iconTheme: {
-                  primary: '#ffffff',
-                  secondary: '#7f1d1d',
-                },
-              },
-            }}
-          />
-
-          <Routes>
-            <Route path="/admin/login" element={<AdminLogin />} />
-
-            <Route path="/admin/*" element={<AdminLayout />}>
-              <Route index element={<Dashboard />} />
-              <Route path="news" element={<ManageNews />} />
-              <Route path="events" element={<ManageEvents />} />
-              <Route path="heritage" element={<ManageHeritage />} />
-              <Route path="partners" element={<ManagePartners />} />
-              <Route path="hero" element={<ManageHero />} />
-              <Route path="settings" element={<ManageSettings />} />
-              <Route path="admins" element={<ManageAdmins />} />
-              <Route path="messages" element={<ManageMessages />} />
-              <Route path="profile" element={<Profile />} />            
-        <Route path="gallery" element={<ManageGallery />} />
-              <Route path="*" element={<Navigate to="/admin" replace />} />
-            </Route>
-            <Route path="/*" element={<PublicLayout />} />
-          </Routes>
-        </BrowserRouter>
+              <Route path="/*" element={<PublicLayout />} />
+            </Routes>
+          </BrowserRouter>
+        )}
       </div>
     </AppContext.Provider>
   )
