@@ -11,6 +11,7 @@ import {
   Save,
   CalendarDays,
   MapPin,
+  RotateCcw,
 } from 'lucide-react'
 import { ConfirmContext } from './AdminLayout'
 import { useAdminLang } from './adminI18n'
@@ -119,6 +120,10 @@ export default function ManageEvents() {
     load()
   }, [])
 
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || typeFilter !== 'all' || dateFrom || dateTo
+  )
+
   const filteredItems = useMemo(() => {
     let nextItems = [...items]
 
@@ -169,10 +174,6 @@ export default function ManageEvents() {
   const seminarCount = items.filter((item) => item.type === 'seminar').length
   const projectCount = items.filter((item) => item.type === 'project').length
   const trainingCount = items.filter((item) => item.type === 'training').length
-
-  const hasActiveFilters = Boolean(
-    searchTerm.trim() || typeFilter !== 'all' || dateFrom || dateTo
-  )
 
   const updateForm = (key, value) => {
     setForm((current) => ({
@@ -344,7 +345,13 @@ export default function ManageEvents() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1.3fr_220px_180px_180px_auto] lg:items-end">
+        <div
+          className={`grid grid-cols-1 gap-3 ${
+            hasActiveFilters
+              ? 'lg:grid-cols-[1.3fr_220px_180px_180px_48px]'
+              : 'lg:grid-cols-[1.3fr_220px_180px_180px]'
+          } lg:items-end`}
+        >
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               {isRtl ? 'بحث' : 'Search'}
@@ -377,7 +384,9 @@ export default function ManageEvents() {
               className="input-field h-12 w-full"
             >
               <option value="all">
-                {isRtl ? `كل التصنيفات (${items.length})` : `All categories (${items.length})`}
+                {isRtl
+                  ? `كل التصنيفات (${items.length})`
+                  : `All categories (${items.length})`}
               </option>
               <option value="event">
                 {getTypeName('event')} ({eventCount})
@@ -422,18 +431,17 @@ export default function ManageEvents() {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={resetFilters}
-            disabled={!hasActiveFilters}
-            className={`h-12 rounded-xl px-4 text-sm font-semibold transition ${
-              hasActiveFilters
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'cursor-not-allowed bg-gray-100 text-gray-400'
-            }`}
-          >
-            {isRtl ? 'إعادة ضبط' : 'Reset'}
-          </button>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              title={isRtl ? 'إعادة ضبط الفلاتر' : 'Reset filters'}
+              aria-label={isRtl ? 'إعادة ضبط الفلاتر' : 'Reset filters'}
+              className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gray-900 text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900/20"
+            >
+              <RotateCcw size={18} />
+            </button>
+          )}
         </div>
       </div>
 
