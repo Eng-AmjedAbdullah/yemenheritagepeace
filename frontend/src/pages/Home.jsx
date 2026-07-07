@@ -19,6 +19,7 @@ import {
   Target,
   Heart,
   Leaf,
+  ShieldCheck,
 } from 'lucide-react'
 
 const GOALS_DATA = {
@@ -76,6 +77,9 @@ const DEFAULT_HERO_SLIDE = {
   alt_ar: 'قلعة القاهرة – تعز (اليمن)',
   alt_en: 'Al-Qahira Castle - Taiz (Yemen)',
 }
+
+const DEFAULT_ABOUT_IMAGE =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
 
 function normalizeArray(value) {
   if (Array.isArray(value)) return value
@@ -138,6 +142,18 @@ export default function Home() {
     [publicData?.partners]
   )
 
+  const latestNews = useMemo(() => {
+    return [...news].sort((a, b) => {
+      return getDateTime(b?.created_at) - getDateTime(a?.created_at)
+    })
+  }, [news])
+
+  const latestEvents = useMemo(() => {
+    return [...events].sort((a, b) => {
+      return getEventTime(b) - getEventTime(a)
+    })
+  }, [events])
+
   const heroSlidesData = useMemo(
     () => (heroSlides.length > 0 ? heroSlides : [DEFAULT_HERO_SLIDE]),
     [heroSlides]
@@ -147,6 +163,43 @@ export default function Home() {
     const img = heroSlidesData[heroIdx] || DEFAULT_HERO_SLIDE
     return isRtl ? img.alt_ar || '' : img.alt_en || ''
   }, [heroIdx, isRtl, heroSlidesData])
+
+  const aboutCards = useMemo(
+    () => [
+      {
+        icon: Eye,
+        title: t.vision || (isRtl ? 'الرؤية' : 'Vision'),
+        text:
+          t.vision_text ||
+          (isRtl
+            ? 'أن تكون المنظمة رائدة في حماية التراث اليمني وتعزيز حضوره في التنمية والسلام.'
+            : 'To be a leading organization in protecting Yemeni heritage and strengthening its role in development and peace.'),
+        className: 'border-primary/15 bg-primary/5',
+        iconClass: 'bg-primary/10 text-primary',
+      },
+      {
+        icon: Target,
+        title: t.mission || (isRtl ? 'الرسالة' : 'Mission'),
+        text:
+          t.mission_text ||
+          (isRtl
+            ? 'نعمل على صون التراث الثقافي اليمني، ودعم البحث والتعليم، وبناء شراكات تخدم المجتمع.'
+            : 'We work to preserve Yemeni cultural heritage, support research and education, and build partnerships that serve communities.'),
+        className: 'border-gray-200 bg-gray-50',
+        iconClass: 'bg-dark/5 text-dark',
+      },
+      {
+        icon: ShieldCheck,
+        title: isRtl ? 'قيمنا' : 'Our Values',
+        text: isRtl
+          ? 'نؤمن بالمسؤولية، الشراكة، السلام، واحترام الهوية الثقافية للأجيال الحالية والقادمة.'
+          : 'We believe in responsibility, partnership, peace, and respect for cultural identity for current and future generations.',
+        className: 'border-primary/15 bg-white',
+        iconClass: 'bg-primary/10 text-primary',
+      },
+    ],
+    [t, isRtl]
+  )
 
   useEffect(() => {
     if (publicData?.loaded) return
@@ -184,6 +237,7 @@ export default function Home() {
   const eventIcon = (type) => {
     if (type === 'seminar') return <BookOpen size={16} />
     if (type === 'training') return <GraduationCap size={16} />
+    if (type === 'project') return <Landmark size={16} />
     return <Calendar size={16} />
   }
 
@@ -227,37 +281,42 @@ export default function Home() {
         id="home-hero"
         className="relative flex min-h-[86vh] items-center justify-center overflow-hidden py-8"
       >
-        {heroSlidesData.map((img, index) => (
-          <div
-            key={img.id || index}
-            className={`absolute inset-0 ${
-              index === heroIdx ? 'opacity-100' : 'opacity-0'
-            }`}
-            style={{ transition: 'opacity 1.5s ease' }}
-            aria-hidden={index !== heroIdx}
-          >
-            <img
-              src={resolveMediaUrl(img.image_url)}
-              alt={index === heroIdx ? heroAlt : ''}
-              className="h-full w-full object-cover"
-              loading={index === 0 ? 'eager' : 'lazy'}
-            />
+        {heroSlidesData.map((img, index) => {
+          const imageSrc =
+            resolveMediaUrl(img.image_url) || DEFAULT_HERO_SLIDE.image_url
 
-            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/55" />
+          return (
+            <div
+              key={img.id || index}
+              className={`absolute inset-0 ${
+                index === heroIdx ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{ transition: 'opacity 1.5s ease' }}
+              aria-hidden={index !== heroIdx}
+            >
+              <img
+                src={imageSrc}
+                alt={index === heroIdx ? heroAlt : ''}
+                className="h-full w-full object-cover"
+                loading={index === 0 ? 'eager' : 'lazy'}
+              />
 
-            {(img.caption_ar || img.caption_en) && (
-              <div
-                className={`absolute bottom-20 ${
-                  isRtl ? 'right-8' : 'left-8'
-                } hidden md:block`}
-              >
-                <p className="border-s-2 border-primary ps-3 text-xs italic text-white/80">
-                  {isRtl ? img.caption_ar : img.caption_en}
-                </p>
-              </div>
-            )}
-          </div>
-        ))}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/55" />
+
+              {(img.caption_ar || img.caption_en) && (
+                <div
+                  className={`absolute bottom-20 ${
+                    isRtl ? 'right-8' : 'left-8'
+                  } hidden md:block`}
+                >
+                  <p className="border-s-2 border-primary ps-3 text-xs italic text-white/80">
+                    {isRtl ? img.caption_ar : img.caption_en}
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        })}
 
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
 
@@ -328,37 +387,36 @@ export default function Home() {
               {t.about_short.desc}
             </p>
 
-            <div className="mb-8 space-y-3">
-              <div className="flex items-start gap-3 rounded-xl border border-primary/15 bg-primary/5 p-4">
-                <Eye size={20} className="mt-0.5 shrink-0 text-primary" />
+            <div className="mb-8 grid gap-4">
+              {aboutCards.map((card, index) => {
+                const Icon = card.icon
 
-                <div>
-                  <p className="mb-1 text-sm font-bold text-dark">
-                    {t.vision}
-                  </p>
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-4 rounded-2xl border p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md ${card.className}`}
+                  >
+                    <div
+                      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${card.iconClass}`}
+                    >
+                      <Icon size={22} />
+                    </div>
 
-                  <p className="text-sm leading-relaxed text-gray-600">
-                    {t.vision_text}
-                  </p>
-                </div>
-              </div>
+                    <div>
+                      <h3 className="mb-1 text-base font-bold text-dark">
+                        {card.title}
+                      </h3>
 
-              <div className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
-                <Target size={20} className="mt-0.5 shrink-0 text-dark" />
-
-                <div>
-                  <p className="mb-1 text-sm font-bold text-dark">
-                    {t.mission}
-                  </p>
-
-                  <p className="text-sm leading-relaxed text-gray-600">
-                    {t.mission_text}
-                  </p>
-                </div>
-              </div>
+                      <p className="text-sm leading-7 text-gray-600">
+                        {card.text}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
-            <div className="flex justify-center">
+            <div className="flex justify-center md:justify-start">
               <Link to="/about" className="btn-primary">
                 {t.about_short.more}
                 <Arrow size={16} />
@@ -368,10 +426,7 @@ export default function Home() {
 
           <div className="relative">
             <img
-              src={
-                resolveMediaUrl(aboutImageUrl) ||
-                'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
-              }
+              src={resolveMediaUrl(aboutImageUrl) || DEFAULT_ABOUT_IMAGE}
               alt={
                 aboutAlt ||
                 (isRtl
@@ -536,70 +591,71 @@ export default function Home() {
             </Link>
           </div>
 
-          {news.length === 0 ? (
+          {latestNews.length === 0 ? (
             <div className="py-12 text-center text-gray-400">
               {isRtl ? 'لا توجد أخبار منشورة حالياً' : 'No published news yet'}
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
-              {news.slice(0, 3).map((item) => (
-                <div
-                  key={item.id}
-                  className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <div className="relative h-44 overflow-hidden">
-                    {item.image_url ? (
-                      <img
-                        src={resolveMediaUrl(item.image_url)}
-                        alt={isRtl ? item.title : item.title_en || item.title}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-gray-100">
-                        <Newspaper size={32} className="text-gray-300" />
-                      </div>
-                    )}
+              {latestNews.slice(0, 3).map((item) => {
+                const title = isRtl ? item.title : item.title_en || item.title
+                const content = isRtl
+                  ? item.content
+                  : item.content_en || item.content
 
-                    {(item.category || item.category_en) && (
-                      <span className="absolute start-3 top-3 rounded-full bg-primary/90 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                        {isRtl
-                          ? item.category
-                          : item.category_en || item.category}
-                      </span>
-                    )}
-                  </div>
+                return (
+                  <Link
+                    key={item.id}
+                    to={item.id ? `/news?selected=${item.id}` : '/news'}
+                    className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <div className="relative h-44 overflow-hidden">
+                      {item.image_url ? (
+                        <img
+                          src={resolveMediaUrl(item.image_url)}
+                          alt={title || ''}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                          <Newspaper size={32} className="text-gray-300" />
+                        </div>
+                      )}
 
-                  <div className="p-5">
-                    <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-dark">
-                      {isRtl ? item.title : item.title_en || item.title}
-                    </h3>
-
-                    <p className="mb-4 line-clamp-2 text-sm text-gray-500">
-                      {isRtl ? item.content : item.content_en || item.content}
-                    </p>
-
-                    <div className="flex items-center justify-between border-t border-gray-100 pt-3">
-                      <span className="flex items-center gap-1 text-xs text-gray-400">
-                        <Newspaper size={12} />
-                        {item.created_at
-                          ? new Date(item.created_at).toLocaleDateString(
-                              isRtl ? 'ar-YE' : 'en-US'
-                            )
-                          : '—'}
-                      </span>
-
-                      <Link
-                        to="/news"
-                        className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                      >
-                        {t.read_more}
-                        <ChevronDir size={12} />
-                      </Link>
+                      {(item.category || item.category_en) && (
+                        <span className="absolute start-3 top-3 rounded-full bg-primary/90 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                          {isRtl
+                            ? item.category
+                            : item.category_en || item.category}
+                        </span>
+                      )}
                     </div>
-                  </div>
-                </div>
-              ))}
+
+                    <div className="p-5">
+                      <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-dark">
+                        {title}
+                      </h3>
+
+                      <p className="mb-4 line-clamp-2 text-sm text-gray-500">
+                        {content}
+                      </p>
+
+                      <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                        <span className="flex items-center gap-1 text-xs text-gray-400">
+                          <Newspaper size={12} />
+                          {formatDate(item.created_at, isRtl)}
+                        </span>
+
+                        <span className="flex items-center gap-1 text-xs font-medium text-primary group-hover:underline">
+                          {t.read_more}
+                          <ChevronDir size={12} />
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                )
+              })}
             </div>
           )}
         </div>
@@ -609,7 +665,9 @@ export default function Home() {
       <section className="bg-white py-14">
         <div className="mx-auto max-w-7xl px-4">
           <div className="mb-10 flex items-end justify-between">
-            <SectionTitle align="start">{t.latest_events}</SectionTitle>
+            <SectionTitle align="start">
+              {isRtl ? 'أحدث الفعاليات' : 'Latest Events'}
+            </SectionTitle>
 
             <Link
               to="/events"
@@ -620,25 +678,34 @@ export default function Home() {
             </Link>
           </div>
 
-          {events.length === 0 ? (
+          {latestEvents.length === 0 ? (
             <div className="py-12 text-center text-gray-400">
-              {isRtl ? 'لا توجد فعاليات منشورة حالياً' : 'No upcoming events yet'}
+              {isRtl ? 'لا توجد فعاليات منشورة حالياً' : 'No published events yet'}
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
-              {events.slice(0, 3).map((item) => {
+              {latestEvents.slice(0, 3).map((item) => {
                 const badge = typeBadge(item.type)
+                const title = isRtl ? item.title : item.title_en || item.title
+                const location = isRtl
+                  ? item.location || ''
+                  : item.location_en || item.location || ''
+                const eventHref =
+                  item.type && item.type !== 'event'
+                    ? `/events?type=${item.type}`
+                    : '/events'
 
                 return (
-                  <div
+                  <Link
                     key={item.id}
+                    to={eventHref}
                     className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                   >
                     {item.image_url && (
                       <div className="relative h-44 overflow-hidden">
                         <img
                           src={resolveMediaUrl(item.image_url)}
-                          alt={isRtl ? item.title : item.title_en || item.title}
+                          alt={title || ''}
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
                         />
@@ -665,32 +732,29 @@ export default function Home() {
                           </div>
 
                           <div className="text-sm font-semibold text-dark">
-                            {item.event_date
-                              ? new Date(item.event_date).toLocaleDateString(
-                                  isRtl ? 'ar-YE' : 'en-US',
-                                  {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                  }
-                                )
-                              : '—'}
+                            {formatDate(
+                              item.event_date || item.created_at,
+                              isRtl,
+                              {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              }
+                            )}
                           </div>
                         </div>
                       </div>
 
                       <h3 className="mb-3 line-clamp-2 font-bold leading-snug text-dark">
-                        {isRtl ? item.title : item.title_en || item.title}
+                        {title}
                       </h3>
 
                       <p className="flex items-center gap-1 text-sm text-gray-500">
                         <MapPin size={13} className="shrink-0 text-primary" />
-                        {isRtl
-                          ? item.location || ''
-                          : item.location_en || item.location || ''}
+                        {location}
                       </p>
                     </div>
-                  </div>
+                  </Link>
                 )
               })}
             </div>
@@ -759,5 +823,30 @@ export default function Home() {
         </div>
       </section>
     </main>
+  )
+}
+
+function getDateTime(value) {
+  const time = new Date(value || 0).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
+
+function getEventTime(item) {
+  return getDateTime(item?.event_date || item?.created_at)
+}
+
+function formatDate(value, isRtl, options) {
+  if (!value) return '—'
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+
+  return date.toLocaleDateString(
+    isRtl ? 'ar-YE' : 'en-US',
+    options || {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }
   )
 }
