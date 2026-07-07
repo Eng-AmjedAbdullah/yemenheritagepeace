@@ -73,6 +73,9 @@ export default function Navbar() {
       projects:
         t.nav.projects || (isRtl ? 'المشاريع' : 'Projects'),
 
+      training:
+        t.nav.training || (isRtl ? 'التدريب' : 'Training'),
+
       photoGallery:
         t.nav.photo_gallery ||
         t.nav.photoGallery ||
@@ -90,9 +93,13 @@ export default function Navbar() {
     () => ({
       media_center: [
         { label: t.nav.news, href: '/news' },
+
+        // These links open Events page and activate the matching tab/filter.
         { label: labels.eventsActivities, href: '/events' },
         { label: labels.seminars, href: '/events?type=seminar' },
         { label: labels.projects, href: '/events?type=project' },
+        { label: labels.training, href: '/events?type=training' },
+
         { label: labels.photoGallery, href: '/photo-gallery' },
         { label: labels.videoGallery, href: '/video-gallery' },
       ],
@@ -150,20 +157,21 @@ export default function Navbar() {
 
     const [path, qs] = String(to).split('?')
 
-    const pathActive =
-      location.pathname === path ||
-      (path !== '/' && location.pathname.startsWith(`${path}/`))
+    if (location.pathname !== path) return false
 
-    if (!qs) return pathActive
+    const current = new URLSearchParams(location.search)
+
+    if (!qs) {
+      return Array.from(current.keys()).length === 0
+    }
 
     const target = new URLSearchParams(qs)
-    const current = new URLSearchParams(location.search)
 
     for (const [key, value] of target.entries()) {
       if (current.get(key) !== value) return false
     }
 
-    return pathActive
+    return true
   }
 
   const dropdownActive = (key) =>
@@ -180,6 +188,12 @@ export default function Navbar() {
   const handleAdminClick = () => {
     setMobileOpen(false)
     navigate('/admin/login')
+  }
+
+  const closeMenus = () => {
+    setMobileOpen(false)
+    setOpenDrop(null)
+    setMobileDrop(null)
   }
 
   return (
@@ -276,8 +290,10 @@ export default function Navbar() {
                   items={dropdowns.media_center}
                   open={openDrop === 'media_center'}
                   onToggle={() => toggleDesktopDropdown('media_center')}
+                  onItemClick={closeMenus}
                   active={dropdownActive('media_center')}
                   navText={navText}
+                  isActiveQueryLink={isActiveQueryLink}
                 />
 
                 <DropMenu
@@ -285,8 +301,10 @@ export default function Navbar() {
                   items={dropdowns.fields}
                   open={openDrop === 'fields'}
                   onToggle={() => toggleDesktopDropdown('fields')}
+                  onItemClick={closeMenus}
                   active={dropdownActive('fields')}
                   navText={navText}
+                  isActiveQueryLink={isActiveQueryLink}
                 />
 
                 <DropMenu
@@ -294,8 +312,10 @@ export default function Navbar() {
                   items={dropdowns.heritage_life}
                   open={openDrop === 'heritage_life'}
                   onToggle={() => toggleDesktopDropdown('heritage_life')}
+                  onItemClick={closeMenus}
                   active={dropdownActive('heritage_life')}
                   navText={navText}
+                  isActiveQueryLink={isActiveQueryLink}
                 />
 
                 <NavLink
@@ -407,6 +427,7 @@ export default function Navbar() {
                         open={mobileDrop === item.key}
                         active={dropdownActive(item.key)}
                         onToggle={() => toggleMobileDropdown(item.key)}
+                        onItemClick={closeMenus}
                         isActiveQueryLink={isActiveQueryLink}
                       />
                     )
@@ -417,6 +438,7 @@ export default function Navbar() {
                       key={item.href}
                       to={item.href}
                       active={isActiveQueryLink(item.href)}
+                      onClick={closeMenus}
                     >
                       {item.label}
                     </MobileNavItem>
@@ -494,7 +516,16 @@ function MobileSocialLink({ href, label, icon }) {
   )
 }
 
-function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
+function DropMenu({
+  label,
+  items,
+  open,
+  onToggle,
+  onItemClick,
+  active,
+  navText = '',
+  isActiveQueryLink,
+}) {
   const ref = useRef(null)
 
   useEffect(() => {
@@ -528,31 +559,42 @@ function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
 
       {open && (
         <div className="absolute left-1/2 top-full z-[70] mt-3 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-primary/15 bg-white py-2 text-start shadow-xl shadow-black/10">
-          {items.map((item, index) => (
-            <Link
-              key={`${item.href}-${index}`}
-              to={item.href}
-              className="block px-4 py-3 text-sm font-medium text-primary transition hover:bg-primary/10 hover:text-primary"
-            >
-              {item.parent && (
-                <span className="mb-0.5 block text-xs font-normal text-primary/60">
-                  {item.parent} /
-                </span>
-              )}
+          {items.map((item, index) => {
+            const activeItem = isActiveQueryLink?.(item.href)
 
-              {item.label}
-            </Link>
-          ))}
+            return (
+              <Link
+                key={`${item.href}-${index}`}
+                to={item.href}
+                onClick={onItemClick}
+                className={[
+                  'block px-4 py-3 text-sm font-medium transition',
+                  activeItem
+                    ? 'bg-primary/10 text-primary'
+                    : 'text-primary hover:bg-primary/10 hover:text-primary',
+                ].join(' ')}
+              >
+                {item.parent && (
+                  <span className="mb-0.5 block text-xs font-normal text-primary/60">
+                    {item.parent} /
+                  </span>
+                )}
+
+                {item.label}
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
 
-function MobileNavItem({ to, active, children }) {
+function MobileNavItem({ to, active, children, onClick }) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className={[
         'block border-b border-gray-200 py-3 text-dark transition-colors',
         active ? 'font-semibold text-primary' : 'hover:text-primary',
@@ -569,6 +611,7 @@ function MobileDropMenu({
   open,
   active,
   onToggle,
+  onItemClick,
   isActiveQueryLink,
 }) {
   return (
@@ -593,26 +636,31 @@ function MobileDropMenu({
 
       {open && (
         <div className="pb-2">
-          {items.map((item, index) => (
-            <Link
-              key={`${item.href}-${index}`}
-              to={item.href}
-              className={[
-                'block rounded-xl px-3 py-2 text-sm transition-colors',
-                isActiveQueryLink(item.href)
-                  ? 'bg-primary/10 font-semibold text-primary'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-primary',
-              ].join(' ')}
-            >
-              {item.parent && (
-                <span className="block text-xs text-primary/60">
-                  {item.parent} /
-                </span>
-              )}
+          {items.map((item, index) => {
+            const activeItem = isActiveQueryLink(item.href)
 
-              {item.label}
-            </Link>
-          ))}
+            return (
+              <Link
+                key={`${item.href}-${index}`}
+                to={item.href}
+                onClick={onItemClick}
+                className={[
+                  'block rounded-xl px-3 py-2 text-sm transition-colors',
+                  activeItem
+                    ? 'bg-primary/10 font-semibold text-primary'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-primary',
+                ].join(' ')}
+              >
+                {item.parent && (
+                  <span className="block text-xs text-primary/60">
+                    {item.parent} /
+                  </span>
+                )}
+
+                {item.label}
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>
