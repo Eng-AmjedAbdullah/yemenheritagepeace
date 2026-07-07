@@ -4,6 +4,10 @@ function getToken() {
   return localStorage.getItem('yhpo_token')
 }
 
+function getLang() {
+  return localStorage.getItem('yhpo_lang') || document.documentElement.lang || 'ar'
+}
+
 function clearAdminSession() {
   localStorage.removeItem('yhpo_token')
   localStorage.removeItem('yhpo_admin')
@@ -21,6 +25,16 @@ function redirectToAdminLogin() {
   window.location.replace('/admin/login')
 }
 
+function getFallbackError(status) {
+  return getLang() === 'en'
+    ? `Request failed with status ${status}`
+    : `فشل الطلب برمز الحالة ${status}`
+}
+
+function getSessionExpiredMessage() {
+  return getLang() === 'en' ? 'Session expired' : 'انتهت الجلسة'
+}
+
 async function request(method, path, body = null, isFormData = false) {
   const headers = {}
   const token = getToken()
@@ -29,6 +43,11 @@ async function request(method, path, body = null, isFormData = false) {
     headers.Authorization = `Bearer ${token}`
   }
 
+  // Important: backend uses this to return Arabic/English messages
+  headers['Accept-Language'] = getLang()
+
+  // Do not set Content-Type manually for FormData
+  // Browser must set multipart/form-data boundary automatically
   if (!isFormData) {
     headers['Content-Type'] = 'application/json'
   }
@@ -61,11 +80,11 @@ async function request(method, path, body = null, isFormData = false) {
 
   if (res.status === 401) {
     redirectToAdminLogin()
-    throw new Error(data.error || data.message || 'Session expired')
+    throw new Error(data.error || data.message || getSessionExpiredMessage())
   }
 
   if (!res.ok) {
-    throw new Error(data.error || data.message || `Request failed with status ${res.status}`)
+    throw new Error(data.error || data.message || getFallbackError(res.status))
   }
 
   return data
@@ -98,6 +117,18 @@ export const api = {
     form.append('folder', folder)
 
     return request('POST', '/upload', form, true)
+  },
+
+  uploadMany(files, folder = 'general') {
+    const form = new FormData()
+
+    Array.from(files).forEach((file) => {
+      form.append('files', file)
+    })
+
+    form.append('folder', folder)
+
+    return request('POST', '/upload/multiple', form, true)
   },
 
   deleteUploadedFile(url) {
