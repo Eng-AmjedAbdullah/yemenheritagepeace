@@ -2,15 +2,17 @@ import { resolveMediaUrl } from '../lib/media'
 
 const DEFAULT_LOGO = '/logo.png'
 
+const DEFAULT_NAME_AR = 'منظمة تراث اليمن لأجل السلام'
+const DEFAULT_NAME_EN = 'Yemen Heritage for Peace Organization'
+
 export default function Preloader({ lang = 'ar', settings = null }) {
   const isArabic = lang === 'ar'
 
   const uploadedLogo = resolveMediaUrl(settings?.logo_url?.trim() || '')
   const logoSrc = uploadedLogo || DEFAULT_LOGO
 
-  const orgName = isArabic
-    ? settings?.site_name_ar || 'منظمة تراث اليمن لأجل السلام'
-    : settings?.site_name_en || 'Yemen Heritage for Peace Organization'
+  const orgNameAr = settings?.site_name_ar || DEFAULT_NAME_AR
+  const orgNameEn = settings?.site_name_en || DEFAULT_NAME_EN
 
   return (
     <div
@@ -26,7 +28,7 @@ export default function Preloader({ lang = 'ar', settings = null }) {
           <div className="yhpo-preloader-logo relative flex h-24 w-24 items-center justify-center rounded-full border border-primary/15 bg-white p-4 shadow-xl shadow-primary/20">
             <img
               src={logoSrc}
-              alt={orgName}
+              alt={`${orgNameAr} - ${orgNameEn}`}
               className="h-full w-full object-contain"
               onError={(event) => {
                 event.currentTarget.src = DEFAULT_LOGO
@@ -35,9 +37,21 @@ export default function Preloader({ lang = 'ar', settings = null }) {
           </div>
         </div>
 
-        <h1 className="text-xl font-bold text-dark md:text-2xl">
-          {orgName}
-        </h1>
+        <div className="space-y-2">
+          <h1
+            dir="rtl"
+            className="text-xl font-bold leading-snug text-primary md:text-2xl"
+          >
+            {orgNameAr}
+          </h1>
+
+          <p
+            dir="ltr"
+            className="text-sm font-semibold leading-snug text-primary md:text-base"
+          >
+            {orgNameEn}
+          </p>
+        </div>
       </div>
     </div>
   )
