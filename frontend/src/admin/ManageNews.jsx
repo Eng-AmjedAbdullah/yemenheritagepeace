@@ -9,7 +9,6 @@ import {
   Trash2,
   X,
   Save,
-  Search,
   CalendarDays,
   Tag,
   Image as ImageIcon,
@@ -292,22 +291,16 @@ export default function ManageNews() {
 
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="relative flex-1">
-            <Search
-              size={17}
-              className={`pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400 ${
-                isRtl ? 'right-4' : 'left-4'
-              }`}
-            />
-
+          <div className="min-w-0 flex-1">
             <input
               type="text"
               placeholder={t.searchNews}
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              className={`input-field h-12 w-full ${
-                isRtl ? 'pr-11 text-right' : 'pl-11 text-left'
+              className={`input-field h-12 w-full px-4 ${
+                isRtl ? 'text-right' : 'text-left'
               }`}
+              dir={isRtl ? 'rtl' : 'ltr'}
             />
           </div>
 
@@ -545,7 +538,7 @@ export default function ManageNews() {
           className="modal-overlay"
           onClick={(event) => event.target === event.currentTarget && closeModal()}
         >
-          <div className="modal-box w-[calc(100vw-24px)] max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="modal-box max-h-[90vh] w-[calc(100vw-24px)] max-w-3xl overflow-y-auto">
             <div className="flex items-center justify-between border-b p-4 sm:p-6">
               <h2 className="text-lg font-bold text-dark sm:text-xl">
                 {editId ? t.editNews : t.addNewNews}
