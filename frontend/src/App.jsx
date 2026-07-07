@@ -1,5 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { useEffect, useState, createContext, useContext } from 'react'
+import {
+  useEffect,
+  useState,
+  createContext,
+  useContext,
+  useCallback,
+} from 'react'
 import { Toaster } from 'react-hot-toast'
 
 import { translations } from './lib/i18n'
@@ -35,6 +41,14 @@ import ManageGallery from './admin/ManageGallery'
 
 export const AppContext = createContext(null)
 export const useLang = () => useContext(AppContext)
+
+const INITIAL_PUBLIC_DATA = {
+  loaded: false,
+  heroSlides: [],
+  news: [],
+  events: [],
+  partners: [],
+}
 
 function PublicLayout() {
   return (
@@ -116,11 +130,24 @@ function AppToaster() {
   )
 }
 
+function normalizeArray(value) {
+  if (Array.isArray(value)) return value
+  if (Array.isArray(value?.data)) return value.data
+  if (Array.isArray(value?.items)) return value.items
+  return []
+}
+
 export default function App() {
   const [lang, setLang] = useState('ar')
+
   const [settings, setSettings] = useState(null)
-  const [settingsLoading, setSettingsLoading] = useState(true)
+  const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsError, setSettingsError] = useState(null)
+
+  const [bootLoading, setBootLoading] = useState(true)
+  const [bootError, setBootError] = useState(null)
+
+  const [publicData, setPublicData] = useState(INITIAL_PUBLIC_DATA)
 
   const t = translations[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
@@ -129,53 +156,99 @@ export default function App() {
     setLang((currentLang) => (currentLang === 'ar' ? 'en' : 'ar'))
   }
 
-  const refreshSettings = async () => {
+  const loadSettings = useCallback(async () => {
+    const siteSettings = await api.get('/settings')
+    setSettings(siteSettings)
+    setSettingsError(null)
+    return siteSettings
+  }, [])
+
+  const refreshSettings = useCallback(async () => {
     setSettingsLoading(true)
     setSettingsError(null)
 
     try {
-      const siteSettings = await api.get('/settings')
-      setSettings(siteSettings)
+      return await loadSettings()
     } catch (error) {
-      console.error('Failed to load site settings:', error)
-      setSettings(null)
+      console.error('Failed to refresh site settings:', error)
       setSettingsError(error)
+      throw error
     } finally {
       setSettingsLoading(false)
     }
-  }
+  }, [loadSettings])
+
+  const refreshPublicData = useCallback(async () => {
+    const [heroSlides, news, events, partners] = await Promise.all([
+      api.get('/hero'),
+      api.get('/news?limit=3'),
+      api.get('/events?limit=3'),
+      api.get('/partners'),
+    ])
+
+    const nextPublicData = {
+      loaded: true,
+      heroSlides: normalizeArray(heroSlides),
+      news: normalizeArray(news),
+      events: normalizeArray(events),
+      partners: normalizeArray(partners),
+    }
+
+    setPublicData(nextPublicData)
+    return nextPublicData
+  }, [])
+
+  const bootstrapApp = useCallback(async () => {
+    setBootLoading(true)
+    setBootError(null)
+    setSettingsError(null)
+
+    try {
+      const isAdminPath = window.location.pathname.startsWith('/admin')
+
+      await api.get('/health')
+      await loadSettings()
+
+      if (!isAdminPath) {
+        await refreshPublicData()
+      }
+    } catch (error) {
+      console.error('App bootstrap failed:', error)
+      setBootError(error)
+    } finally {
+      setBootLoading(false)
+    }
+  }, [loadSettings, refreshPublicData])
 
   useEffect(() => {
-    refreshSettings()
-  }, [])
+    bootstrapApp()
+  }, [bootstrapApp])
 
   const contextValue = {
     lang,
     t,
     dir,
     toggleLang,
+
     settings,
     settingsLoading,
     settingsError,
     refreshSettings,
+
+    publicData,
+    refreshPublicData,
+
+    bootLoading,
+    bootError,
+    retryBootstrap: bootstrapApp,
   }
 
   return (
     <AppContext.Provider value={contextValue}>
       <div dir={dir} className={lang === 'ar' ? 'font-ar' : 'font-en'}>
-        {settingsLoading ? (
+        {bootLoading || bootError ? (
           <>
             <Preloader lang={lang} settings={settings} />
-            <AppToaster />
-          </>
-        ) : settingsError ? (
-          <>
-            <Preloader
-              lang={lang}
-              settings={settings}
-              error
-              onRetry={refreshSettings}
-            />
             <AppToaster />
           </>
         ) : (
