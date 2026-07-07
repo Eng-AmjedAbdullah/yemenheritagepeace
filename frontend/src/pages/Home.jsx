@@ -107,13 +107,7 @@ function SectionTitle({ children, align = 'center' }) {
 }
 
 export default function Home() {
-  const {
-    t,
-    lang,
-    settings,
-    publicData,
-    refreshPublicData,
-  } = useLang()
+  const { t, lang, settings, publicData, refreshPublicData } = useLang()
 
   const isRtl = lang === 'ar'
 
@@ -396,11 +390,15 @@ export default function Home() {
 
                 <div>
                   <p className="text-sm font-bold text-dark">
-                    {isRtl ? 'حماية التراث اليمني' : 'Protecting Yemeni Heritage'}
+                    {isRtl
+                      ? 'حماية التراث اليمني'
+                      : 'Protecting Yemeni Heritage'}
                   </p>
 
                   <p className="mt-0.5 text-xs text-gray-400">
-                    {isRtl ? 'من أجل الأجيال القادمة' : 'For future generations'}
+                    {isRtl
+                      ? 'من أجل الأجيال القادمة'
+                      : 'For future generations'}
                   </p>
                 </div>
               </div>
@@ -408,3 +406,358 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Goals */}
+      <section className="bg-gray-50 py-14">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-10 flex flex-col items-center text-center">
+            <SectionTitle>
+              {isRtl ? 'رؤيتنا وأهدافنا' : 'Our Vision & Goals'}
+            </SectionTitle>
+
+            <p className="mx-auto mt-4 max-w-xl text-sm text-gray-500">
+              {isRtl
+                ? 'نعمل من أجل يمن يحتفي بتراثه ويبني مستقبله على أسس من العلم والثقافة والسلام'
+                : 'We work for a Yemen that celebrates its heritage and builds its future on science, culture, and peace'}
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+            {goals.map((goal, index) => {
+              const Icon = goal.icon
+
+              return (
+                <div
+                  key={index}
+                  className="group rounded-2xl border border-gray-100 bg-white p-6 transition-all duration-300 hover:border-primary/30 hover:shadow-lg"
+                >
+                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary/20">
+                    <Icon size={22} className="text-primary" />
+                  </div>
+
+                  <h3 className="mb-2 font-bold text-dark">{goal.title}</h3>
+
+                  <p className="text-sm leading-relaxed text-gray-500">
+                    {goal.text}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link to="/about" className="btn-primary">
+              {isRtl ? 'اقرأ المزيد عن المنظمة' : 'Learn More About Us'}
+              <Arrow size={16} />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Heritage Life */}
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-10 flex flex-col items-center text-center">
+            <SectionTitle>{t.heritage_life_title}</SectionTitle>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <Link
+              to="/heritage-life?type=tangible"
+              className="group relative h-64 overflow-hidden rounded-2xl border border-gray-100 shadow-md"
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Temple_in_Ancient_city_of_Marib.jpg/1280px-Temple_in_Ancient_city_of_Marib.jpg"
+                alt={isRtl ? 'معلم أثري في مأرب' : 'Archaeological site in Marib'}
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                loading="lazy"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-dark/20 to-transparent" />
+
+              <div className="absolute bottom-0 p-6 text-start text-white">
+                <div className="mb-2 flex items-center gap-2">
+                  <Landmark size={15} className="text-primary" />
+
+                  <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                    {isRtl ? 'التراث المادي' : 'Tangible'}
+                  </span>
+                </div>
+
+                <h3 className="mb-1 text-xl font-bold">{t.nav.tangible}</h3>
+
+                <p className="text-sm text-gray-200">{t.tangible_desc}</p>
+              </div>
+            </Link>
+
+            <Link
+              to="/heritage-life?type=intangible"
+              className="group relative h-64 overflow-hidden rounded-2xl border border-gray-100 shadow-md"
+            >
+              <img
+                src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Janbiya_Dance%2C_Yemen_%2811041030075%29.jpg/1280px-Janbiya_Dance%2C_Yemen_%2811041030075%29.jpg"
+                alt={isRtl ? 'رقصة شعبية يمنية' : 'Traditional Yemeni dance'}
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                loading="lazy"
+              />
+
+              <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-dark/20 to-transparent" />
+
+              <div className="absolute bottom-0 p-6 text-start text-white">
+                <div className="mb-2 flex items-center gap-2">
+                  <Sparkles size={15} className="text-primary" />
+
+                  <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+                    {isRtl ? 'التراث اللامادي' : 'Intangible'}
+                  </span>
+                </div>
+
+                <h3 className="mb-1 text-xl font-bold">{t.nav.intangible}</h3>
+
+                <p className="text-sm text-gray-200">{t.intangible_desc}</p>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* News */}
+      <section className="bg-gray-50 py-14">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-10 flex items-end justify-between">
+            <SectionTitle align="start">{t.latest_news}</SectionTitle>
+
+            <Link
+              to="/news"
+              className="ms-4 hidden shrink-0 items-center gap-2 text-sm font-semibold text-primary hover:underline md:inline-flex"
+            >
+              {t.view_all}
+              <Arrow size={14} />
+            </Link>
+          </div>
+
+          {news.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              {isRtl ? 'لا توجد أخبار منشورة حالياً' : 'No published news yet'}
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-3">
+              {news.slice(0, 3).map((item) => (
+                <div
+                  key={item.id}
+                  className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="relative h-44 overflow-hidden">
+                    {item.image_url ? (
+                      <img
+                        src={resolveMediaUrl(item.image_url)}
+                        alt={isRtl ? item.title : item.title_en || item.title}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gray-100">
+                        <Newspaper size={32} className="text-gray-300" />
+                      </div>
+                    )}
+
+                    {(item.category || item.category_en) && (
+                      <span className="absolute start-3 top-3 rounded-full bg-primary/90 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                        {isRtl
+                          ? item.category
+                          : item.category_en || item.category}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-5">
+                    <h3 className="mb-2 line-clamp-2 text-base font-bold leading-snug text-dark">
+                      {isRtl ? item.title : item.title_en || item.title}
+                    </h3>
+
+                    <p className="mb-4 line-clamp-2 text-sm text-gray-500">
+                      {isRtl ? item.content : item.content_en || item.content}
+                    </p>
+
+                    <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <Newspaper size={12} />
+                        {item.created_at
+                          ? new Date(item.created_at).toLocaleDateString(
+                              isRtl ? 'ar-YE' : 'en-US'
+                            )
+                          : '—'}
+                      </span>
+
+                      <Link
+                        to="/news"
+                        className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                      >
+                        {t.read_more}
+                        <ChevronDir size={12} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Events */}
+      <section className="bg-white py-14">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-10 flex items-end justify-between">
+            <SectionTitle align="start">{t.latest_events}</SectionTitle>
+
+            <Link
+              to="/events"
+              className="btn-primary ms-4 hidden shrink-0 items-center gap-2 text-sm md:inline-flex"
+            >
+              {t.view_all}
+              <Arrow size={14} />
+            </Link>
+          </div>
+
+          {events.length === 0 ? (
+            <div className="py-12 text-center text-gray-400">
+              {isRtl ? 'لا توجد فعاليات منشورة حالياً' : 'No upcoming events yet'}
+            </div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-3">
+              {events.slice(0, 3).map((item) => {
+                const badge = typeBadge(item.type)
+
+                return (
+                  <div
+                    key={item.id}
+                    className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                  >
+                    {item.image_url && (
+                      <div className="relative h-44 overflow-hidden">
+                        <img
+                          src={resolveMediaUrl(item.image_url)}
+                          alt={isRtl ? item.title : item.title_en || item.title}
+                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+
+                        <div className="absolute inset-0 bg-gradient-to-t from-dark/40 to-transparent" />
+
+                        <span
+                          className={`absolute start-3 top-3 rounded-full px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm ${badge.cls}`}
+                        >
+                          {isRtl ? badge.ar : badge.en}
+                        </span>
+                      </div>
+                    )}
+
+                    <div className="p-5">
+                      <div className="mb-3 flex items-center gap-2">
+                        <div className="shrink-0 rounded-lg bg-primary/10 p-2 text-primary transition-colors group-hover:bg-primary/20">
+                          {eventIcon(item.type)}
+                        </div>
+
+                        <div>
+                          <div className="text-xs text-gray-400">
+                            {t.date_field}
+                          </div>
+
+                          <div className="text-sm font-semibold text-dark">
+                            {item.event_date
+                              ? new Date(item.event_date).toLocaleDateString(
+                                  isRtl ? 'ar-YE' : 'en-US',
+                                  {
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                  }
+                                )
+                              : '—'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <h3 className="mb-3 line-clamp-2 font-bold leading-snug text-dark">
+                        {isRtl ? item.title : item.title_en || item.title}
+                      </h3>
+
+                      <p className="flex items-center gap-1 text-sm text-gray-500">
+                        <MapPin size={13} className="shrink-0 text-primary" />
+                        {isRtl
+                          ? item.location || ''
+                          : item.location_en || item.location || ''}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Partners */}
+      <section className="bg-gray-50 py-14">
+        <div className="mx-auto max-w-7xl px-4">
+          <div className="mb-10 flex flex-col items-center text-center">
+            <SectionTitle>{t.partners_title}</SectionTitle>
+          </div>
+
+          {partners.length === 0 ? (
+            <div className="py-10 text-center text-gray-400">
+              {isRtl
+                ? 'لا توجد جهات شريكة مضافة بعد'
+                : 'No partners added yet'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {partners.map((partner, index) => {
+                const partnerKey = partner.id || index
+                const partnerName = isRtl
+                  ? partner.name
+                  : partner.name_en || partner.name
+
+                return (
+                  <a
+                    key={partnerKey}
+                    href={partner.website_url || '#'}
+                    target={partner.website_url ? '_blank' : undefined}
+                    rel={partner.website_url ? 'noreferrer' : undefined}
+                    className="flex min-h-[140px] flex-col items-center justify-center gap-4 rounded-2xl border border-gray-200 bg-white px-4 py-6 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg"
+                  >
+                    {partner.logo_url && !partnerErrors[partnerKey] ? (
+                      <div className="flex h-12 w-full items-center justify-center">
+                        <img
+                          src={resolveMediaUrl(partner.logo_url)}
+                          alt={partnerName}
+                          className="max-h-12 w-auto max-w-[110px] object-contain"
+                          loading="lazy"
+                          onError={() =>
+                            setPartnerErrors((current) => ({
+                              ...current,
+                              [partnerKey]: true,
+                            }))
+                          }
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg font-bold text-primary">
+                        {String(partnerName || '').slice(0, 2)}
+                      </div>
+                    )}
+
+                    <p className="line-clamp-2 w-full text-center text-sm font-semibold leading-snug text-gray-700">
+                      {partnerName}
+                    </p>
+                  </a>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+    </main>
+  )
+}
