@@ -65,6 +65,16 @@ function isPublished(value) {
   return value === 1 || value === true || value === '1'
 }
 
+function getInputDate(value) {
+  if (!value) return ''
+
+  try {
+    return String(value).split('T')[0]
+  } catch {
+    return ''
+  }
+}
+
 export default function ManageNews() {
   const { t, isRtl } = useAdminLang()
   const { requestConfirm } = useContext(ConfirmContext)
@@ -78,6 +88,8 @@ export default function ManageNews() {
   const [saving, setSaving] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
   const load = async () => {
     setLoading(true)
@@ -120,17 +132,42 @@ export default function ManageNews() {
       })
     }
 
+    if (dateFrom) {
+      filtered = filtered.filter((item) => {
+        const itemDate = getInputDate(item.created_at)
+        return itemDate && itemDate >= dateFrom
+      })
+    }
+
+    if (dateTo) {
+      filtered = filtered.filter((item) => {
+        const itemDate = getInputDate(item.created_at)
+        return itemDate && itemDate <= dateTo
+      })
+    }
+
     setFilteredItems(filtered)
-  }, [items, searchTerm, statusFilter])
+  }, [items, searchTerm, statusFilter, dateFrom, dateTo])
 
   const publishedCount = items.filter((item) => isPublished(item.published)).length
   const draftCount = items.filter((item) => !isPublished(item.published)).length
+
+  const hasActiveFilters = Boolean(
+    searchTerm.trim() || statusFilter !== 'all' || dateFrom || dateTo
+  )
 
   const updateForm = (key, value) => {
     setForm((current) => ({
       ...current,
       [key]: value,
     }))
+  }
+
+  const resetFilters = () => {
+    setSearchTerm('')
+    setStatusFilter('all')
+    setDateFrom('')
+    setDateTo('')
   }
 
   const closeModal = () => {
@@ -158,7 +195,7 @@ export default function ManageNews() {
       category_en: item.category_en || 'News',
       image_url: item.image_url || '',
       published: isPublished(item.published),
-      created_at: item.created_at ? item.created_at.split('T')[0] : '',
+      created_at: getInputDate(item.created_at),
     })
 
     setEditId(item.id)
@@ -275,7 +312,9 @@ export default function ManageNews() {
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            {t.totalNews}: {items.length}
+            {isRtl
+              ? `${t.totalNews}: ${items.length} — النتائج: ${filteredItems.length}`
+              : `${t.totalNews}: ${items.length} — Results: ${filteredItems.length}`}
           </p>
         </div>
 
@@ -290,8 +329,12 @@ export default function ManageNews() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-          <div className="min-w-0 flex-1">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_auto_180px_180px_auto] xl:items-end">
+          <div className="min-w-0">
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'بحث' : 'Search'}
+            </label>
+
             <input
               type="text"
               placeholder={t.searchNews}
@@ -304,28 +347,75 @@ export default function ManageNews() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
-            <FilterButton
-              active={statusFilter === 'all'}
-              onClick={() => setStatusFilter('all')}
-              label={`${t.all} (${items.length})`}
-              activeClass="bg-primary text-white"
-            />
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'الحالة' : 'Status'}
+            </label>
 
-            <FilterButton
-              active={statusFilter === 'published'}
-              onClick={() => setStatusFilter('published')}
-              label={`${t.published} (${publishedCount})`}
-              activeClass="bg-green-600 text-white"
-            />
+            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
+              <FilterButton
+                active={statusFilter === 'all'}
+                onClick={() => setStatusFilter('all')}
+                label={`${t.all} (${items.length})`}
+                activeClass="bg-primary text-white"
+              />
 
-            <FilterButton
-              active={statusFilter === 'draft'}
-              onClick={() => setStatusFilter('draft')}
-              label={`${t.draft} (${draftCount})`}
-              activeClass="bg-gray-600 text-white"
+              <FilterButton
+                active={statusFilter === 'published'}
+                onClick={() => setStatusFilter('published')}
+                label={`${t.published} (${publishedCount})`}
+                activeClass="bg-green-600 text-white"
+              />
+
+              <FilterButton
+                active={statusFilter === 'draft'}
+                onClick={() => setStatusFilter('draft')}
+                label={`${t.draft} (${draftCount})`}
+                activeClass="bg-gray-600 text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'من تاريخ' : 'From Date'}
+            </label>
+
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => setDateFrom(event.target.value)}
+              className="input-field h-12 w-full"
+              dir="ltr"
             />
           </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-gray-700">
+              {isRtl ? 'إلى تاريخ' : 'To Date'}
+            </label>
+
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => setDateTo(event.target.value)}
+              className="input-field h-12 w-full"
+              dir="ltr"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={resetFilters}
+            disabled={!hasActiveFilters}
+            className={`h-12 rounded-xl px-4 text-sm font-semibold transition ${
+              hasActiveFilters
+                ? 'bg-gray-900 text-white hover:bg-gray-800'
+                : 'cursor-not-allowed bg-gray-100 text-gray-400'
+            }`}
+          >
+            {isRtl ? 'إعادة ضبط' : 'Reset'}
+          </button>
         </div>
       </div>
 
@@ -658,7 +748,7 @@ function FilterButton({ active, onClick, label, activeClass }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
+      className={`h-12 rounded-xl px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
         active
           ? activeClass
           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
