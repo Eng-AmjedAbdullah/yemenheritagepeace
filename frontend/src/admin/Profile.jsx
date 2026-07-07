@@ -117,7 +117,11 @@ export default function Profile() {
     if (!value) return '—'
 
     try {
-      return new Date(value).toLocaleDateString(isRtl ? 'ar-YE' : 'en-US')
+      return new Date(value).toLocaleDateString(isRtl ? 'ar-YE' : 'en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      })
     } catch {
       return '—'
     }
@@ -127,7 +131,13 @@ export default function Profile() {
     if (!value) return '—'
 
     try {
-      return new Date(value).toLocaleString(isRtl ? 'ar-YE' : 'en-US')
+      return new Date(value).toLocaleString(isRtl ? 'ar-YE' : 'en-US', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
     } catch {
       return '—'
     }
@@ -159,16 +169,16 @@ export default function Profile() {
           {t.loading}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_424px]">
+          <div className="min-w-0 space-y-6">
             <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div className="border-b border-gray-100 bg-gray-50/70 px-5 py-4 sm:px-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <User size={20} />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <h2 className="font-bold text-dark">
                       {t.accountInfo}
                     </h2>
@@ -181,7 +191,7 @@ export default function Profile() {
               </div>
 
               <div className="p-5 sm:p-6">
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
                   <InfoCard
                     icon={<Mail size={18} />}
                     label={t.email}
@@ -193,12 +203,14 @@ export default function Profile() {
                     icon={<Clock size={18} />}
                     label={t.lastLogin}
                     value={formatDateTime(admin?.last_login)}
+                    dir="ltr"
                   />
 
                   <InfoCard
                     icon={<CalendarDays size={18} />}
                     label={t.createdAt}
                     value={formatDate(admin?.created_at)}
+                    dir="ltr"
                   />
                 </div>
               </div>
@@ -219,9 +231,9 @@ export default function Profile() {
 
               <form
                 onSubmit={handleUpdateName}
-                className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto]"
+                className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_auto]"
               >
-                <div>
+                <div className="min-w-0">
                   <label className="mb-2 block text-sm font-semibold text-gray-700">
                     {t.name}
                   </label>
@@ -251,13 +263,13 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+          <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 flex items-start gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
                 <KeyRound size={20} />
               </div>
 
-              <div>
+              <div className="min-w-0">
                 <h2 className="font-bold text-dark">
                   {t.changePassword}
                 </h2>
@@ -345,7 +357,7 @@ export default function Profile() {
 
 function InfoCard({ icon, label, value, dir }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
       <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-gray-50 text-primary">
         {icon}
       </div>
@@ -355,8 +367,9 @@ function InfoCard({ icon, label, value, dir }) {
       </div>
 
       <div
-        className="mt-1 break-words text-sm font-semibold leading-6 text-dark"
+        className="mt-1 block max-w-full truncate whitespace-nowrap text-sm font-semibold leading-6 text-dark"
         dir={dir || undefined}
+        title={typeof value === 'string' ? value : undefined}
       >
         {value}
       </div>
