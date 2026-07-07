@@ -16,17 +16,19 @@ export default function Preloader({ lang = 'ar', settings = null }) {
       className="fixed inset-0 z-[9999] flex items-center justify-center bg-white"
     >
       <div className="flex w-full max-w-md flex-col items-center justify-center px-6 text-center">
-        <div className="relative mb-6 flex h-40 w-40 items-center justify-center">
+        <div className="relative mb-7 flex h-48 w-48 items-center justify-center">
           <div className="yhpo-preloader-ring absolute inset-0 rounded-full border-2 border-primary/20" />
-          <div className="yhpo-preloader-ring-reverse absolute inset-3 rounded-full border-2 border-primary/10" />
-          <div className="yhpo-preloader-glow absolute inset-6 rounded-full bg-primary/10 blur-xl" />
+          <div className="yhpo-preloader-ring-reverse absolute inset-4 rounded-full border-2 border-primary/10" />
+          <div className="yhpo-preloader-glow absolute inset-10 rounded-full bg-primary/10 blur-xl" />
 
           <div className="yhpo-preloader-logo-shell relative z-10 flex h-28 w-28 items-center justify-center">
             <img
               src={logoSrc}
               alt={`${orgNameAr} - ${orgNameEn}`}
               className="yhpo-preloader-logo h-full w-full object-contain"
+              draggable="false"
               onError={(event) => {
+                if (event.currentTarget.src.endsWith(DEFAULT_LOGO)) return
                 event.currentTarget.src = DEFAULT_LOGO
               }}
             />
