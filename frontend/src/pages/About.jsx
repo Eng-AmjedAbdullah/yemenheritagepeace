@@ -161,18 +161,18 @@ export default function About() {
       ]
 
   return (
-    <main dir={isRtl ? 'rtl' : 'ltr'} className="overflow-hidden">
+    <main dir={isRtl ? 'rtl' : 'ltr'} className="overflow-hidden bg-white">
       <PageHeader title={t.nav.about} subtitle={headerSubtitle} />
 
       {/* WHO WE ARE */}
-      <section className="bg-white py-14">
+      <section className="bg-white pt-8 pb-14 md:pt-10">
         <div className="mx-auto max-w-6xl px-4">
-          <h2 className="mb-8 text-2xl font-black text-dark md:text-3xl">
+          <h2 className="mb-6 text-2xl font-black leading-tight text-dark md:text-3xl">
             {isRtl ? 'من نحن' : 'Who We Are'}
           </h2>
 
-          <div className="rounded-2xl border border-gray-100 bg-gray-50 p-6 shadow-sm sm:p-8">
-            <div className="space-y-4 text-base leading-relaxed text-gray-600">
+          <div className="rounded-3xl border border-gray-100 bg-gray-50/80 p-6 shadow-sm sm:p-8">
+            <div className="space-y-4 text-base leading-8 text-gray-600">
               <p>{whoIntro}</p>
               <p>{whoFocus}</p>
             </div>
@@ -208,7 +208,7 @@ export default function About() {
                 {goals.map((goal, index) => (
                   <div
                     key={index}
-                    className="flex items-start gap-3 rounded-xl border border-gray-100 bg-gray-50 p-4 transition hover:border-primary/20 hover:bg-primary/5"
+                    className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4 transition hover:border-primary/20 hover:bg-primary/5"
                   >
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-white shadow-sm shadow-primary/20">
                       {index + 1}
@@ -234,24 +234,14 @@ export default function About() {
             center
           />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {values.map((value, index) => (
-              <div
+              <ValueCard
                 key={index}
-                className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:border-primary/30 hover:shadow-md"
-              >
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                  <value.Icon size={22} className="text-primary" />
-                </div>
-
-                <h3 className="mb-2 text-lg font-bold" style={{ color: ACCENT }}>
-                  {value.label}
-                </h3>
-
-                <p className="text-sm leading-7 text-gray-500">
-                  {value.desc}
-                </p>
-              </div>
+                Icon={value.Icon}
+                label={value.label}
+                desc={value.desc}
+              />
             ))}
           </div>
         </div>
@@ -263,18 +253,15 @@ export default function About() {
 function SectionHeading({ icon: Icon, title, center = false }) {
   return (
     <div
-      className={`mb-8 flex items-center gap-3 ${
+      className={`mb-9 flex items-center gap-3 ${
         center ? 'justify-center text-center' : 'justify-start'
       }`}
     >
       <IconBox>
-        <Icon size={22} className="text-primary" />
+        <Icon size={23} className="text-primary" />
       </IconBox>
 
-      <h2
-        className="text-2xl font-black md:text-3xl"
-        style={{ color: ACCENT }}
-      >
+      <h2 className="text-2xl font-black text-primary md:text-3xl">
         {title}
       </h2>
     </div>
@@ -283,12 +270,12 @@ function SectionHeading({ icon: Icon, title, center = false }) {
 
 function InfoCard({ Icon, title, text }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md">
+    <div className="group rounded-3xl border border-gray-100 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10">
       <IconBox className="mb-4">
         <Icon size={21} className="text-primary" />
       </IconBox>
 
-      <h3 className="mb-2 text-lg font-bold" style={{ color: ACCENT }}>
+      <h3 className="mb-2 text-lg font-bold text-primary">
         {title}
       </h3>
 
@@ -301,23 +288,40 @@ function InfoCard({ Icon, title, text }) {
 
 function InfoPanel({ Icon, title, children }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
+    <div className="rounded-3xl border border-gray-100 bg-white p-5 shadow-sm sm:p-6">
       <div className="mb-4 flex items-center gap-3">
         <IconBox>
-          <Icon size={26} className="text-primary" />
+          <Icon size={25} className="text-primary" />
         </IconBox>
 
-        <h3
-          className="text-xl font-bold md:text-2xl"
-          style={{ color: ACCENT }}
-        >
+        <h3 className="text-xl font-bold text-primary md:text-2xl">
           {title}
         </h3>
       </div>
 
-      <div className="text-sm leading-7 text-gray-600 sm:text-base">
+      <div className="text-sm leading-8 text-gray-600 sm:text-base">
         {children}
       </div>
+    </div>
+  )
+}
+
+function ValueCard({ Icon, label, desc }) {
+  return (
+    <div className="group relative overflow-hidden rounded-3xl border border-gray-100 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10">
+      <div className="pointer-events-none absolute -end-8 -top-8 h-24 w-24 rounded-full bg-primary/5 transition-all duration-300 group-hover:scale-125 group-hover:bg-primary/10" />
+
+      <div className="relative mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/10 transition-all duration-300 group-hover:bg-primary group-hover:text-white group-hover:shadow-lg group-hover:shadow-primary/20">
+        <Icon size={25} />
+      </div>
+
+      <h3 className="relative mb-3 text-xl font-black text-dark transition-colors duration-300 group-hover:text-primary">
+        {label}
+      </h3>
+
+      <p className="relative text-sm leading-8 text-gray-600">
+        {desc}
+      </p>
     </div>
   )
 }
@@ -325,7 +329,7 @@ function InfoPanel({ Icon, title, children }) {
 function IconBox({ children, className = '' }) {
   return (
     <div
-      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 ${className}`}
+      className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/10 ${className}`}
     >
       {children}
     </div>
