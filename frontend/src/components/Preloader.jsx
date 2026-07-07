@@ -1,14 +1,8 @@
-import { RefreshCw } from 'lucide-react'
 import { resolveMediaUrl } from '../lib/media'
 
 const DEFAULT_LOGO = '/logo.png'
 
-export default function Preloader({
-  lang = 'ar',
-  settings = null,
-  error = false,
-  onRetry,
-}) {
+export default function Preloader({ lang = 'ar', settings = null }) {
   const isArabic = lang === 'ar'
 
   const uploadedLogo = resolveMediaUrl(settings?.logo_url?.trim() || '')
@@ -41,30 +35,9 @@ export default function Preloader({
           </div>
         </div>
 
-        <h1 className="mb-2 text-xl font-bold text-dark md:text-2xl">
+        <h1 className="text-xl font-bold text-dark md:text-2xl">
           {orgName}
         </h1>
-
-        <p className="text-sm font-medium text-primary">
-          {error
-            ? isArabic
-              ? 'تعذر الاتصال بالخادم'
-              : 'Could not connect to server'
-            : isArabic
-              ? 'جارِ تحميل البيانات...'
-              : 'Loading data...'}
-        </p>
-
-        {error && (
-          <button
-            type="button"
-            onClick={onRetry}
-            className="mt-5 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
-          >
-            <RefreshCw size={16} />
-            {isArabic ? 'إعادة المحاولة' : 'Retry'}
-          </button>
-        )}
       </div>
     </div>
   )
