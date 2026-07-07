@@ -21,7 +21,7 @@ export default function PageHeader({ title, subtitle, children }) {
           }`}
         >
           {/* Title + line grouped so line matches title width */}
-          <div className="inline-flex flex-col items-center mb-4">
+          <div className="inline-flex flex-col items-center mb-4 md:mt-2">
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-dark mb-3 leading-tight max-w-3xl">
               {title}
             </h1>
