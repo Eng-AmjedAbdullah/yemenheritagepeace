@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { resolveMediaUrl } from '../lib/media'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
+import AdminPreloader from './AdminPreloader'
 import {
   Newspaper,
   Calendar,
@@ -51,106 +52,130 @@ export default function Dashboard() {
     const loadDashboard = async () => {
       setLoading(true)
 
-      const features = getAllowedFeatures(admin.role)
-      const requests = []
+      try {
+        const features = getAllowedFeatures(admin.role)
+        const requests = []
 
-      if (features.viewNews) {
-        requests.push({
-          type: 'news',
-          request: api.get('/news/all'),
-        })
-      }
-
-      if (features.viewEvents) {
-        requests.push({
-          type: 'events',
-          request: api.get('/events/all'),
-        })
-      }
-
-      if (features.viewAdmins) {
-        requests.push({
-          type: 'admins',
-          request: api.get('/admins'),
-        })
-      }
-
-      if (features.viewMessages) {
-        requests.push({
-          type: 'messages',
-          request: api.get('/contact'),
-        })
-      }
-
-      if (features.viewHeritage) {
-        requests.push({
-          type: 'heritage',
-          request: api.get('/heritage/all'),
-        })
-      }
-
-      if (features.viewPartners) {
-        requests.push({
-          type: 'partners',
-          request: api.get('/partners/all'),
-        })
-      }
-
-      if (features.viewGallery) {
-        requests.push({
-          type: 'gallery',
-          request: api.get('/gallery/all'),
-        })
-      }
-
-      const results = await Promise.allSettled(
-        requests.map((item) => item.request)
-      )
-
-      if (cancelled) return
-
-      const nextStats = {
-        news: 0,
-        events: 0,
-        admins: 0,
-        messages: 0,
-        heritage: 0,
-        partners: 0,
-        gallery: 0,
-        unreadMessages: 0,
-      }
-
-      let loadedNews = []
-      let loadedEvents = []
-
-      results.forEach((result, index) => {
-        const type = requests[index].type
-        const data =
-          result.status === 'fulfilled' && Array.isArray(result.value)
-            ? result.value
-            : []
-
-        nextStats[type] = data.length
-
-        if (type === 'messages') {
-          nextStats.unreadMessages = data.filter(
-            (message) => !message.read_status
-          ).length
+        if (features.viewNews) {
+          requests.push({
+            type: 'news',
+            request: api.get('/news/all'),
+          })
         }
 
-        if (type === 'news') {
-          loadedNews = data
+        if (features.viewEvents) {
+          requests.push({
+            type: 'events',
+            request: api.get('/events/all'),
+          })
         }
 
-        if (type === 'events') {
-          loadedEvents = data
+        if (features.viewAdmins) {
+          requests.push({
+            type: 'admins',
+            request: api.get('/admins'),
+          })
         }
-      })
 
-      setStats(nextStats)
-      setRecentNews(loadedNews.slice(0, 3))
-      setRecentEvents(loadedEvents.slice(0, 3))
-      setLoading(false)
+        if (features.viewMessages) {
+          requests.push({
+            type: 'messages',
+            request: api.get('/contact'),
+          })
+        }
+
+        if (features.viewHeritage) {
+          requests.push({
+            type: 'heritage',
+            request: api.get('/heritage/all'),
+          })
+        }
+
+        if (features.viewPartners) {
+          requests.push({
+            type: 'partners',
+            request: api.get('/partners/all'),
+          })
+        }
+
+        if (features.viewGallery) {
+          requests.push({
+            type: 'gallery',
+            request: api
+              .get('/gallery/collections/all')
+              .catch(() => api.get('/gallery/all')),
+          })
+        }
+
+        const results = await Promise.allSettled(
+          requests.map((item) => item.request)
+        )
+
+        if (cancelled) return
+
+        const nextStats = {
+          news: 0,
+          events: 0,
+          admins: 0,
+          messages: 0,
+          heritage: 0,
+          partners: 0,
+          gallery: 0,
+          unreadMessages: 0,
+        }
+
+        let loadedNews = []
+        let loadedEvents = []
+
+        results.forEach((result, index) => {
+          const type = requests[index].type
+          const data =
+            result.status === 'fulfilled' && Array.isArray(result.value)
+              ? result.value
+              : []
+
+          nextStats[type] = data.length
+
+          if (type === 'messages') {
+            nextStats.unreadMessages = data.filter(
+              (message) => !message.read_status
+            ).length
+          }
+
+          if (type === 'news') {
+            loadedNews = data
+          }
+
+          if (type === 'events') {
+            loadedEvents = data
+          }
+        })
+
+        setStats(nextStats)
+        setRecentNews(loadedNews.slice(0, 3))
+        setRecentEvents(loadedEvents.slice(0, 3))
+      } catch (error) {
+        console.error('Failed to load dashboard:', error)
+
+        if (!cancelled) {
+          setStats({
+            news: 0,
+            events: 0,
+            admins: 0,
+            messages: 0,
+            heritage: 0,
+            partners: 0,
+            gallery: 0,
+            unreadMessages: 0,
+          })
+          setRecentNews([])
+          setRecentEvents([])
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
 
     loadDashboard()
@@ -239,15 +264,15 @@ export default function Dashboard() {
 
   if (!admin || loading) {
     return (
-      <div className="flex min-h-[55vh] items-center justify-center py-12">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-
-          <p className="text-sm text-gray-500">
-            {isRtl ? 'جارٍ التحميل...' : 'Loading...'}
-          </p>
-        </div>
-      </div>
+      <AdminPreloader
+        lang={isRtl ? 'ar' : 'en'}
+        compact
+        text={
+          isRtl
+            ? 'جارٍ تحميل بيانات لوحة التحكم...'
+            : 'Loading dashboard data...'
+        }
+      />
     )
   }
 
