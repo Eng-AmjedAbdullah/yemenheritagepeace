@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useLang } from '../App'
 import api from '../lib/api'
 import { resolveMediaUrl } from '../lib/media'
-import { Search, Newspaper, Calendar, X, Filter } from 'lucide-react'
+import { Search, Newspaper, Calendar, X } from 'lucide-react'
 import PageHeader from '../components/PageHeader'
 
 const DEFAULT_NEWS_IMAGE =
@@ -15,8 +15,7 @@ export default function News() {
 
   const [news, setNews] = useState([])
   const [search, setSearch] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('all')
-  const [dateOrder, setDateOrder] = useState('latest')
+  const [dateFilter, setDateFilter] = useState('latest')
   const [loading, setLoading] = useState(true)
   const [selectedNews, setSelectedNews] = useState(null)
 
@@ -65,58 +64,32 @@ export default function News() {
     }
   }, [selectedNews])
 
-  const categories = useMemo(() => {
-    const map = new Map()
-
-    news.forEach((item) => {
-      const categoryAr = item?.category || ''
-      const categoryEn = item?.category_en || item?.category || ''
-      const value = categoryAr || categoryEn
-
-      if (!value) return
-
-      map.set(value, {
-        value,
-        label: isRtl ? categoryAr || categoryEn : categoryEn || categoryAr,
-      })
-    })
-
-    return Array.from(map.values())
-  }, [news, isRtl])
-
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
 
     const result = news.filter((item) => {
       const title = getNewsTitle(item, isRtl).toLowerCase()
       const content = getNewsContent(item, isRtl).toLowerCase()
-      const category = getNewsCategory(item, isRtl).toLowerCase()
 
       const matchesSearch =
-        !q ||
-        title.includes(q) ||
-        content.includes(q) ||
-        category.includes(q)
+        !q || title.includes(q) || content.includes(q)
 
-      const matchesCategory =
-        categoryFilter === 'all' ||
-        item?.category === categoryFilter ||
-        item?.category_en === categoryFilter
+      const matchesDate = matchesDateFilter(item?.created_at, dateFilter)
 
-      return matchesSearch && matchesCategory
+      return matchesSearch && matchesDate
     })
 
     return result.sort((a, b) => {
-      const dateA = new Date(a?.created_at || 0).getTime()
-      const dateB = new Date(b?.created_at || 0).getTime()
+      const dateA = getDateTime(a?.created_at)
+      const dateB = getDateTime(b?.created_at)
 
-      if (dateOrder === 'oldest') {
+      if (dateFilter === 'oldest') {
         return dateA - dateB
       }
 
       return dateB - dateA
     })
-  }, [news, search, categoryFilter, dateOrder, isRtl])
+  }, [news, search, dateFilter, isRtl])
 
   const openNews = (item) => {
     setSelectedNews(item)
@@ -128,8 +101,7 @@ export default function News() {
 
   const clearFilters = () => {
     setSearch('')
-    setCategoryFilter('all')
-    setDateOrder('latest')
+    setDateFilter('latest')
   }
 
   return (
@@ -142,7 +114,7 @@ export default function News() {
             : 'Latest updates and announcements'
         }
       >
-        <div className="mx-auto grid max-w-5xl gap-3 md:grid-cols-[1.5fr_1fr_1fr]">
+        <div className="mx-auto grid max-w-4xl gap-3 md:grid-cols-[1.5fr_1fr]">
           <div className="relative">
             <Search
               className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
@@ -163,34 +135,6 @@ export default function News() {
           </div>
 
           <div className="relative">
-            <Filter
-              className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
-              size={17}
-              style={{ [isRtl ? 'right' : 'left']: '14px' }}
-            />
-
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="h-12 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 text-dark transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
-              style={{
-                paddingLeft: isRtl ? '14px' : '44px',
-                paddingRight: isRtl ? '44px' : '14px',
-              }}
-            >
-              <option value="all">
-                {isRtl ? 'كل التصنيفات' : 'All categories'}
-              </option>
-
-              {categories.map((category) => (
-                <option key={category.value} value={category.value}>
-                  {category.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="relative">
             <Calendar
               className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-gray-400"
               size={17}
@@ -198,8 +142,8 @@ export default function News() {
             />
 
             <select
-              value={dateOrder}
-              onChange={(event) => setDateOrder(event.target.value)}
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
               className="h-12 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 text-dark transition-all focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
               style={{
                 paddingLeft: isRtl ? '14px' : '44px',
@@ -209,8 +153,25 @@ export default function News() {
               <option value="latest">
                 {isRtl ? 'الأحدث أولاً' : 'Latest first'}
               </option>
+
               <option value="oldest">
                 {isRtl ? 'الأقدم أولاً' : 'Oldest first'}
+              </option>
+
+              <option value="today">
+                {isRtl ? 'أخبار اليوم' : 'Today'}
+              </option>
+
+              <option value="this_week">
+                {isRtl ? 'هذا الأسبوع' : 'This week'}
+              </option>
+
+              <option value="this_month">
+                {isRtl ? 'هذا الشهر' : 'This month'}
+              </option>
+
+              <option value="this_year">
+                {isRtl ? 'هذا العام' : 'This year'}
               </option>
             </select>
           </div>
@@ -230,7 +191,7 @@ export default function News() {
             </div>
           ) : (
             <>
-              {(search || categoryFilter !== 'all' || dateOrder !== 'latest') && (
+              {(search || dateFilter !== 'latest') && (
                 <div className="mb-5 flex flex-wrap items-center justify-center gap-3 text-sm">
                   <p className="text-gray-500">
                     {isRtl
@@ -243,7 +204,7 @@ export default function News() {
                     onClick={clearFilters}
                     className="rounded-full border border-primary/20 bg-white px-4 py-1.5 font-semibold text-primary transition hover:bg-primary hover:text-white"
                   >
-                    {isRtl ? 'مسح الفلاتر' : 'Clear filters'}
+                    {isRtl ? 'مسح الفلتر' : 'Clear filter'}
                   </button>
                 </div>
               )}
@@ -410,6 +371,53 @@ function getNewsContent(item, isRtl) {
 
 function getNewsCategory(item, isRtl) {
   return isRtl ? item?.category || '' : item?.category_en || item?.category || ''
+}
+
+function getDateTime(date) {
+  const time = new Date(date || 0).getTime()
+  return Number.isNaN(time) ? 0 : time
+}
+
+function matchesDateFilter(date, filter) {
+  if (filter === 'latest' || filter === 'oldest') return true
+
+  const itemDate = new Date(date)
+  if (Number.isNaN(itemDate.getTime())) return false
+
+  const now = new Date()
+
+  const itemYear = itemDate.getFullYear()
+  const itemMonth = itemDate.getMonth()
+  const itemDay = itemDate.getDate()
+
+  const nowYear = now.getFullYear()
+  const nowMonth = now.getMonth()
+  const nowDay = now.getDate()
+
+  if (filter === 'today') {
+    return itemYear === nowYear && itemMonth === nowMonth && itemDay === nowDay
+  }
+
+  if (filter === 'this_month') {
+    return itemYear === nowYear && itemMonth === nowMonth
+  }
+
+  if (filter === 'this_year') {
+    return itemYear === nowYear
+  }
+
+  if (filter === 'this_week') {
+    const startOfWeek = new Date(now)
+    startOfWeek.setHours(0, 0, 0, 0)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 7)
+
+    return itemDate >= startOfWeek && itemDate < endOfWeek
+  }
+
+  return true
 }
 
 function formatDate(date, isRtl) {
