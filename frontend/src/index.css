@@ -347,6 +347,7 @@ select.input-field {
   background: white;
   clip-path: ellipse(55% 100% at 50% 100%);
 }
+
 /* YHPO Preloader */
 .yhpo-preloader-ring {
   border-top-color: var(--primary);
@@ -360,8 +361,10 @@ select.input-field {
   animation: yhpoSpinReverse 1.8s linear infinite;
 }
 
+/* Keep logo static. Only the surrounding rings/glow animate. */
 .yhpo-preloader-logo {
-  animation: yhpoLogoPulse 1.8s ease-in-out infinite;
+  animation: none !important;
+  transform: none !important;
 }
 
 .yhpo-preloader-glow {
@@ -410,4 +413,4 @@ select.input-field {
     opacity: 0.8;
     transform: scale(1.15);
   }
-  }
+}
