@@ -26,10 +26,6 @@ const EMPTY = {
   social_x: '',
   social_instagram: '',
 
-  home_about_image_url: '',
-  home_about_image_alt_ar: '',
-  home_about_image_alt_en: '',
-
   about_desc_ar: '',
   about_desc_en: '',
 
@@ -98,7 +94,15 @@ export default function ManageSettings() {
 
     try {
       const data = await api.get('/settings')
-      setForm({ ...EMPTY, ...(data || {}) })
+
+      const {
+        home_about_image_url,
+        home_about_image_alt_ar,
+        home_about_image_alt_en,
+        ...cleanData
+      } = data || {}
+
+      setForm({ ...EMPTY, ...cleanData })
     } catch {
       setForm(EMPTY)
     } finally {
@@ -307,25 +311,6 @@ export default function ManageSettings() {
                 <SectionTitle>
                   {isRtl ? 'محتوى صفحة من نحن' : 'About Page Content'}
                 </SectionTitle>
-
-                <UploadBox
-                  value={form.home_about_image_url || ''}
-                  onChange={(value) =>
-                    updateField('home_about_image_url', value)
-                  }
-                  folder="site"
-                  label={isRtl ? 'صورة قسم من نحن' : 'About Section Image'}
-                />
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <Field label={t.altAr} name="home_about_image_alt_ar" />
-
-                  <Field
-                    label={t.altEn}
-                    name="home_about_image_alt_en"
-                    dir="ltr"
-                  />
-                </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <TextArea
