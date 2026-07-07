@@ -86,10 +86,11 @@ export default function ManageNews() {
   const [form, setForm] = useState(EMPTY)
   const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  const hasDateFilter = Boolean(dateFrom || dateTo)
 
   const load = async () => {
     setLoading(true)
@@ -111,27 +112,6 @@ export default function ManageNews() {
   useEffect(() => {
     let filtered = [...items]
 
-    if (searchTerm.trim()) {
-      const query = searchTerm.toLowerCase().trim()
-
-      filtered = filtered.filter((item) => {
-        return (
-          item.title?.toLowerCase().includes(query) ||
-          item.title_en?.toLowerCase().includes(query) ||
-          item.category?.toLowerCase().includes(query) ||
-          item.category_en?.toLowerCase().includes(query)
-        )
-      })
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((item) => {
-        return statusFilter === 'published'
-          ? isPublished(item.published)
-          : !isPublished(item.published)
-      })
-    }
-
     if (dateFrom) {
       filtered = filtered.filter((item) => {
         const itemDate = getInputDate(item.created_at)
@@ -147,14 +127,7 @@ export default function ManageNews() {
     }
 
     setFilteredItems(filtered)
-  }, [items, searchTerm, statusFilter, dateFrom, dateTo])
-
-  const publishedCount = items.filter((item) => isPublished(item.published)).length
-  const draftCount = items.filter((item) => !isPublished(item.published)).length
-
-  const hasActiveFilters = Boolean(
-    searchTerm.trim() || statusFilter !== 'all' || dateFrom || dateTo
-  )
+  }, [items, dateFrom, dateTo])
 
   const updateForm = (key, value) => {
     setForm((current) => ({
@@ -163,9 +136,7 @@ export default function ManageNews() {
     }))
   }
 
-  const resetFilters = () => {
-    setSearchTerm('')
-    setStatusFilter('all')
+  const resetDateFilter = () => {
     setDateFrom('')
     setDateTo('')
   }
@@ -312,9 +283,11 @@ export default function ManageNews() {
           </h1>
 
           <p className="mt-1 text-sm text-gray-500">
-            {isRtl
-              ? `${t.totalNews}: ${items.length} — النتائج: ${filteredItems.length}`
-              : `${t.totalNews}: ${items.length} — Results: ${filteredItems.length}`}
+            {hasDateFilter
+              ? isRtl
+                ? `${t.totalNews}: ${items.length} — النتائج: ${filteredItems.length}`
+                : `${t.totalNews}: ${items.length} — Results: ${filteredItems.length}`
+              : `${t.totalNews}: ${items.length}`}
           </p>
         </div>
 
@@ -329,53 +302,7 @@ export default function ManageNews() {
       </div>
 
       <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1.2fr_auto_180px_180px_auto] xl:items-end">
-          <div className="min-w-0">
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {isRtl ? 'بحث' : 'Search'}
-            </label>
-
-            <input
-              type="text"
-              placeholder={t.searchNews}
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              className={`input-field h-12 w-full px-4 ${
-                isRtl ? 'text-right' : 'text-left'
-              }`}
-              dir={isRtl ? 'rtl' : 'ltr'}
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700">
-              {isRtl ? 'الحالة' : 'Status'}
-            </label>
-
-            <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
-              <FilterButton
-                active={statusFilter === 'all'}
-                onClick={() => setStatusFilter('all')}
-                label={`${t.all} (${items.length})`}
-                activeClass="bg-primary text-white"
-              />
-
-              <FilterButton
-                active={statusFilter === 'published'}
-                onClick={() => setStatusFilter('published')}
-                label={`${t.published} (${publishedCount})`}
-                activeClass="bg-green-600 text-white"
-              />
-
-              <FilterButton
-                active={statusFilter === 'draft'}
-                onClick={() => setStatusFilter('draft')}
-                label={`${t.draft} (${draftCount})`}
-                activeClass="bg-gray-600 text-white"
-              />
-            </div>
-          </div>
-
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">
               {isRtl ? 'من تاريخ' : 'From Date'}
@@ -404,18 +331,17 @@ export default function ManageNews() {
             />
           </div>
 
-          <button
-            type="button"
-            onClick={resetFilters}
-            disabled={!hasActiveFilters}
-            className={`h-12 rounded-xl px-4 text-sm font-semibold transition ${
-              hasActiveFilters
-                ? 'bg-gray-900 text-white hover:bg-gray-800'
-                : 'cursor-not-allowed bg-gray-100 text-gray-400'
-            }`}
-          >
-            {isRtl ? 'إعادة ضبط' : 'Reset'}
-          </button>
+          {hasDateFilter && (
+            <button
+              type="button"
+              onClick={resetDateFilter}
+              className="flex h-12 w-12 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100"
+              aria-label={isRtl ? 'مسح فلتر التاريخ' : 'Clear date filter'}
+              title={isRtl ? 'مسح فلتر التاريخ' : 'Clear date filter'}
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -740,22 +666,6 @@ export default function ManageNews() {
         </div>
       )}
     </div>
-  )
-}
-
-function FilterButton({ active, onClick, label, activeClass }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`h-12 rounded-xl px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
-        active
-          ? activeClass
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-      }`}
-    >
-      {label}
-    </button>
   )
 }
 
