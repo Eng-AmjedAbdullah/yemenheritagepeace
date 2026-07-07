@@ -68,12 +68,10 @@ export default function Navbar() {
         (isRtl ? 'الفعاليات والأنشطة' : 'Events & Activities'),
 
       seminars:
-        t.nav.seminars ||
-        (isRtl ? 'الندوات' : 'Seminars'),
+        t.nav.seminars || (isRtl ? 'الندوات' : 'Seminars'),
 
       projects:
-        t.nav.projects ||
-        (isRtl ? 'المشاريع' : 'Projects'),
+        t.nav.projects || (isRtl ? 'المشاريع' : 'Projects'),
 
       photoGallery:
         t.nav.photo_gallery ||
@@ -151,6 +149,7 @@ export default function Navbar() {
     if (!to) return false
 
     const [path, qs] = String(to).split('?')
+
     const pathActive =
       location.pathname === path ||
       (path !== '/' && location.pathname.startsWith(`${path}/`))
@@ -313,7 +312,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={toggleLang}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary hover:text-primary"
                 >
                   <Globe size={16} />
                   {t.nav.lang}
@@ -322,7 +321,7 @@ export default function Navbar() {
                 <button
                   type="button"
                   onClick={() => navigate('/admin/login')}
-                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary"
+                  className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-2 text-sm text-dark transition hover:border-primary hover:text-primary"
                 >
                   <ShieldCheck size={16} />
                   {t.nav.admin}
@@ -336,7 +335,9 @@ export default function Navbar() {
                 <Link
                   to="/"
                   className="order-1 flex shrink-0 items-center"
-                  aria-label={settings?.site_name_en || settings?.site_name_ar || 'Home'}
+                  aria-label={
+                    settings?.site_name_en || settings?.site_name_ar || 'Home'
+                  }
                 >
                   <img
                     src={WHITE_LOGO}
@@ -392,6 +393,7 @@ export default function Navbar() {
             </div>
           </div>
 
+          {/* MOBILE MENU */}
           {mobileOpen && (
             <div className="max-h-[82vh] overflow-y-auto border-t border-gray-200 bg-white px-4 pb-4 shadow-xl md:hidden">
               <div className="pt-2">
@@ -422,23 +424,24 @@ export default function Navbar() {
                 })}
               </div>
 
-              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {/* MOBILE ACTIONS - SAME ROW */}
+              <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={toggleLang}
-                  className="btn-outline inline-flex items-center justify-center gap-2 py-2 text-sm"
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border-2 border-primary bg-white px-3 py-2 text-sm font-semibold text-primary transition hover:bg-primary/5"
                 >
                   <Globe size={16} />
-                  {t.nav.lang}
+                  <span className="truncate">{t.nav.lang}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleAdminClick}
-                  className="btn-primary inline-flex items-center justify-center gap-2 py-2 text-sm"
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90"
                 >
                   <ShieldCheck size={16} />
-                  {t.nav.admin}
+                  <span className="truncate">{t.nav.admin}</span>
                 </button>
               </div>
             </div>
@@ -524,15 +527,15 @@ function DropMenu({ label, items, open, onToggle, active, navText = '' }) {
       </button>
 
       {open && (
-        <div className="dropdown-menu">
+        <div className="absolute left-1/2 top-full z-[70] mt-3 w-60 -translate-x-1/2 overflow-hidden rounded-2xl border border-primary/15 bg-white py-2 text-start shadow-xl shadow-black/10">
           {items.map((item, index) => (
             <Link
               key={`${item.href}-${index}`}
               to={item.href}
-              className="dropdown-item"
+              className="block px-4 py-3 text-sm font-medium text-primary transition hover:bg-primary/10 hover:text-primary"
             >
               {item.parent && (
-                <span className="block text-xs text-primary/60">
+                <span className="mb-0.5 block text-xs font-normal text-primary/60">
                   {item.parent} /
                 </span>
               )}
