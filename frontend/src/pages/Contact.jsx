@@ -108,7 +108,7 @@ export default function Contact() {
     {
       label: 'Instagram',
       href: settings?.social_instagram,
-      icon: <Instagram size={18} />,
+      icon: <Instagram size={19} />,
     },
     {
       label: 'X',
@@ -118,25 +118,27 @@ export default function Contact() {
     {
       label: 'Facebook',
       href: settings?.social_facebook,
-      icon: <Facebook size={18} />,
+      icon: <Facebook size={19} />,
     },
     {
       label: 'YouTube',
       href: settings?.social_youtube,
-      icon: <Youtube size={18} />,
+      icon: <Youtube size={20} />,
     },
     {
       label: 'LinkedIn',
       href: settings?.social_linkedin,
-      icon: <Linkedin size={18} />,
+      icon: <Linkedin size={19} />,
     },
-  ]
+  ].filter((social) => social.href)
 
   return (
     <main>
       <PageHeader
         title={t.contact_title}
-        subtitle={isArabic ? 'يسعدنا تواصلكم معنا' : 'We’d love to hear from you'}
+        subtitle={
+          isArabic ? 'يسعدنا تواصلكم معنا' : 'We’d love to hear from you'
+        }
       />
 
       <section className="bg-gray-50 py-12">
@@ -149,6 +151,7 @@ export default function Contact() {
             <div className="mb-8 space-y-4">
               {contactItems.map((item, index) => {
                 const Icon = item.icon
+
                 const content = (
                   <>
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 transition-colors group-hover:bg-primary">
@@ -196,19 +199,21 @@ export default function Contact() {
               })}
             </div>
 
-            <p className="mb-4 font-semibold text-dark">
-              {isArabic ? 'تابعنا على:' : 'Follow Us:'}
-            </p>
+            <div className="text-center">
+              <p className="mb-4 font-semibold text-dark">
+                {isArabic ? 'تابعنا على:' : 'Follow Us:'}
+              </p>
 
-            <div className="flex flex-wrap gap-3">
-              {socialLinks.map((social) => (
-                <SocialIconLink
-                  key={social.label}
-                  href={social.href}
-                  label={social.label}
-                  icon={social.icon}
-                />
-              ))}
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {socialLinks.map((social) => (
+                  <SocialIconLink
+                    key={social.label}
+                    href={social.href}
+                    label={social.label}
+                    icon={social.icon}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
@@ -300,24 +305,26 @@ export default function Contact() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="btn-primary inline-flex w-full items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {loading ? (
-                  isArabic ? (
-                    'جارِ الإرسال...'
+              <div className="flex justify-center">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn-primary inline-flex w-[70%] items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {loading ? (
+                    isArabic ? (
+                      'جارِ الإرسال...'
+                    ) : (
+                      'Sending...'
+                    )
                   ) : (
-                    'Sending...'
-                  )
-                ) : (
-                  <>
-                    <Send size={16} />
-                    {t.send}
-                  </>
-                )}
-              </button>
+                    <>
+                      <Send size={16} />
+                      {t.send}
+                    </>
+                  )}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -343,7 +350,7 @@ function SocialIconLink({ href, label, icon }) {
       target="_blank"
       rel="noreferrer"
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md"
+      className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-white shadow-sm transition-all hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-md"
     >
       {icon}
     </a>
