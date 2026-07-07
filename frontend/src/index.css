@@ -368,12 +368,21 @@ select.input-field {
   box-shadow: none !important;
   border-radius: 0 !important;
   padding: 0 !important;
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* Keep logo static. Only the surrounding rings/glow animate. */
 .yhpo-preloader-logo {
   animation: none !important;
   transform: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 .yhpo-preloader-glow {
