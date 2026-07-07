@@ -25,6 +25,7 @@ import {
 
 import { adminTranslations, AdminLangContext } from './adminI18n'
 import { getSidebarItems, canAccessPage } from './adminPermissions'
+import AdminPreloader from './AdminPreloader'
 import api from '../lib/api'
 
 export const ConfirmContext = React.createContext()
@@ -278,7 +279,12 @@ export default function AdminLayout() {
 
       if (!token) {
         clearAdminSession()
-        navigate('/admin/login', { replace: true })
+
+        if (!cancelled) {
+          setLoading(false)
+          navigate('/admin/login', { replace: true })
+        }
+
         return
       }
 
@@ -367,19 +373,15 @@ export default function AdminLayout() {
 
   if (loading) {
     return (
-      <div
-        className={`flex min-h-screen items-center justify-center bg-gray-50 ${
-          isRtl ? 'font-ar' : 'font-en'
-        }`}
-        dir={isRtl ? 'rtl' : 'ltr'}
-      >
-        <div className="rounded-2xl border border-gray-100 bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary" />
-          <p className="text-gray-600">
-            {isRtl ? 'جارٍ التحميل...' : 'Loading...'}
-          </p>
-        </div>
-      </div>
+      <AdminPreloader
+        lang={adminLang}
+        fullScreen
+        text={
+          isRtl
+            ? 'جارٍ تجهيز لوحة الإدارة...'
+            : 'Preparing admin dashboard...'
+        }
+      />
     )
   }
 
