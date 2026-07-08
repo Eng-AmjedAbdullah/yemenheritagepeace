@@ -11,6 +11,7 @@ import {
   Save,
   Image as ImageIcon,
   Video,
+  UploadCloud,
 } from 'lucide-react'
 import { ConfirmContext } from './AdminLayout'
 import { useAdminLang } from './adminI18n'
@@ -60,6 +61,16 @@ function isActive(value) {
 function toNumber(value) {
   const number = Number(value)
   return Number.isFinite(number) ? number : 0
+}
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 KB'
+
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  }
+
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export default function ManageGallery() {
@@ -751,45 +762,12 @@ export default function ManageGallery() {
               )}
 
               {!editCollectionId && collectionForm.type === 'photo' && (
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    {isRtl ? 'اختيار الصور' : 'Choose Images'}
-                  </label>
-
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleFilesChange}
-                    className="input-field"
-                  />
-
-                  <div className="mt-2 rounded-xl bg-gray-50 px-3 py-2 text-xs leading-6 text-gray-500">
-                    {isRtl
-                      ? `تم اختيار ${selectedFiles.length} صورة. الحد الأقصى ${MAX_IMAGES} صورة.`
-                      : `${selectedFiles.length} images selected. Maximum ${MAX_IMAGES} images.`}
-                  </div>
-
-                  {selectedFiles.length > 0 && (
-                    <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-                      {selectedFiles.slice(0, 8).map((file, index) => (
-                        <div
-                          key={`${file.name}-${index}`}
-                          className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-xs text-gray-500"
-                          dir="ltr"
-                        >
-                          <span className="line-clamp-1">{file.name}</span>
-                        </div>
-                      ))}
-
-                      {selectedFiles.length > 8 && (
-                        <div className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500">
-                          +{selectedFiles.length - 8}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <PhotoFilesPicker
+                  files={selectedFiles}
+                  isRtl={isRtl}
+                  maxImages={MAX_IMAGES}
+                  onChange={handleFilesChange}
+                />
               )}
 
               {!editCollectionId && collectionForm.type === 'video' && (
@@ -891,6 +869,89 @@ export default function ManageGallery() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PhotoFilesPicker({ files, isRtl, maxImages, onChange }) {
+  const fileInputId = 'gallery-photo-files-input'
+
+  return (
+    <div>
+      <label className="mb-1 block text-sm font-medium text-gray-700">
+        {isRtl ? 'اختيار الصور' : 'Choose Images'}
+      </label>
+
+      <input
+        id={fileInputId}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={onChange}
+        className="hidden"
+      />
+
+      <label
+        htmlFor={fileInputId}
+        className="group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/25 bg-primary/5 px-4 py-7 text-center transition hover:border-primary/50 hover:bg-primary/10"
+      >
+        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-primary/10 transition group-hover:scale-105">
+          <UploadCloud size={26} />
+        </div>
+
+        <div className="text-sm font-bold text-dark">
+          {isRtl ? 'اضغط لاختيار الصور' : 'Click to choose images'}
+        </div>
+
+        <p className="mt-1 text-xs leading-5 text-gray-500">
+          {isRtl
+            ? `يمكنك رفع حتى ${maxImages} صورة داخل المجموعة الواحدة`
+            : `You can upload up to ${maxImages} images in one collection`}
+        </p>
+
+        <span className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition group-hover:bg-primary-dark">
+          <ImageIcon size={16} className={isRtl ? 'ml-2' : 'mr-2'} />
+          {isRtl ? 'تصفح الصور' : 'Browse Images'}
+        </span>
+      </label>
+
+      <div className="mt-3 rounded-xl bg-gray-50 px-3 py-2 text-xs leading-6 text-gray-500">
+        {isRtl
+          ? `تم اختيار ${files.length} صورة. الحد الأقصى ${maxImages} صورة.`
+          : `${files.length} images selected. Maximum ${maxImages} images.`}
+      </div>
+
+      {files.length > 0 && (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
+          {files.slice(0, 9).map((file, index) => (
+            <div
+              key={`${file.name}-${index}`}
+              className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm"
+              dir="ltr"
+            >
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <ImageIcon size={16} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="line-clamp-1 text-xs font-semibold text-gray-700">
+                  {file.name}
+                </div>
+
+                <div className="mt-0.5 text-[11px] text-gray-400">
+                  {formatFileSize(file.size)}
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {files.length > 9 && (
+            <div className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500">
+              +{files.length - 9}
+            </div>
+          )}
         </div>
       )}
     </div>
