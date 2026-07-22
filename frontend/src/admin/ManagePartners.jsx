@@ -1,21 +1,16 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
+import { Edit, Handshake, Link2, Plus, Save, Trash2 } from 'lucide-react'
+
 import api from '../lib/api'
 import { resolveMediaUrl } from '../lib/media'
-import toast from 'react-hot-toast'
 import ImageUpload from './ImageUpload'
-import {
-  Plus,
-  Edit,
-  Trash2,
-  X,
-  Save,
-  Link2,
-  Image as ImageIcon,
-} from 'lucide-react'
-import { useAdminLang } from './adminI18n'
+import AdminModal from './AdminModal'
+import ValidatedField from './ValidatedField'
 import { ConfirmContext } from './AdminLayout'
+import { useAdminLang } from './adminI18n'
 
-const EMPTY = {
+const EMPTY_FORM = {
   name: '',
   name_en: '',
   logo_url: '',
@@ -25,60 +20,52 @@ const EMPTY = {
 }
 
 const toastTheme = {
-  success: {
-    duration: 3000,
-    style: {
-      background: '#166534',
-      color: '#ffffff',
-      border: '1px solid #15803d',
-      borderRadius: '12px',
-      fontSize: '14px',
-      padding: '14px 18px',
-    },
-    iconTheme: {
-      primary: '#ffffff',
-      secondary: '#166534',
-    },
-  },
-  error: {
-    duration: 4000,
-    style: {
-      background: '#7f1d1d',
-      color: '#ffffff',
-      border: '1px solid #991b1b',
-      borderRadius: '12px',
-      fontSize: '14px',
-      padding: '14px 18px',
-    },
-    iconTheme: {
-      primary: '#ffffff',
-      secondary: '#7f1d1d',
-    },
-  },
+  success: { duration: 3000, style: { background: '#166534', color: '#fff' } },
+  error: { duration: 4500, style: { background: '#7f1d1d', color: '#fff' } },
 }
 
 function isActive(value) {
   return value === true || value === 1 || value === '1'
 }
 
+function isValidUrl(value) {
+  if (!value) return true
+  try {
+    const url = new URL(value)
+    return ['http:', 'https:'].includes(url.protocol)
+  } catch {
+    return false
+  }
+}
+
+function validateForm(form, isRtl) {
+  const errors = {}
+  if (!form.name.trim()) errors.name = isRtl ? 'اسم الشريك مطلوب' : 'Partner name is required'
+  else if (form.name.trim().length > 180) errors.name = isRtl ? 'الاسم طويل جدًا' : 'Name is too long'
+  if (form.name_en.trim().length > 180) errors.name_en = isRtl ? 'الاسم الإنجليزي طويل جدًا' : 'English name is too long'
+  if (form.website_url && !isValidUrl(form.website_url)) errors.website_url = isRtl ? 'رابط الموقع غير صحيح' : 'Website URL is invalid'
+  if (Number(form.sort_order) < 0) errors.sort_order = isRtl ? 'الترتيب لا يمكن أن يكون سالبًا' : 'Order cannot be negative'
+  return errors
+}
+
 export default function ManagePartners() {
   const { t, isRtl } = useAdminLang()
   const { requestConfirm } = useContext(ConfirmContext)
-
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState(EMPTY)
-  const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editId, setEditId] = useState(null)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [touched, setTouched] = useState({})
 
   const load = async () => {
     setLoading(true)
-
     try {
-      const data = await api.get('/partners/all')
+      const data = await api.get('/partners/all', { loadingLabel: 'admin-partners' })
       setItems(Array.isArray(data) ? data : [])
-    } catch {
+    } catch (error) {
+      console.error('Failed to load partners:', error)
       setItems([])
     } finally {
       setLoading(false)
@@ -89,17 +76,19 @@ export default function ManagePartners() {
     load()
   }, [])
 
-  const updateForm = (key, value) => {
-    setForm((current) => ({
-      ...current,
-      [key]: value,
-    }))
+  const errors = useMemo(() => validateForm(form, isRtl), [form, isRtl])
+  const hasErrors = Object.keys(errors).length > 0
+
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setTouched((current) => ({ ...current, [key]: true }))
   }
 
   const openAdd = () => {
-    setForm(EMPTY)
+    setForm(EMPTY_FORM)
+    setTouched({})
     setEditId(null)
-    setModal('form')
+    setModalOpen(true)
   }
 
   const openEdit = (item) => {
@@ -111,488 +100,129 @@ export default function ManagePartners() {
       sort_order: item.sort_order || 0,
       is_active: isActive(item.is_active),
     })
-
+    setTouched({})
     setEditId(item.id)
-    setModal('form')
+    setModalOpen(true)
   }
 
   const closeModal = () => {
-    setModal(null)
-    setForm(EMPTY)
+    setModalOpen(false)
+    setForm(EMPTY_FORM)
+    setTouched({})
     setEditId(null)
   }
 
   const handleSave = async () => {
-    if (!form.name?.trim()) {
-      toast.error(
-        t.titleRequired || (isRtl ? 'الاسم مطلوب' : 'Name is required'),
-        toastTheme.error
-      )
-      return
-    }
-
-    if (saving) return
+    setTouched({ name: true, name_en: true, website_url: true, sort_order: true })
+    if (hasErrors || saving) return
     setSaving(true)
 
     try {
       const payload = {
-        ...form,
         name: form.name.trim(),
         name_en: form.name_en.trim(),
+        logo_url: form.logo_url,
         website_url: form.website_url.trim(),
         sort_order: Number(form.sort_order) || 0,
-        is_active: !!form.is_active,
+        is_active: Boolean(form.is_active),
       }
 
       if (editId) {
-        await api.put(`/partners/${editId}`, payload)
+        await api.put(`/partners/${editId}`, payload, { globalLoading: true, loadingLabel: 'update-partner' })
       } else {
-        await api.post('/partners', payload)
+        await api.post('/partners', payload, { globalLoading: true, loadingLabel: 'create-partner' })
       }
 
-      toast.success(
-        editId
-          ? t.saved || (isRtl ? 'تم الحفظ' : 'Saved')
-          : t.added || (isRtl ? 'تمت الإضافة' : 'Added'),
-        toastTheme.success
-      )
-
+      toast.success(editId ? (isRtl ? 'تم تحديث الشريك' : 'Partner updated') : (isRtl ? 'تمت إضافة الشريك' : 'Partner added'), toastTheme.success)
       await load()
       closeModal()
     } catch (error) {
-      toast.error(
-        error?.message || (isRtl ? 'حدث خطأ' : 'Something went wrong'),
-        toastTheme.error
-      )
+      toast.error(error?.message || (isRtl ? 'تعذر الحفظ' : 'Save failed'), toastTheme.error)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleDelete = async (id) => {
+  const handleDelete = async (item) => {
     const confirmed = await requestConfirm({
-      title: isRtl ? 'تأكيد حذف الشريك' : 'Delete partner?',
-      message: isRtl
-        ? 'سيتم حذف هذا الشريك من قائمة الشركاء.'
-        : 'This partner will be removed from the partners list.',
+      title: isRtl ? 'حذف الشريك' : 'Delete partner',
+      message: isRtl ? `سيتم حذف «${getName(item, isRtl)}» من قائمة الشركاء.` : `“${getName(item, isRtl)}” will be removed.`,
       variant: 'danger',
-      confirmText: t.delete,
+      confirmText: t.delete || (isRtl ? 'حذف' : 'Delete'),
     })
-
     if (!confirmed) return
 
     try {
-      await api.delete(`/partners/${id}`)
-
-      toast.success(
-        t.deleted || (isRtl ? 'تم الحذف' : 'Deleted'),
-        toastTheme.success
-      )
-
+      await api.delete(`/partners/${item.id}`, null, { globalLoading: true, loadingLabel: 'delete-partner' })
+      toast.success(isRtl ? 'تم الحذف' : 'Deleted', toastTheme.success)
       await load()
     } catch (error) {
-      toast.error(
-        error?.message || (isRtl ? 'حدث خطأ أثناء الحذف' : 'Failed to delete'),
-        toastTheme.error
-      )
+      toast.error(error?.message || (isRtl ? 'تعذر الحذف' : 'Delete failed'), toastTheme.error)
     }
   }
 
-  const getName = (item) => {
-    if (isRtl) return item.name || item.name_en || '—'
-    return item.name_en || item.name || '—'
-  }
+  if (loading) return null
 
   return (
     <div className="w-full max-w-full overflow-hidden">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-dark md:text-3xl">
-            {t.managePartners}
-          </h1>
-
-          <p className="mt-1 text-sm text-gray-500">
-            {isRtl
-              ? 'إدارة شعارات وروابط الشركاء وترتيب ظهورهم'
-              : 'Manage partner logos, links, and display order'}
-          </p>
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-dark sm:text-3xl"><Handshake className="text-primary" />{t.managePartners || (isRtl ? 'إدارة الشركاء' : 'Manage Partners')}</h1>
+          <p className="mt-2 text-sm text-gray-500">{items.length} {isRtl ? 'شريك' : 'partners'}</p>
         </div>
-
-        <button
-          type="button"
-          onClick={openAdd}
-          className="btn-primary w-full justify-center sm:w-auto"
-        >
-          <Plus size={16} />
-          {t.addPartner}
-        </button>
+        <button type="button" onClick={openAdd} className="btn-primary"><Plus size={17} />{isRtl ? 'إضافة شريك' : 'Add Partner'}</button>
       </div>
 
-      <div className="md:hidden">
-        {loading ? (
-          <EmptyState text={t.loading} />
-        ) : items.length === 0 ? (
-          <EmptyState text={t.noPartners} />
-        ) : (
-          <div className="space-y-3">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
-              >
-                <div className="flex gap-3">
-                  {item.logo_url ? (
-                    <img
-                      src={resolveMediaUrl(item.logo_url)}
-                      alt=""
-                      className="h-20 w-20 shrink-0 rounded-xl border border-gray-100 bg-gray-50 object-contain p-2"
-                    />
-                  ) : (
-                    <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 text-gray-400">
-                      <ImageIcon size={22} />
-                    </div>
-                  )}
-
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <h3 className="line-clamp-2 text-sm font-bold leading-6 text-dark">
-                        {getName(item)}
-                      </h3>
-
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-                          isActive(item.is_active)
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {isActive(item.is_active) ? t.active : t.hidden}
-                      </span>
-                    </div>
-
-                    {item.name_en && isRtl && (
-                      <p className="line-clamp-1 text-xs text-gray-400" dir="ltr">
-                        {item.name_en}
-                      </p>
-                    )}
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">
-                        {t.order}: {item.sort_order || 0}
-                      </span>
-
-                      {item.website_url && (
-                        <a
-                          href={item.website_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex max-w-full items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-xs text-primary"
-                          dir="ltr"
-                        >
-                          <Link2 size={12} />
-                          <span className="max-w-[160px] truncate">
-                            {item.website_url}
-                          </span>
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => openEdit(item)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-600"
-                  >
-                    <Edit size={15} />
-                    {t.edit}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.id)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
-                  >
-                    <Trash2 size={15} />
-                    {t.delete}
-                  </button>
-                </div>
+      {items.length === 0 ? (
+        <EmptyState text={isRtl ? 'لا يوجد شركاء' : 'No partners found'} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {items.map((item) => (
+            <article key={item.id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+              <div className="flex h-28 items-center justify-center rounded-2xl bg-gray-50 p-4">
+                {item.logo_url ? <img src={resolveMediaUrl(item.logo_url)} alt={getName(item, isRtl)} className="max-h-full max-w-full object-contain" /> : <Handshake size={38} className="text-primary/45" />}
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] table-fixed text-sm">
-            <colgroup>
-              <col className="w-[130px]" />
-              <col className="w-[330px]" />
-              <col className="w-[100px]" />
-              <col className="w-[120px]" />
-              <col className="w-[120px]" />
-            </colgroup>
-
-            <thead className="border-b border-gray-100 bg-gray-50">
-              <tr>
-                <TableHead isRtl={isRtl}>{t.partnerLogo}</TableHead>
-                <TableHead isRtl={isRtl}>{t.partnerName}</TableHead>
-                <TableHead isRtl={isRtl}>{t.order}</TableHead>
-                <TableHead isRtl={isRtl}>{t.status}</TableHead>
-                <TableHead isRtl={isRtl}>{t.actions}</TableHead>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">
-                    {t.loading}
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-gray-400">
-                    {t.noPartners}
-                  </td>
-                </tr>
-              ) : (
-                items.map((item) => (
-                  <tr
-                    key={item.id}
-                    className="border-b border-gray-50 transition hover:bg-gray-50/70"
-                  >
-                    <td className="p-4">
-                      {item.logo_url ? (
-                        <img
-                          src={resolveMediaUrl(item.logo_url)}
-                          alt=""
-                          className="h-14 w-20 rounded-lg border border-gray-100 bg-gray-50 object-contain p-2"
-                        />
-                      ) : (
-                        <div className="flex h-14 w-20 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 text-gray-400">
-                          <ImageIcon size={18} />
-                        </div>
-                      )}
-                    </td>
-
-                    <td className="p-4 font-medium text-dark">
-                      <div className="line-clamp-1">
-                        {getName(item)}
-                      </div>
-
-                      {item.name_en && isRtl && (
-                        <div className="line-clamp-1 text-xs text-gray-400" dir="ltr">
-                          {item.name_en}
-                        </div>
-                      )}
-
-                      {item.website_url && (
-                        <a
-                          href={item.website_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="mt-1 inline-flex max-w-full items-center gap-1 text-xs text-primary hover:underline"
-                          dir="ltr"
-                        >
-                          <Link2 size={12} />
-                          <span className="truncate">
-                            {item.website_url}
-                          </span>
-                        </a>
-                      )}
-                    </td>
-
-                    <td className="p-4 text-gray-500">
-                      {item.sort_order || 0}
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                          isActive(item.is_active)
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {isActive(item.is_active) ? t.active : t.hidden}
-                      </span>
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEdit(item)}
-                          className="rounded-lg p-2 text-blue-500 transition hover:bg-blue-50"
-                          aria-label={t.edit}
-                        >
-                          <Edit size={15} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(item.id)}
-                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
-                          aria-label={t.delete}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {modal && (
-        <div
-          className="modal-overlay"
-          onClick={(event) => event.target === event.currentTarget && closeModal()}
-        >
-          <div className="modal-box w-[calc(100vw-24px)] max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b p-4 sm:p-6">
-              <h2 className="text-lg font-bold text-dark sm:text-xl">
-                {editId ? t.editPartner : t.addPartner}
-              </h2>
-
-              <button
-                type="button"
-                onClick={closeModal}
-                className="text-gray-400 transition hover:text-gray-600"
-                aria-label={isRtl ? 'إغلاق' : 'Close'}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4 p-4 sm:p-6">
-              <ImageUpload
-                value={form.logo_url}
-                onChange={(value) => updateForm('logo_url', value)}
-                folder="partners"
-                label={t.partnerLogo}
-              />
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field
-                  label={`${t.partnerNameAr} *`}
-                  value={form.name}
-                  onChange={(value) => updateForm('name', value)}
-                />
-
-                <Field
-                  label={t.partnerNameEn}
-                  value={form.name_en}
-                  onChange={(value) => updateForm('name_en', value)}
-                  dir="ltr"
-                />
+              <h2 className="mt-4 text-center font-bold text-dark">{getName(item, isRtl)}</h2>
+              {item.website_url && <a href={item.website_url} target="_blank" rel="noreferrer" className="mt-2 flex items-center justify-center gap-2 text-xs font-semibold text-primary"><Link2 size={13} />{item.website_url}</a>}
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => openEdit(item)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-sm font-bold text-blue-600"><Edit size={15} />{t.edit || (isRtl ? 'تعديل' : 'Edit')}</button>
+                <button type="button" onClick={() => handleDelete(item)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600"><Trash2 size={15} />{t.delete || (isRtl ? 'حذف' : 'Delete')}</button>
               </div>
-
-              <Field
-                label={t.websiteUrl}
-                value={form.website_url}
-                onChange={(value) => updateForm('website_url', value)}
-                dir="ltr"
-                placeholder="https://..."
-              />
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field
-                  label={t.order}
-                  type="number"
-                  value={form.sort_order}
-                  onChange={(value) => updateForm('sort_order', value)}
-                />
-
-                <div className="flex items-end">
-                  <label className="flex w-full cursor-pointer items-center gap-2 rounded-xl bg-gray-50 px-3 py-3">
-                    <input
-                      type="checkbox"
-                      checked={!!form.is_active}
-                      onChange={(event) => updateForm('is_active', event.target.checked)}
-                      className="h-4 w-4 accent-primary"
-                    />
-
-                    <span className="text-sm text-gray-700">
-                      {t.activePublic}
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col-reverse gap-3 border-t p-4 sm:flex-row sm:justify-end sm:p-6">
-              <button
-                type="button"
-                onClick={closeModal}
-                className="btn-outline justify-center"
-              >
-                {t.cancel}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                className="btn-primary justify-center"
-              >
-                <Save size={16} />
-                {saving ? t.saving : t.save}
-              </button>
-            </div>
-          </div>
+            </article>
+          ))}
         </div>
       )}
+
+      <AdminModal
+        open={modalOpen}
+        title={editId ? (isRtl ? 'تعديل الشريك' : 'Edit Partner') : (isRtl ? 'إضافة شريك' : 'Add Partner')}
+        subtitle={isRtl ? 'تحقق مباشر من الاسم والرابط والترتيب.' : 'Realtime validation for name, URL, and order.'}
+        icon={Handshake}
+        isRtl={isRtl}
+        size="normal"
+        onClose={closeModal}
+        closeDisabled={saving}
+        footer={<div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end"><button type="button" onClick={closeModal} className="btn-outline min-w-32 justify-center">{t.cancel || (isRtl ? 'إلغاء' : 'Cancel')}</button><button type="button" onClick={handleSave} disabled={saving || hasErrors} className="btn-primary min-w-36 justify-center"><Save size={16} />{saving ? (isRtl ? 'جارٍ الحفظ...' : 'Saving...') : (t.save || (isRtl ? 'حفظ' : 'Save'))}</button></div>}
+      >
+        <div className="space-y-5">
+          <ImageUpload value={form.logo_url} onChange={(value) => update('logo_url', value)} folder="partners" label={isRtl ? 'شعار الشريك' : 'Partner logo'} />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ValidatedField label={isRtl ? 'الاسم العربي' : 'Arabic name'} value={form.name} onChange={(value) => update('name', value)} error={errors.name} touched={touched.name} required dir="rtl" />
+            <ValidatedField label={isRtl ? 'الاسم الإنجليزي' : 'English name'} value={form.name_en} onChange={(value) => update('name_en', value)} error={errors.name_en} touched={touched.name_en} dir="ltr" />
+            <ValidatedField label={isRtl ? 'رابط الموقع' : 'Website URL'} value={form.website_url} onChange={(value) => update('website_url', value)} error={errors.website_url} touched={touched.website_url} type="url" dir="ltr" placeholder="https://example.com" />
+            <ValidatedField label={isRtl ? 'الترتيب' : 'Sort order'} value={form.sort_order} onChange={(value) => update('sort_order', value)} error={errors.sort_order} touched={touched.sort_order} type="number" min="0" dir="ltr" />
+          </div>
+          <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4"><input type="checkbox" checked={Boolean(form.is_active)} onChange={(event) => update('is_active', event.target.checked)} className="h-5 w-5 accent-primary" /><span className="text-sm font-bold text-gray-700">{isRtl ? 'الشريك نشط ويظهر في الموقع' : 'Partner is active and visible'}</span></label>
+        </div>
+      </AdminModal>
     </div>
   )
 }
 
-function TableHead({ children, isRtl }) {
-  return (
-    <th
-      className={`${isRtl ? 'text-right' : 'text-left'} p-4 font-semibold text-gray-600`}
-    >
-      {children}
-    </th>
-  )
+function getName(item, isRtl) {
+  return isRtl ? item.name || item.name_en || '—' : item.name_en || item.name || '—'
 }
 
 function EmptyState({ text }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-gray-400 shadow-sm">
-      {text}
-    </div>
-  )
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  dir,
-  placeholder = '',
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-
-      <input
-        type={type}
-        value={value || ''}
-        onChange={(event) => onChange(event.target.value)}
-        className="input-field"
-        dir={dir || ''}
-        placeholder={placeholder}
-      />
-    </div>
-  )
+  return <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center text-gray-400 shadow-sm">{text}</div>
 }
