@@ -1,32 +1,46 @@
 import { useContext, useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
+import {
+  Edit,
+  Film,
+  Image as ImageIcon,
+  Link as LinkIcon,
+  Plus,
+  Save,
+  Trash2,
+  UploadCloud,
+  Video,
+} from 'lucide-react'
+
 import api from '../lib/api'
 import { resolveMediaUrl } from '../lib/media'
-import toast from 'react-hot-toast'
 import ImageUpload from './ImageUpload'
-import {
-  Plus,
-  Edit,
-  Trash2,
-  X,
-  Save,
-  Image as ImageIcon,
-  Video,
-  UploadCloud,
-} from 'lucide-react'
+import AdminModal from './AdminModal'
+import ValidatedField from './ValidatedField'
 import { ConfirmContext } from './AdminLayout'
 import { useAdminLang } from './adminI18n'
 
 const MAX_IMAGES = 50
+const MAX_VIDEO_FILES = 10
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+const MAX_VIDEO_SIZE = 250 * 1024 * 1024
 
 const EMPTY_COLLECTION = {
   title: '',
   title_en: '',
-  description: '',
-  description_en: '',
   type: 'photo',
   cover_url: '',
   sort_order: 0,
   is_active: true,
+}
+
+const EMPTY_TOUCHED = {
+  title: false,
+  title_en: false,
+  cover_url: false,
+  sort_order: false,
+  media: false,
+  video_urls: false,
 }
 
 const toastTheme = {
@@ -42,7 +56,7 @@ const toastTheme = {
     },
   },
   error: {
-    duration: 4000,
+    duration: 4500,
     style: {
       background: '#7f1d1d',
       color: '#ffffff',
@@ -65,12 +79,78 @@ function toNumber(value) {
 
 function formatFileSize(bytes) {
   if (!bytes) return '0 KB'
-
   if (bytes < 1024 * 1024) {
     return `${Math.max(1, Math.round(bytes / 1024))} KB`
   }
 
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function isValidHttpUrl(value) {
+  if (!value) return true
+
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function validateForm(form, options) {
+  const { isRtl, editCollectionId, photoFiles, videoFiles, videoUrls } = options
+  const errors = {}
+
+  if (!form.title.trim()) {
+    errors.title = isRtl ? 'عنوان المجموعة مطلوب' : 'Collection title is required'
+  } else if (form.title.trim().length > 180) {
+    errors.title = isRtl
+      ? 'العنوان طويل جدًا، الحد الأقصى 180 حرفًا'
+      : 'Title is too long. Maximum is 180 characters'
+  }
+
+  if (form.title_en.trim().length > 180) {
+    errors.title_en = isRtl
+      ? 'العنوان الإنجليزي طويل جدًا'
+      : 'English title is too long'
+  }
+
+  if (form.cover_url && !isValidHttpUrl(form.cover_url)) {
+    errors.cover_url = isRtl ? 'رابط الغلاف غير صحيح' : 'Cover URL is invalid'
+  }
+
+  if (toNumber(form.sort_order) < 0) {
+    errors.sort_order = isRtl
+      ? 'الترتيب لا يمكن أن يكون سالبًا'
+      : 'Order cannot be negative'
+  }
+
+  if (!editCollectionId && form.type === 'photo' && photoFiles.length === 0) {
+    errors.media = isRtl
+      ? 'اختر صورة واحدة على الأقل'
+      : 'Choose at least one image'
+  }
+
+  const cleanVideoUrls = videoUrls.map((url) => url.trim()).filter(Boolean)
+
+  if (
+    !editCollectionId &&
+    form.type === 'video' &&
+    cleanVideoUrls.length === 0 &&
+    videoFiles.length === 0
+  ) {
+    errors.media = isRtl
+      ? 'أضف رابط فيديو أو ارفع ملف فيديو واحدًا على الأقل'
+      : 'Add a video URL or upload at least one video file'
+  }
+
+  if (cleanVideoUrls.some((url) => !isValidHttpUrl(url))) {
+    errors.video_urls = isRtl
+      ? 'يوجد رابط فيديو غير صحيح'
+      : 'One or more video URLs are invalid'
+  }
+
+  return errors
 }
 
 export default function ManageGallery() {
@@ -82,11 +162,14 @@ export default function ManageGallery() {
   const [saving, setSaving] = useState(false)
   const [filter, setFilter] = useState('all')
 
-  const [collectionModal, setCollectionModal] = useState(false)
-  const [collectionForm, setCollectionForm] = useState(EMPTY_COLLECTION)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [form, setForm] = useState(EMPTY_COLLECTION)
+  const [touched, setTouched] = useState(EMPTY_TOUCHED)
   const [editCollectionId, setEditCollectionId] = useState(null)
+  const [collectionItems, setCollectionItems] = useState([])
 
-  const [selectedFiles, setSelectedFiles] = useState([])
+  const [photoFiles, setPhotoFiles] = useState([])
+  const [videoFiles, setVideoFiles] = useState([])
   const [videoUrls, setVideoUrls] = useState([''])
 
   const pageTitle = isRtl ? 'إدارة المعرض' : 'Manage Gallery'
@@ -95,7 +178,9 @@ export default function ManageGallery() {
     setLoading(true)
 
     try {
-      const data = await api.get('/gallery/collections/all')
+      const data = await api.get('/gallery/collections/all', {
+        loadingLabel: 'admin-gallery-collections',
+      })
       setCollections(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error('Failed to load gallery collections:', error)
@@ -109,60 +194,96 @@ export default function ManageGallery() {
     load()
   }, [])
 
+  const errors = useMemo(
+    () =>
+      validateForm(form, {
+        isRtl,
+        editCollectionId,
+        photoFiles,
+        videoFiles,
+        videoUrls,
+      }),
+    [
+      form,
+      isRtl,
+      editCollectionId,
+      photoFiles,
+      videoFiles,
+      videoUrls,
+    ]
+  )
+
   const filteredCollections = useMemo(() => {
     if (filter === 'all') return collections
     return collections.filter((collection) => collection.type === filter)
   }, [collections, filter])
 
-  const photosCount = collections.filter((collection) => collection.type === 'photo').length
-  const videosCount = collections.filter((collection) => collection.type === 'video').length
+  const photosCount = collections.filter(
+    (collection) => collection.type === 'photo'
+  ).length
+  const videosCount = collections.filter(
+    (collection) => collection.type === 'video'
+  ).length
 
-  const updateCollectionForm = (key, value) => {
-    setCollectionForm((current) => ({
-      ...current,
-      [key]: value,
-    }))
+  const markTouched = (field) => {
+    setTouched((current) => ({ ...current, [field]: true }))
   }
 
-  const openAddCollection = (type = 'photo') => {
-    setCollectionForm({
-      ...EMPTY_COLLECTION,
-      type,
-    })
+  const updateForm = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setTouched((current) => ({ ...current, [key]: true }))
+  }
+
+  const resetModalState = () => {
+    setForm(EMPTY_COLLECTION)
+    setTouched(EMPTY_TOUCHED)
     setEditCollectionId(null)
-    setSelectedFiles([])
+    setCollectionItems([])
+    setPhotoFiles([])
+    setVideoFiles([])
     setVideoUrls([''])
-    setCollectionModal(true)
   }
 
-  const openEditCollection = (collection) => {
-    setCollectionForm({
+  const openAddCollection = (type) => {
+    resetModalState()
+    setForm({ ...EMPTY_COLLECTION, type })
+    setModalOpen(true)
+  }
+
+  const openEditCollection = async (collection) => {
+    resetModalState()
+    setEditCollectionId(collection.id)
+    setForm({
       title: collection.title || '',
       title_en: collection.title_en || '',
-      description: collection.description || '',
-      description_en: collection.description_en || '',
       type: collection.type || 'photo',
       cover_url: collection.cover_url || '',
       sort_order: collection.sort_order || 0,
       is_active: isActive(collection.is_active),
     })
+    setModalOpen(true)
 
-    setEditCollectionId(collection.id)
-    setSelectedFiles([])
-    setVideoUrls([''])
-    setCollectionModal(true)
+    try {
+      const detail = await api.get(`/gallery/collections/${collection.id}`, {
+        loadingLabel: 'admin-gallery-collection-detail',
+      })
+      setCollectionItems(Array.isArray(detail?.items) ? detail.items : [])
+    } catch (error) {
+      console.error('Failed to load collection items:', error)
+      setCollectionItems([])
+    }
   }
 
-  const closeCollectionModal = () => {
-    setCollectionModal(false)
-    setCollectionForm(EMPTY_COLLECTION)
-    setEditCollectionId(null)
-    setSelectedFiles([])
-    setVideoUrls([''])
+  const closeModal = () => {
+    setModalOpen(false)
+    resetModalState()
   }
 
-  const handleFilesChange = (event) => {
+  const handlePhotoFiles = (event) => {
     const files = Array.from(event.target.files || [])
+    const invalid = files.find(
+      (file) => !file.type.startsWith('image/') || file.size > MAX_IMAGE_SIZE
+    )
 
     if (files.length > MAX_IMAGES) {
       toast.error(
@@ -171,13 +292,55 @@ export default function ManageGallery() {
           : `Maximum ${MAX_IMAGES} images at once`,
         toastTheme.error
       )
-
       event.target.value = ''
-      setSelectedFiles([])
       return
     }
 
-    setSelectedFiles(files)
+    if (invalid) {
+      toast.error(
+        isRtl
+          ? 'تأكد أن الملفات صور وحجم كل صورة لا يتجاوز 10MB'
+          : 'Use image files no larger than 10MB each',
+        toastTheme.error
+      )
+      event.target.value = ''
+      return
+    }
+
+    setPhotoFiles(files)
+    markTouched('media')
+  }
+
+  const handleVideoFiles = (event) => {
+    const files = Array.from(event.target.files || [])
+    const invalid = files.find(
+      (file) => !file.type.startsWith('video/') || file.size > MAX_VIDEO_SIZE
+    )
+
+    if (files.length > MAX_VIDEO_FILES) {
+      toast.error(
+        isRtl
+          ? `الحد الأقصى ${MAX_VIDEO_FILES} ملفات فيديو في المرة الواحدة`
+          : `Maximum ${MAX_VIDEO_FILES} video files at once`,
+        toastTheme.error
+      )
+      event.target.value = ''
+      return
+    }
+
+    if (invalid) {
+      toast.error(
+        isRtl
+          ? 'تأكد أن الملفات فيديو وحجم كل فيديو لا يتجاوز 250MB'
+          : 'Use video files no larger than 250MB each',
+        toastTheme.error
+      )
+      event.target.value = ''
+      return
+    }
+
+    setVideoFiles(files)
+    markTouched('media')
   }
 
   const addVideoUrl = () => {
@@ -186,8 +349,12 @@ export default function ManageGallery() {
 
   const updateVideoUrl = (index, value) => {
     setVideoUrls((current) =>
-      current.map((url, currentIndex) => (currentIndex === index ? value : url))
+      current.map((url, currentIndex) =>
+        currentIndex === index ? value : url
+      )
     )
+    markTouched('video_urls')
+    markTouched('media')
   }
 
   const removeVideoUrl = (index) => {
@@ -195,120 +362,120 @@ export default function ManageGallery() {
       const next = current.filter((_, currentIndex) => currentIndex !== index)
       return next.length ? next : ['']
     })
+    markTouched('video_urls')
   }
 
-  const getCleanVideoUrls = () => {
-    return videoUrls.map((url) => url.trim()).filter(Boolean)
+  const buildCollectionPayload = () => ({
+    title: form.title.trim(),
+    title_en: form.title_en.trim(),
+    type: form.type,
+    cover_url: form.cover_url || '',
+    sort_order: toNumber(form.sort_order),
+    is_active: Boolean(form.is_active),
+  })
+
+  const uploadNewItems = async (collectionPayload) => {
+    if (collectionPayload.type === 'photo') {
+      if (!photoFiles.length) return []
+
+      const uploaded = await api.uploadMany(photoFiles, 'gallery/photos')
+
+      return (uploaded.files || []).map((file, index) => ({
+        title: collectionPayload.title,
+        title_en: collectionPayload.title_en,
+        image_url: file.url,
+        thumbnail_url: file.url,
+        video_url: '',
+        sort_order: collectionItems.length + index + 1,
+        is_active: true,
+      }))
+    }
+
+    const directItems = videoUrls
+      .map((url) => url.trim())
+      .filter(Boolean)
+      .map((url, index) => ({
+        title: collectionPayload.title,
+        title_en: collectionPayload.title_en,
+        image_url: '',
+        thumbnail_url: collectionPayload.cover_url || '',
+        video_url: url,
+        sort_order: collectionItems.length + index + 1,
+        is_active: true,
+      }))
+
+    let uploadedItems = []
+
+    if (videoFiles.length) {
+      const uploaded = await api.uploadManyMedia(
+        videoFiles,
+        'gallery/videos'
+      )
+
+      uploadedItems = (uploaded.files || []).map((file, index) => ({
+        title: collectionPayload.title,
+        title_en: collectionPayload.title_en,
+        image_url: '',
+        thumbnail_url: collectionPayload.cover_url || '',
+        video_url: file.url,
+        sort_order:
+          collectionItems.length + directItems.length + index + 1,
+        is_active: true,
+      }))
+    }
+
+    return [...directItems, ...uploadedItems]
   }
 
-  const validateCollection = () => {
-    if (!collectionForm.title.trim()) {
-      return isRtl ? 'عنوان المجموعة العربي مطلوب' : 'Arabic collection title is required'
-    }
+  const handleSave = async () => {
+    setTouched({
+      title: true,
+      title_en: true,
+      cover_url: true,
+      sort_order: true,
+      media: true,
+      video_urls: true,
+    })
 
-    if (!editCollectionId && collectionForm.type === 'photo' && selectedFiles.length === 0) {
-      return isRtl ? 'اختر صورة واحدة على الأقل' : 'Choose at least one image'
-    }
+    if (Object.keys(errors).length > 0 || saving) return
 
-    if (!editCollectionId && collectionForm.type === 'photo' && selectedFiles.length > MAX_IMAGES) {
-      return isRtl
-        ? `الحد الأقصى ${MAX_IMAGES} صورة في المجموعة الواحدة`
-        : `Maximum ${MAX_IMAGES} images are allowed in one collection`
-    }
-
-    if (!editCollectionId && collectionForm.type === 'video' && getCleanVideoUrls().length === 0) {
-      return isRtl ? 'أضف رابط فيديو واحد على الأقل' : 'Add at least one video URL'
-    }
-
-    return ''
-  }
-
-  const buildCollectionPayload = () => {
-    return {
-      title: collectionForm.title.trim(),
-      title_en: collectionForm.title_en.trim(),
-      description: collectionForm.description.trim(),
-      description_en: collectionForm.description_en.trim(),
-      type: collectionForm.type,
-      cover_url: collectionForm.cover_url || '',
-      sort_order: toNumber(collectionForm.sort_order),
-      is_active: !!collectionForm.is_active,
-    }
-  }
-
-  const handleSaveCollection = async () => {
-    const validationError = validateCollection()
-
-    if (validationError) {
-      toast.error(validationError, toastTheme.error)
-      return
-    }
-
-    if (saving) return
     setSaving(true)
 
     try {
       const collectionPayload = buildCollectionPayload()
+      const items = await uploadNewItems(collectionPayload)
 
       if (editCollectionId) {
-        await api.put(`/gallery/collections/${editCollectionId}`, collectionPayload)
-
-        toast.success(
-          isRtl ? 'تم تحديث المجموعة بنجاح' : 'Collection updated successfully',
-          toastTheme.success
+        await api.put(
+          `/gallery/collections/${editCollectionId}`,
+          collectionPayload
         )
 
-        await load()
-        closeCollectionModal()
-        return
+        if (items.length) {
+          await api.post(`/gallery/collections/${editCollectionId}/items`, {
+            items,
+          })
+        }
+      } else {
+        await api.post('/gallery/collections', {
+          collection: collectionPayload,
+          items,
+        })
       }
-
-      let items = []
-
-      if (collectionPayload.type === 'photo') {
-        const uploaded = await api.uploadMany(selectedFiles, 'gallery/photos')
-
-        items = (uploaded.files || []).map((file, index) => ({
-          title: collectionPayload.title,
-          title_en: collectionPayload.title_en,
-          description: collectionPayload.description,
-          description_en: collectionPayload.description_en,
-          image_url: file.url,
-          thumbnail_url: file.url,
-          video_url: '',
-          sort_order: index + 1,
-          is_active: true,
-        }))
-      }
-
-      if (collectionPayload.type === 'video') {
-        const urls = getCleanVideoUrls()
-
-        items = urls.map((url, index) => ({
-          title: collectionPayload.title,
-          title_en: collectionPayload.title_en,
-          description: collectionPayload.description,
-          description_en: collectionPayload.description_en,
-          image_url: '',
-          thumbnail_url: collectionPayload.cover_url || '',
-          video_url: url,
-          sort_order: index + 1,
-          is_active: true,
-        }))
-      }
-
-      await api.post('/gallery/collections', {
-        collection: collectionPayload,
-        items,
-      })
 
       toast.success(
-        isRtl ? 'تم حفظ المجموعة بنجاح' : 'Collection saved successfully',
+        editCollectionId
+          ? isRtl
+            ? 'تم تحديث المجموعة بنجاح'
+            : 'Collection updated successfully'
+          : isRtl
+            ? 'تم حفظ المجموعة بنجاح'
+            : 'Collection saved successfully',
         toastTheme.success
       )
 
       await load()
-      closeCollectionModal()
+      closeModal()
     } catch (error) {
       toast.error(
         error?.message || (isRtl ? 'حدث خطأ' : 'Something went wrong'),
@@ -323,8 +490,8 @@ export default function ManageGallery() {
     const confirmed = await requestConfirm({
       title: isRtl ? 'تأكيد حذف المجموعة' : 'Delete collection?',
       message: isRtl
-        ? 'سيتم حذف هذه المجموعة وجميع العناصر التابعة لها نهائيًا.'
-        : 'This collection and all its items will be permanently removed.',
+        ? 'سيتم حذف المجموعة وجميع الصور أو الفيديوهات التابعة لها نهائيًا.'
+        : 'The collection and all of its media will be permanently removed.',
       variant: 'danger',
       confirmText: t.delete,
     })
@@ -333,18 +500,39 @@ export default function ManageGallery() {
 
     try {
       await api.delete(`/gallery/collections/${collection.id}`)
-
       toast.success(
         isRtl ? 'تم حذف المجموعة بنجاح' : 'Collection deleted successfully',
         toastTheme.success
       )
-
       await load()
     } catch (error) {
       toast.error(
-        error?.message || (isRtl ? 'حدث خطأ أثناء الحذف' : 'Failed to delete'),
+        error?.message || (isRtl ? 'حدث خطأ أثناء الحذف' : 'Delete failed'),
         toastTheme.error
       )
+    }
+  }
+
+  const handleDeleteItem = async (item) => {
+    const confirmed = await requestConfirm({
+      title: isRtl ? 'حذف العنصر؟' : 'Delete item?',
+      message: isRtl
+        ? 'سيتم حذف هذا العنصر من المجموعة نهائيًا.'
+        : 'This item will be permanently removed from the collection.',
+      variant: 'danger',
+      confirmText: t.delete,
+    })
+
+    if (!confirmed) return
+
+    try {
+      await api.delete(`/gallery/items/${item.id}`)
+      setCollectionItems((current) =>
+        current.filter((currentItem) => currentItem.id !== item.id)
+      )
+      await load()
+    } catch (error) {
+      toast.error(error?.message || t.error, toastTheme.error)
     }
   }
 
@@ -353,27 +541,17 @@ export default function ManageGallery() {
     return item.title_en || item.title || '—'
   }
 
-  const getDescription = (item) => {
-    if (isRtl) return item.description || item.description_en || ''
-    return item.description_en || item.description || ''
-  }
-
-  const getItemsCount = (collection) => {
-    return toNumber(collection.items_count)
-  }
-
   return (
     <div className="w-full max-w-full overflow-hidden">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-dark md:text-3xl">
+          <h1 className="text-2xl font-bold text-dark sm:text-3xl">
             {pageTitle}
           </h1>
-
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-2 text-sm leading-6 text-gray-500">
             {isRtl
-              ? 'إدارة مجموعات الصور والفيديوهات المعروضة في الموقع'
-              : 'Manage public photo and video collections'}
+              ? 'إدارة مجموعات الصور والفيديوهات. لا توجد حقول وصف؛ العنوان فقط.'
+              : 'Manage photo and video collections. Collections use titles only.'}
           </p>
         </div>
 
@@ -383,7 +561,7 @@ export default function ManageGallery() {
             onClick={() => openAddCollection('photo')}
             className="btn-primary justify-center"
           >
-            <ImageIcon size={16} />
+            <ImageIcon size={17} />
             {isRtl ? 'إضافة مجموعة صور' : 'Add Photo Collection'}
           </button>
 
@@ -392,591 +570,539 @@ export default function ManageGallery() {
             onClick={() => openAddCollection('video')}
             className="btn-primary justify-center"
           >
-            <Video size={16} />
+            <Video size={17} />
             {isRtl ? 'إضافة مجموعة فيديوهات' : 'Add Video Collection'}
           </button>
         </div>
       </div>
 
-      <div className="mb-6 rounded-2xl border border-gray-100 bg-white p-3 shadow-sm">
-        <div className="grid grid-cols-3 gap-2 sm:flex sm:flex-wrap">
-          <FilterButton
-            active={filter === 'all'}
-            onClick={() => setFilter('all')}
-            label={`${isRtl ? 'الكل' : 'All'} (${collections.length})`}
-          />
-
-          <FilterButton
-            active={filter === 'photo'}
-            onClick={() => setFilter('photo')}
-            label={`${isRtl ? 'مجموعات الصور' : 'Photo Collections'} (${photosCount})`}
-          />
-
-          <FilterButton
-            active={filter === 'video'}
-            onClick={() => setFilter('video')}
-            label={`${isRtl ? 'مجموعات الفيديو' : 'Video Collections'} (${videosCount})`}
-          />
-        </div>
+      <div className="mb-5 flex flex-wrap gap-2">
+        <FilterButton
+          active={filter === 'all'}
+          onClick={() => setFilter('all')}
+          label={`${isRtl ? 'الكل' : 'All'} (${collections.length})`}
+        />
+        <FilterButton
+          active={filter === 'photo'}
+          onClick={() => setFilter('photo')}
+          label={`${isRtl ? 'الصور' : 'Photos'} (${photosCount})`}
+        />
+        <FilterButton
+          active={filter === 'video'}
+          onClick={() => setFilter('video')}
+          label={`${isRtl ? 'الفيديوهات' : 'Videos'} (${videosCount})`}
+        />
       </div>
 
-      <div className="md:hidden">
-        {loading ? (
-          <EmptyState text={t.loading} />
-        ) : filteredCollections.length === 0 ? (
-          <EmptyState text={isRtl ? 'لا توجد مجموعات' : 'No collections found'} />
-        ) : (
-          <div className="space-y-3">
-            {filteredCollections.map((collection) => (
-              <div
-                key={collection.id}
-                className="rounded-2xl border border-gray-100 bg-white p-3 shadow-sm"
-              >
-                <div className="flex gap-3">
-                  <CollectionThumb collection={collection} />
+      {loading ? null : filteredCollections.length === 0 ? (
+        <EmptyState
+          text={isRtl ? 'لا توجد مجموعات' : 'No collections found'}
+        />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredCollections.map((collection) => (
+            <article
+              key={collection.id}
+              className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+            >
+              <CollectionCover collection={collection} />
 
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-2 flex items-start justify-between gap-2">
-                      <h3 className="line-clamp-2 text-sm font-bold leading-6 text-dark">
-                        {getTitle(collection)}
-                      </h3>
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h2 className="line-clamp-2 font-bold text-dark">
+                      {getTitle(collection)}
+                    </h2>
+                    <p className="mt-1 text-xs text-gray-400">
+                      {collection.type === 'photo'
+                        ? isRtl
+                          ? 'مجموعة صور'
+                          : 'Photo collection'
+                        : isRtl
+                          ? 'مجموعة فيديوهات'
+                          : 'Video collection'}
+                    </p>
+                  </div>
 
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-                          isActive(collection.is_active)
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {isActive(collection.is_active)
-                          ? isRtl
-                            ? 'نشط'
-                            : 'Active'
-                          : isRtl
-                            ? 'مخفي'
-                            : 'Hidden'}
-                      </span>
+                  <span
+                    className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${
+                      isActive(collection.is_active)
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {isActive(collection.is_active)
+                      ? isRtl
+                        ? 'نشط'
+                        : 'Active'
+                      : isRtl
+                        ? 'مخفي'
+                        : 'Hidden'}
+                  </span>
+                </div>
+
+                <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-gray-50 p-3 text-center text-xs">
+                  <div>
+                    <div className="font-bold text-dark">
+                      {toNumber(collection.items_count)}
                     </div>
-
-                    {getDescription(collection) && (
-                      <p className="mb-2 line-clamp-2 text-xs leading-6 text-gray-500">
-                        {getDescription(collection)}
-                      </p>
-                    )}
-
-                    <div className="flex flex-wrap gap-2">
-                      <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                        {collection.type === 'photo'
-                          ? isRtl
-                            ? 'مجموعة صور'
-                            : 'Photo Collection'
-                          : isRtl
-                            ? 'مجموعة فيديو'
-                            : 'Video Collection'}
-                      </span>
-
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">
-                        {getItemsCount(collection)} {isRtl ? 'عنصر' : 'Items'}
-                      </span>
-
-                      <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-500">
-                        {isRtl ? 'الترتيب' : 'Order'}: {collection.sort_order || 0}
-                      </span>
+                    <div className="mt-1 text-gray-400">
+                      {isRtl ? 'عنصر' : 'Items'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-dark">
+                      {toNumber(collection.events_count)}
+                    </div>
+                    <div className="mt-1 text-gray-400">
+                      {isRtl ? 'فعالية' : 'Events'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-dark">
+                      {collection.sort_order || 0}
+                    </div>
+                    <div className="mt-1 text-gray-400">
+                      {isRtl ? 'الترتيب' : 'Order'}
                     </div>
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
+                <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => openEditCollection(collection)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-600"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-50 text-sm font-semibold text-blue-600 transition hover:bg-blue-100"
                   >
-                    <Edit size={15} />
+                    <Edit size={16} />
                     {t.edit}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleDeleteCollection(collection)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-red-50 text-sm font-semibold text-red-600 transition hover:bg-red-100"
                   >
-                    <Trash2 size={15} />
+                    <Trash2 size={16} />
                     {t.delete}
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <div className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[920px] table-fixed text-sm">
-            <colgroup>
-              <col className="w-[120px]" />
-              <col className="w-[320px]" />
-              <col className="w-[150px]" />
-              <col className="w-[110px]" />
-              <col className="w-[110px]" />
-              <col className="w-[110px]" />
-              <col className="w-[120px]" />
-            </colgroup>
-
-            <thead className="border-b border-gray-100 bg-gray-50">
-              <tr>
-                <TableHead isRtl={isRtl}>{isRtl ? 'الغلاف' : 'Cover'}</TableHead>
-                <TableHead isRtl={isRtl}>{t.title}</TableHead>
-                <TableHead isRtl={isRtl}>{isRtl ? 'النوع' : 'Type'}</TableHead>
-                <TableHead isRtl={isRtl}>{isRtl ? 'العناصر' : 'Items'}</TableHead>
-                <TableHead isRtl={isRtl}>{isRtl ? 'الترتيب' : 'Order'}</TableHead>
-                <TableHead isRtl={isRtl}>{t.status}</TableHead>
-                <TableHead isRtl={isRtl}>{t.actions}</TableHead>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-400">
-                    {t.loading}
-                  </td>
-                </tr>
-              ) : filteredCollections.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="p-8 text-center text-gray-400">
-                    {isRtl ? 'لا توجد مجموعات' : 'No collections found'}
-                  </td>
-                </tr>
-              ) : (
-                filteredCollections.map((collection) => (
-                  <tr
-                    key={collection.id}
-                    className="border-b border-gray-50 transition hover:bg-gray-50/70"
-                  >
-                    <td className="p-4">
-                      <CollectionThumb collection={collection} small />
-                    </td>
-
-                    <td className="p-4 font-medium text-dark">
-                      <div className="line-clamp-1">{getTitle(collection)}</div>
-
-                      {collection.title_en && isRtl && (
-                        <div className="line-clamp-1 text-xs text-gray-400" dir="ltr">
-                          {collection.title_en}
-                        </div>
-                      )}
-
-                      {getDescription(collection) && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-400">
-                          {getDescription(collection)}
-                        </p>
-                      )}
-                    </td>
-
-                    <td className="p-4">
-                      <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-semibold text-primary">
-                        {collection.type === 'photo'
-                          ? isRtl
-                            ? 'مجموعة صور'
-                            : 'Photo Collection'
-                          : isRtl
-                            ? 'مجموعة فيديو'
-                            : 'Video Collection'}
-                      </span>
-                    </td>
-
-                    <td className="p-4 text-gray-500">
-                      {getItemsCount(collection)}
-                    </td>
-
-                    <td className="p-4 text-gray-500">
-                      {collection.sort_order || 0}
-                    </td>
-
-                    <td className="p-4">
-                      <span
-                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                          isActive(collection.is_active)
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-500'
-                        }`}
-                      >
-                        {isActive(collection.is_active)
-                          ? isRtl
-                            ? 'نشط'
-                            : 'Active'
-                          : isRtl
-                            ? 'مخفي'
-                            : 'Hidden'}
-                      </span>
-                    </td>
-
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => openEditCollection(collection)}
-                          className="rounded-lg p-2 text-blue-500 transition hover:bg-blue-50"
-                          aria-label={t.edit}
-                        >
-                          <Edit size={15} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCollection(collection)}
-                          className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
-                          aria-label={t.delete}
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+            </article>
+          ))}
         </div>
-      </div>
+      )}
 
-      {collectionModal && (
-        <div
-          className="modal-overlay"
-          onClick={(event) =>
-            event.target === event.currentTarget && closeCollectionModal()
-          }
-        >
-          <div className="modal-box max-h-[90vh] w-[calc(100vw-24px)] max-w-4xl overflow-y-auto">
-            <div className="flex items-center justify-between border-b p-4 sm:p-6">
-              <div>
-                <h2 className="text-lg font-bold text-dark sm:text-xl">
-                  {editCollectionId
+      <AdminModal
+        open={modalOpen}
+        title={
+          editCollectionId
+            ? isRtl
+              ? 'تعديل المجموعة'
+              : 'Edit Collection'
+            : form.type === 'photo'
+              ? isRtl
+                ? 'إضافة مجموعة صور'
+                : 'Add Photo Collection'
+              : isRtl
+                ? 'إضافة مجموعة فيديوهات'
+                : 'Add Video Collection'
+        }
+        subtitle={
+          form.type === 'video'
+            ? isRtl
+              ? 'يمكنك إضافة روابط مباشرة أو رفع ملفات فيديو إلى Supabase.'
+              : 'Add direct links or upload video files to Supabase.'
+            : isRtl
+              ? `يمكن رفع حتى ${MAX_IMAGES} صورة للمجموعة.`
+              : `Upload up to ${MAX_IMAGES} images per collection.`
+        }
+        icon={form.type === 'video' ? Film : ImageIcon}
+        isRtl={isRtl}
+        size="wide"
+        onClose={closeModal}
+        closeDisabled={saving}
+        footer={
+          <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:justify-end">
+            <button
+              type="button"
+              onClick={closeModal}
+              disabled={saving}
+              className="btn-outline justify-center"
+            >
+              {t.cancel}
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || Object.keys(errors).length > 0}
+              className="btn-primary justify-center"
+            >
+              <Save size={16} />
+              {saving ? t.saving : t.save}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ValidatedField
+              label={isRtl ? 'عنوان المجموعة بالعربي' : 'Arabic Title'}
+              value={form.title}
+              onChange={(value) => updateForm('title', value)}
+              onBlur={() => markTouched('title')}
+              error={errors.title}
+              touched={touched.title}
+              required
+              dir="rtl"
+            />
+
+            <ValidatedField
+              label={isRtl ? 'عنوان المجموعة بالإنجليزي' : 'English Title'}
+              value={form.title_en}
+              onChange={(value) => updateForm('title_en', value)}
+              onBlur={() => markTouched('title_en')}
+              error={errors.title_en}
+              touched={touched.title_en}
+              dir="ltr"
+            />
+
+            <ValidatedField
+              label={isRtl ? 'نوع المجموعة' : 'Collection Type'}
+              value={form.type}
+              onChange={(value) => updateForm('type', value)}
+              onBlur={() => markTouched('type')}
+              touched
+              disabled={Boolean(editCollectionId)}
+              as="select"
+              options={[
+                {
+                  value: 'photo',
+                  label: isRtl ? 'مجموعة صور' : 'Photo Collection',
+                },
+                {
+                  value: 'video',
+                  label: isRtl ? 'مجموعة فيديوهات' : 'Video Collection',
+                },
+              ]}
+            />
+
+            <ValidatedField
+              label={isRtl ? 'الترتيب' : 'Sort Order'}
+              value={form.sort_order}
+              onChange={(value) => updateForm('sort_order', value)}
+              onBlur={() => markTouched('sort_order')}
+              error={errors.sort_order}
+              touched={touched.sort_order}
+              type="number"
+              min="0"
+              dir="ltr"
+            />
+          </div>
+
+          {(editCollectionId || form.type === 'video') && (
+            <ImageUpload
+              value={form.cover_url}
+              onChange={(value) => updateForm('cover_url', value)}
+              folder={
+                form.type === 'photo'
+                  ? 'gallery/photos'
+                  : 'gallery/video-covers'
+              }
+              label={isRtl ? 'غلاف المجموعة (اختياري)' : 'Collection Cover (Optional)'}
+            />
+          )}
+
+          {form.type === 'photo' ? (
+            <MediaPicker
+              label={
+                editCollectionId
+                  ? isRtl
+                    ? 'إضافة صور جديدة للمجموعة (اختياري)'
+                    : 'Add New Images (Optional)'
+                  : isRtl
+                    ? 'صور المجموعة'
+                    : 'Collection Images'
+              }
+              accept="image/*"
+              files={photoFiles}
+              onChange={handlePhotoFiles}
+              icon={ImageIcon}
+              error={errors.media}
+              touched={touched.media}
+              isRtl={isRtl}
+              hint={
+                isRtl
+                  ? `حتى ${MAX_IMAGES} صورة، 10MB لكل صورة`
+                  : `Up to ${MAX_IMAGES} images, 10MB each`
+              }
+            />
+          ) : (
+            <div className="space-y-5">
+              <MediaPicker
+                label={
+                  editCollectionId
                     ? isRtl
-                      ? 'تعديل المجموعة'
-                      : 'Edit Collection'
-                    : collectionForm.type === 'photo'
-                      ? isRtl
-                        ? 'إضافة مجموعة صور'
-                        : 'Add Photo Collection'
-                      : isRtl
-                        ? 'إضافة مجموعة فيديوهات'
-                        : 'Add Video Collection'}
-                </h2>
+                      ? 'رفع فيديوهات جديدة (اختياري)'
+                      : 'Upload New Videos (Optional)'
+                    : isRtl
+                      ? 'رفع ملفات فيديو إلى Supabase'
+                      : 'Upload Video Files to Supabase'
+                }
+                accept="video/*"
+                files={videoFiles}
+                onChange={handleVideoFiles}
+                icon={UploadCloud}
+                error={errors.media}
+                touched={touched.media}
+                isRtl={isRtl}
+                hint={
+                  isRtl
+                    ? `حتى ${MAX_VIDEO_FILES} فيديوهات، 250MB لكل فيديو`
+                    : `Up to ${MAX_VIDEO_FILES} videos, 250MB each`
+                }
+              />
 
-                <p className="mt-1 text-xs leading-5 text-gray-500 sm:text-sm">
-                  {editCollectionId
-                    ? isRtl
-                      ? 'يمكنك تعديل بيانات المجموعة والغلاف والحالة.'
-                      : 'You can edit collection details, cover, and status.'
-                    : collectionForm.type === 'photo'
-                      ? isRtl
-                        ? `اختر حتى ${MAX_IMAGES} صورة واحفظها كمجموعة واحدة.`
-                        : `Choose up to ${MAX_IMAGES} images and save them as one collection.`
-                      : isRtl
-                        ? 'اضغط زر + لإضافة أكثر من رابط فيديو داخل نفس المجموعة.'
-                        : 'Press + to add multiple video URLs inside one collection.'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={closeCollectionModal}
-                className="text-gray-400 transition hover:text-gray-600"
-                aria-label={isRtl ? 'إغلاق' : 'Close'}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-5 p-4 sm:p-6">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700">
-                    {isRtl ? 'نوع المجموعة' : 'Collection Type'}
-                  </label>
-
-                  <select
-                    value={collectionForm.type}
-                    onChange={(event) => updateCollectionForm('type', event.target.value)}
-                    className="input-field"
-                    disabled={!!editCollectionId}
-                  >
-                    <option value="photo">{isRtl ? 'مجموعة صور' : 'Photo Collection'}</option>
-                    <option value="video">{isRtl ? 'مجموعة فيديوهات' : 'Video Collection'}</option>
-                  </select>
-
-                  {editCollectionId && (
+              <div className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-bold text-dark">
+                      {isRtl ? 'روابط الفيديو المباشرة' : 'Direct Video Links'}
+                    </h3>
                     <p className="mt-1 text-xs text-gray-400">
                       {isRtl
-                        ? 'لا يمكن تغيير نوع المجموعة بعد إنشائها.'
-                        : 'Collection type cannot be changed after creation.'}
+                        ? 'يدعم YouTube وVimeo وروابط ملفات الفيديو المباشرة.'
+                        : 'Supports YouTube, Vimeo, and direct video file URLs.'}
                     </p>
-                  )}
-                </div>
-
-                <Field
-                  label={isRtl ? 'الترتيب' : 'Order'}
-                  type="number"
-                  value={collectionForm.sort_order}
-                  onChange={(value) => updateCollectionForm('sort_order', value)}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field
-                  label={`${isRtl ? 'عنوان المجموعة بالعربي' : 'Arabic Collection Title'} *`}
-                  value={collectionForm.title}
-                  onChange={(value) => updateCollectionForm('title', value)}
-                />
-
-                <Field
-                  label={isRtl ? 'عنوان المجموعة بالإنجليزي' : 'English Collection Title'}
-                  value={collectionForm.title_en}
-                  onChange={(value) => updateCollectionForm('title_en', value)}
-                  dir="ltr"
-                />
-              </div>
-
-              {(editCollectionId || collectionForm.type === 'video') && (
-                <ImageUpload
-                  value={collectionForm.cover_url}
-                  onChange={(value) => updateCollectionForm('cover_url', value)}
-                  folder={
-                    collectionForm.type === 'photo'
-                      ? 'gallery/photos'
-                      : 'gallery/videos'
-                  }
-                  label={
-                    collectionForm.type === 'photo'
-                      ? isRtl
-                        ? 'غلاف المجموعة'
-                        : 'Collection Cover'
-                      : isRtl
-                        ? 'غلاف مجموعة الفيديوهات'
-                        : 'Video Collection Cover'
-                  }
-                />
-              )}
-
-              {!editCollectionId && collectionForm.type === 'photo' && (
-                <PhotoFilesPicker
-                  files={selectedFiles}
-                  isRtl={isRtl}
-                  maxImages={MAX_IMAGES}
-                  onChange={handleFilesChange}
-                />
-              )}
-
-              {!editCollectionId && collectionForm.type === 'video' && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="text-sm font-medium text-gray-700">
-                      {isRtl ? 'روابط الفيديوهات' : 'Video URLs'}
-                    </label>
-
-                    <button
-                      type="button"
-                      onClick={addVideoUrl}
-                      className="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-dark"
-                    >
-                      <Plus size={16} />
-                      {isRtl ? 'إضافة رابط' : 'Add URL'}
-                    </button>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={addVideoUrl}
+                    className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/20"
+                  >
+                    <Plus size={14} />
+                    {isRtl ? 'إضافة رابط' : 'Add Link'}
+                  </button>
+                </div>
+
+                <div className="space-y-2">
                   {videoUrls.map((url, index) => (
-                    <div key={index} className="flex gap-2">
-                      <input
-                        value={url}
-                        onChange={(event) => updateVideoUrl(index, event.target.value)}
-                        className="input-field"
-                        dir="ltr"
-                        placeholder="https://youtube.com/watch?v=..."
-                      />
+                    <div key={index} className="flex items-center gap-2">
+                      <div className="relative min-w-0 flex-1">
+                        <LinkIcon
+                          size={16}
+                          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+                        <input
+                          type="url"
+                          value={url}
+                          onChange={(event) =>
+                            updateVideoUrl(index, event.target.value)
+                          }
+                          onBlur={() => markTouched('video_urls')}
+                          className={`input-field pl-10 ${
+                            touched.video_urls &&
+                            url &&
+                            !isValidHttpUrl(url)
+                              ? 'border-red-400 ring-4 ring-red-50'
+                              : ''
+                          }`}
+                          dir="ltr"
+                          placeholder="https://youtube.com/watch?v=..."
+                        />
+                      </div>
 
                       {videoUrls.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeVideoUrl(index)}
-                          className="rounded-xl bg-red-50 px-3 text-red-600 transition hover:bg-red-100"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100"
                           aria-label={isRtl ? 'حذف الرابط' : 'Remove URL'}
                         >
-                          <X size={16} />
+                          <Trash2 size={17} />
                         </button>
                       )}
                     </div>
                   ))}
                 </div>
-              )}
 
-              {editCollectionId && (
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm leading-7 text-amber-700">
-                  {isRtl
-                    ? 'ملاحظة: هذا التعديل يغير بيانات المجموعة فقط. إضافة صور أو روابط جديدة تكون من زر إضافة مجموعة جديدة.'
-                    : 'Note: this edit changes collection metadata only. To add new photos or video URLs, create a new collection.'}
-                </div>
-              )}
-
-              <TextArea
-                label={isRtl ? 'وصف المجموعة بالعربي' : 'Arabic Description'}
-                value={collectionForm.description}
-                onChange={(value) => updateCollectionForm('description', value)}
-              />
-
-              <TextArea
-                label={isRtl ? 'وصف المجموعة بالإنجليزي' : 'English Description'}
-                value={collectionForm.description_en}
-                onChange={(value) => updateCollectionForm('description_en', value)}
-                dir="ltr"
-              />
-
-              <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-gray-50 px-3 py-3">
-                <input
-                  type="checkbox"
-                  checked={!!collectionForm.is_active}
-                  onChange={(event) =>
-                    updateCollectionForm('is_active', event.target.checked)
-                  }
-                  className="h-4 w-4 accent-primary"
-                />
-
-                <span className="text-sm text-gray-700">
-                  {isRtl ? 'إظهار في الموقع' : 'Show on website'}
-                </span>
-              </label>
+                {touched.video_urls && errors.video_urls && (
+                  <p className="mt-2 text-xs font-medium text-red-600">
+                    {errors.video_urls}
+                  </p>
+                )}
+              </div>
             </div>
+          )}
 
-            <div className="flex flex-col-reverse gap-3 border-t p-4 sm:flex-row sm:justify-end sm:p-6">
-              <button
-                type="button"
-                onClick={closeCollectionModal}
-                className="btn-outline justify-center"
-              >
-                {t.cancel}
-              </button>
+          {editCollectionId && collectionItems.length > 0 && (
+            <div>
+              <h3 className="mb-3 text-sm font-bold text-dark">
+                {isRtl ? 'العناصر الحالية' : 'Current Items'}
+              </h3>
 
-              <button
-                type="button"
-                onClick={handleSaveCollection}
-                disabled={saving}
-                className="btn-primary justify-center"
-              >
-                <Save size={16} />
-                {saving ? t.saving : t.save}
-              </button>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {collectionItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm"
+                  >
+                    <ItemThumb item={item} type={form.type} />
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-1 text-xs font-semibold text-gray-700">
+                        {item.title || form.title}
+                      </p>
+                      <p className="mt-1 text-[11px] text-gray-400">
+                        {form.type === 'photo'
+                          ? isRtl
+                            ? 'صورة'
+                            : 'Photo'
+                          : isRtl
+                            ? 'فيديو'
+                            : 'Video'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteItem(item)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+            <input
+              type="checkbox"
+              checked={Boolean(form.is_active)}
+              onChange={(event) => updateForm('is_active', event.target.checked)}
+              className="h-4 w-4 accent-primary"
+            />
+            <span className="text-sm font-semibold text-gray-700">
+              {isRtl ? 'إظهار المجموعة في الموقع' : 'Show collection on website'}
+            </span>
+          </label>
         </div>
-      )}
+      </AdminModal>
     </div>
   )
 }
 
-function PhotoFilesPicker({ files, isRtl, maxImages, onChange }) {
-  const fileInputId = 'gallery-photo-files-input'
+function MediaPicker({
+  label,
+  accept,
+  files,
+  onChange,
+  icon: Icon,
+  error,
+  touched,
+  isRtl,
+  hint,
+}) {
+  const inputId = `${accept.includes('video') ? 'video' : 'photo'}-media-picker`
 
   return (
     <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700">
-        {isRtl ? 'اختيار الصور' : 'Choose Images'}
+      <label className="mb-1.5 block text-sm font-bold text-gray-700">
+        {label}
       </label>
 
       <input
-        id={fileInputId}
+        id={inputId}
         type="file"
-        accept="image/*"
+        accept={accept}
         multiple
         onChange={onChange}
         className="hidden"
       />
 
       <label
-        htmlFor={fileInputId}
-        className="group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/25 bg-primary/5 px-4 py-7 text-center transition hover:border-primary/50 hover:bg-primary/10"
+        htmlFor={inputId}
+        className={`group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition ${
+          touched && error
+            ? 'border-red-300 bg-red-50/50'
+            : 'border-primary/25 bg-primary/5 hover:border-primary/50 hover:bg-primary/10'
+        }`}
       >
-        <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-primary/10 transition group-hover:scale-105">
-          <UploadCloud size={26} />
+        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-primary/10 transition group-hover:scale-105">
+          <Icon size={23} />
         </div>
-
-        <div className="text-sm font-bold text-dark">
-          {isRtl ? 'اضغط لاختيار الصور' : 'Click to choose images'}
-        </div>
-
-        <p className="mt-1 text-xs leading-5 text-gray-500">
-          {isRtl
-            ? `يمكنك رفع حتى ${maxImages} صورة داخل المجموعة الواحدة`
-            : `You can upload up to ${maxImages} images in one collection`}
+        <p className="text-sm font-bold text-dark">
+          {isRtl ? 'اضغط لاختيار الملفات' : 'Click to choose files'}
         </p>
-
-        <span className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition group-hover:bg-primary-dark">
-          <ImageIcon size={16} className={isRtl ? 'ml-2' : 'mr-2'} />
-          {isRtl ? 'تصفح الصور' : 'Browse Images'}
-        </span>
+        <p className="mt-1 text-xs leading-5 text-gray-500">{hint}</p>
       </label>
 
-      <div className="mt-3 rounded-xl bg-gray-50 px-3 py-2 text-xs leading-6 text-gray-500">
-        {isRtl
-          ? `تم اختيار ${files.length} صورة. الحد الأقصى ${maxImages} صورة.`
-          : `${files.length} images selected. Maximum ${maxImages} images.`}
-      </div>
+      {touched && error && (
+        <p className="mt-2 text-xs font-medium text-red-600">{error}</p>
+      )}
 
       {files.length > 0 && (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-3">
-          {files.slice(0, 9).map((file, index) => (
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {files.slice(0, 8).map((file, index) => (
             <div
               key={`${file.name}-${index}`}
               className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm"
               dir="ltr"
             >
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <ImageIcon size={16} />
+                <Icon size={16} />
               </div>
-
               <div className="min-w-0 flex-1">
-                <div className="line-clamp-1 text-xs font-semibold text-gray-700">
+                <p className="line-clamp-1 text-xs font-semibold text-gray-700">
                   {file.name}
-                </div>
-
-                <div className="mt-0.5 text-[11px] text-gray-400">
+                </p>
+                <p className="mt-0.5 text-[11px] text-gray-400">
                   {formatFileSize(file.size)}
-                </div>
+                </p>
               </div>
             </div>
           ))}
-
-          {files.length > 9 && (
-            <div className="flex items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-500">
-              +{files.length - 9}
-            </div>
-          )}
         </div>
       )}
     </div>
   )
 }
 
-function CollectionThumb({ collection, small = false }) {
-  const sizeClass = small ? 'h-14 w-20' : 'h-24 w-24'
-  const src = collection.cover_url
-
-  if (src) {
+function CollectionCover({ collection }) {
+  if (collection.cover_url) {
     return (
       <img
-        src={resolveMediaUrl(src)}
+        src={resolveMediaUrl(collection.cover_url)}
         alt=""
-        className={`${sizeClass} shrink-0 rounded-xl border border-gray-100 bg-gray-50 object-cover`}
+        className="aspect-[16/8] w-full bg-gray-50 object-cover"
       />
     )
   }
 
   return (
-    <div
-      className={`${sizeClass} flex shrink-0 items-center justify-center rounded-xl border border-gray-100 bg-gray-50 text-gray-400`}
-    >
-      {collection.type === 'video' ? <Video size={22} /> : <ImageIcon size={22} />}
+    <div className="flex aspect-[16/8] w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5 text-primary">
+      {collection.type === 'video' ? <Video size={34} /> : <ImageIcon size={34} />}
+    </div>
+  )
+}
+
+function ItemThumb({ item, type }) {
+  const image = item.thumbnail_url || item.image_url
+
+  if (image) {
+    return (
+      <img
+        src={resolveMediaUrl(image)}
+        alt=""
+        className="h-12 w-12 shrink-0 rounded-lg object-cover"
+      />
+    )
+  }
+
+  return (
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      {type === 'video' ? <Video size={18} /> : <ImageIcon size={18} />}
     </div>
   )
 }
@@ -986,9 +1112,9 @@ function FilterButton({ active, onClick, label }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl px-3 py-2 text-xs font-semibold transition sm:px-4 sm:text-sm ${
+      className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
         active
-          ? 'bg-primary text-white'
+          ? 'bg-primary text-white shadow-sm'
           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
       }`}
     >
@@ -997,64 +1123,10 @@ function FilterButton({ active, onClick, label }) {
   )
 }
 
-function TableHead({ children, isRtl }) {
-  return (
-    <th
-      className={`${isRtl ? 'text-right' : 'text-left'} p-4 font-semibold text-gray-600`}
-    >
-      {children}
-    </th>
-  )
-}
-
 function EmptyState({ text }) {
   return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-gray-400 shadow-sm">
+    <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center text-gray-400 shadow-sm">
       {text}
-    </div>
-  )
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  dir,
-  placeholder = '',
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-
-      <input
-        type={type}
-        value={value || ''}
-        onChange={(event) => onChange(event.target.value)}
-        className="input-field"
-        dir={dir || ''}
-        placeholder={placeholder}
-      />
-    </div>
-  )
-}
-
-function TextArea({ label, value, onChange, dir }) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-
-      <textarea
-        rows={3}
-        value={value || ''}
-        onChange={(event) => onChange(event.target.value)}
-        className="input-field resize-none"
-        dir={dir || ''}
-      />
     </div>
   )
 }
