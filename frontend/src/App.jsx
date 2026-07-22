@@ -198,7 +198,7 @@ export default function App() {
   const [bootLoading, setBootLoading] = useState(true)
   const [bootError, setBootError] = useState(null)
 
-  const { isLoading } = useGlobalLoading()
+  const { isLoading, runWithLoading } = useGlobalLoading()
 
   const t = translations[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
@@ -218,6 +218,7 @@ export default function App() {
 
   const loadSettings = useCallback(async () => {
     const siteSettings = await api.get('/settings', {
+      globalLoading: false,
       loadingLabel: 'site-settings',
     })
 
@@ -253,18 +254,28 @@ export default function App() {
     setSettingsError(null)
 
     try {
-      // The router and current page are already mounted behind the global
-      // preloader. Page-level GET requests are tracked automatically by
-      // api.js, so App only loads shared site settings here.
-      await loadSettings()
+      /*
+       * The router and current page remain mounted behind the preloader.
+       * LoadingContext automatically captures GET requests started during
+       * this first bootstrap, including the initial route data.
+       */
+      await runWithLoading(
+        'app-bootstrap',
+        async () => loadSettings()
+      )
     } catch (error) {
       console.error('App bootstrap failed:', error)
       setBootError(error)
     } finally {
       setBootLoading(false)
+
+      /*
+       * Existing initial request tokens remain active until their requests
+       * finish, but later GET requests stop reopening the full-screen loader.
+       */
       finishInitialLoading()
     }
-  }, [loadSettings])
+  }, [loadSettings, runWithLoading])
 
   useEffect(() => {
     bootstrapApp()

@@ -10,15 +10,18 @@ import {
 const LoadingContext = createContext(null)
 
 const INITIAL_BOOT_TOKEN = Symbol('initial-app-bootstrap')
+
 const activeTasks = new Map([
   [INITIAL_BOOT_TOKEN, 'initial-app-bootstrap'],
 ])
+
 const listeners = new Set()
 
-const HIDE_DELAY_MS = 250
+const HIDE_DELAY_MS = 180
 
 let hideTimer = null
 let isVisible = true
+let automaticGetTrackingEnabled = true
 
 function getSnapshot() {
   return {
@@ -42,7 +45,10 @@ function syncVisibility() {
       hideTimer = null
     }
 
-    isVisible = true
+    if (!isVisible) {
+      isVisible = true
+    }
+
     emitSnapshot()
     return
   }
@@ -61,6 +67,10 @@ function syncVisibility() {
   }, HIDE_DELAY_MS)
 }
 
+export function shouldAutomaticallyTrackGlobalLoading() {
+  return automaticGetTrackingEnabled
+}
+
 export function startGlobalLoading(label = 'loading-task') {
   const token = Symbol(label)
 
@@ -71,13 +81,16 @@ export function startGlobalLoading(label = 'loading-task') {
 }
 
 export function stopGlobalLoading(token) {
-  if (!token || !activeTasks.has(token)) return
+  if (!token || !activeTasks.has(token)) {
+    return
+  }
 
   activeTasks.delete(token)
   syncVisibility()
 }
 
 export function finishInitialLoading() {
+  automaticGetTrackingEnabled = false
   stopGlobalLoading(INITIAL_BOOT_TOKEN)
 }
 
@@ -105,19 +118,24 @@ export function LoadingProvider({ children }) {
     stopGlobalLoading(token)
   }, [])
 
-  const runWithLoading = useCallback(async (label, operation) => {
-    if (typeof operation !== 'function') {
-      throw new TypeError('runWithLoading requires an async operation function')
-    }
+  const runWithLoading = useCallback(
+    async (label, operation) => {
+      if (typeof operation !== 'function') {
+        throw new TypeError(
+          'runWithLoading requires an async operation function'
+        )
+      }
 
-    const token = startGlobalLoading(label)
+      const token = startGlobalLoading(label)
 
-    try {
-      return await operation()
-    } finally {
-      stopGlobalLoading(token)
-    }
-  }, [])
+      try {
+        return await operation()
+      } finally {
+        stopGlobalLoading(token)
+      }
+    },
+    []
+  )
 
   const value = useMemo(
     () => ({

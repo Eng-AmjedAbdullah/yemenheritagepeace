@@ -1,4 +1,5 @@
 import {
+  shouldAutomaticallyTrackGlobalLoading,
   startGlobalLoading,
   stopGlobalLoading,
 } from '../context/LoadingContext'
@@ -63,8 +64,22 @@ async function request(
 ) {
   const config = normalizeRequestOptions(requestOptions)
 
+  /*
+   * Full-screen loading behavior:
+   *
+   * 1. During the first application bootstrap, GET requests are tracked
+   *    automatically so the preloader waits for the initial route data.
+   * 2. After bootstrap, the preloader is opt-in only.
+   * 3. Save, update, delete, upload, search, filter, pagination, and
+   *    background polling requests do not reopen it automatically.
+   */
   const shouldUseGlobalLoading =
-    config.globalLoading ?? method === 'GET'
+    config.globalLoading === true ||
+    (
+      config.globalLoading !== false &&
+      method === 'GET' &&
+      shouldAutomaticallyTrackGlobalLoading()
+    )
 
   const loadingToken = shouldUseGlobalLoading
     ? startGlobalLoading(

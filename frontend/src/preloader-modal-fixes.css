@@ -174,3 +174,42 @@ body.modal-open {
   filter: none !important;
   animation: none !important;
 }
+
+/*
+ * Admin sidebar scrollbar
+ * -----------------------
+ * This overrides the global turquoise scrollbar only inside the admin
+ * navigation. Firefox uses scrollbar-color; Chromium, Edge, and Safari
+ * use the WebKit pseudo-elements below.
+ */
+.admin-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.92) transparent;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  background-clip: padding-box;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #ffffff !important;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
