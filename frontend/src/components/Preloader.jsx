@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+
 const DEFAULT_NAME_AR = 'منظمة تراث اليمن لأجل السلام'
 const DEFAULT_NAME_EN = 'Yemen Heritage for Peace Organization'
 
@@ -5,6 +7,15 @@ const LOGO_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAYAAAAEmCAYAAABrgkdMAACuE0lEQVR
 
 export default function Preloader({ lang = 'ar', settings = null }) {
   const isArabic = lang === 'ar'
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
 
   const orgNameAr = settings?.site_name_ar || DEFAULT_NAME_AR
   const orgNameEn = settings?.site_name_en || DEFAULT_NAME_EN
