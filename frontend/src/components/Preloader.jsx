@@ -19,10 +19,10 @@ export default function Preloader({ lang = 'ar', settings = null }) {
           {/* Animated parts only */}
           <div className="yhpo-preloader-ring absolute inset-0 rounded-full border-2 border-primary/20" />
           <div className="yhpo-preloader-ring-reverse absolute inset-3 rounded-full border-2 border-primary/10" />
-          <div className="yhpo-preloader-glow absolute inset-6 rounded-full bg-primary/10 blur-xl" />
+          <div className="yhpo-preloader-glow absolute inset-6 rounded-full bg-transparent blur-none" />
 
           {/* Static embedded SVG logo: no external image request */}
-          <div className="relative z-10 flex h-28 w-28 items-center justify-center rounded-full border border-primary/15 bg-white p-3 shadow-xl shadow-primary/20">
+          <div className="relative z-10 flex h-28 w-28 items-center justify-center rounded-full border border-primary/15 bg-white p-4 shadow-none">
             <YHPOLogoSvg title={`${orgNameAr} - ${orgNameEn}`} />
           </div>
         </div>
