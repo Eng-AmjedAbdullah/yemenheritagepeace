@@ -1,3 +1,8 @@
+import {
+  startGlobalLoading,
+  stopGlobalLoading,
+} from '../context/LoadingContext'
+
 const BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '')
 
 function getToken() {
@@ -5,7 +10,11 @@ function getToken() {
 }
 
 function getLang() {
-  return localStorage.getItem('yhpo_lang') || document.documentElement.lang || 'ar'
+  return (
+    localStorage.getItem('yhpo_lang') ||
+    document.documentElement.lang ||
+    'ar'
+  )
 }
 
 function clearAdminSession() {
@@ -32,94 +41,150 @@ function getFallbackError(status) {
 }
 
 function getSessionExpiredMessage() {
-  return getLang() === 'en' ? 'Session expired' : 'انتهت الجلسة'
+  return getLang() === 'en'
+    ? 'Session expired'
+    : 'انتهت الجلسة'
 }
 
-async function request(method, path, body = null, isFormData = false) {
-  const headers = {}
-  const token = getToken()
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
+function normalizeRequestOptions(options) {
+  if (!options || typeof options !== 'object') {
+    return {}
   }
 
-  // Important: backend uses this to return Arabic/English messages
-  headers['Accept-Language'] = getLang()
+  return options
+}
 
-  // Do not set Content-Type manually for FormData
-  // Browser must set multipart/form-data boundary automatically
-  if (!isFormData) {
-    headers['Content-Type'] = 'application/json'
-  }
+async function request(
+  method,
+  path,
+  body = null,
+  isFormData = false,
+  requestOptions = {}
+) {
+  const config = normalizeRequestOptions(requestOptions)
 
-  const options = {
-    method,
-    headers,
-  }
+  const shouldUseGlobalLoading =
+    config.globalLoading ?? method === 'GET'
 
-  if (body !== null && body !== undefined) {
-    options.body = isFormData ? body : JSON.stringify(body)
-  }
-
-  const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  const res = await fetch(`${BASE}/api${normalizedPath}`, options)
-
-  let data = {}
-  const contentType = res.headers.get('content-type') || ''
+  const loadingToken = shouldUseGlobalLoading
+    ? startGlobalLoading(
+        config.loadingLabel || `${method} ${path}`
+      )
+    : null
 
   try {
-    if (contentType.includes('application/json')) {
-      data = await res.json()
-    } else {
-      const text = await res.text()
-      data = text ? { message: text } : {}
+    const headers = {}
+    const token = getToken()
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
     }
-  } catch {
-    data = {}
-  }
 
-  if (res.status === 401) {
-    redirectToAdminLogin()
-    throw new Error(data.error || data.message || getSessionExpiredMessage())
-  }
+    // Backend uses this header to return Arabic/English messages.
+    headers['Accept-Language'] = getLang()
 
-  if (!res.ok) {
-    throw new Error(data.error || data.message || getFallbackError(res.status))
-  }
+    // Do not set Content-Type manually for FormData.
+    // The browser must set the multipart boundary automatically.
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json'
+    }
 
-  return data
+    const fetchOptions = {
+      method,
+      headers,
+    }
+
+    if (config.signal) {
+      fetchOptions.signal = config.signal
+    }
+
+    if (body !== null && body !== undefined) {
+      fetchOptions.body = isFormData
+        ? body
+        : JSON.stringify(body)
+    }
+
+    const normalizedPath = path.startsWith('/')
+      ? path
+      : `/${path}`
+
+    const response = await fetch(
+      `${BASE}/api${normalizedPath}`,
+      fetchOptions
+    )
+
+    let data = {}
+    const contentType =
+      response.headers.get('content-type') || ''
+
+    try {
+      if (contentType.includes('application/json')) {
+        data = await response.json()
+      } else {
+        const text = await response.text()
+        data = text ? { message: text } : {}
+      }
+    } catch {
+      data = {}
+    }
+
+    if (response.status === 401) {
+      redirectToAdminLogin()
+
+      throw new Error(
+        data.error ||
+          data.message ||
+          getSessionExpiredMessage()
+      )
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data.error ||
+          data.message ||
+          getFallbackError(response.status)
+      )
+    }
+
+    return data
+  } finally {
+    if (loadingToken) {
+      stopGlobalLoading(loadingToken)
+    }
+  }
 }
 
 export const api = {
-  get(path) {
-    return request('GET', path)
+  get(path, options = {}) {
+    return request('GET', path, null, false, options)
   },
 
-  post(path, body) {
-    return request('POST', path, body)
+  post(path, body, options = {}) {
+    return request('POST', path, body, false, options)
   },
 
-  put(path, body) {
-    return request('PUT', path, body)
+  put(path, body, options = {}) {
+    return request('PUT', path, body, false, options)
   },
 
-  patch(path, body) {
-    return request('PATCH', path, body)
+  patch(path, body, options = {}) {
+    return request('PATCH', path, body, false, options)
   },
 
-  delete(path, body = null) {
-    return request('DELETE', path, body)
+  delete(path, body = null, options = {}) {
+    return request('DELETE', path, body, false, options)
   },
 
-  upload(file, folder = 'general') {
+  upload(file, folder = 'general', options = {}) {
     const form = new FormData()
+
     form.append('file', file)
     form.append('folder', folder)
 
-    return request('POST', '/upload', form, true)
+    return request('POST', '/upload', form, true, options)
   },
 
-  uploadMany(files, folder = 'general') {
+  uploadMany(files, folder = 'general', options = {}) {
     const form = new FormData()
 
     Array.from(files).forEach((file) => {
@@ -128,11 +193,52 @@ export const api = {
 
     form.append('folder', folder)
 
-    return request('POST', '/upload/multiple', form, true)
+    return request(
+      'POST',
+      '/upload/multiple',
+      form,
+      true,
+      options
+    )
   },
 
-  deleteUploadedFile(url) {
-    return request('DELETE', '/upload', { url })
+
+
+  uploadMedia(file, folder = 'general', options = {}) {
+    const form = new FormData()
+
+    form.append('file', file)
+    form.append('folder', folder)
+
+    return request('POST', '/upload/media', form, true, options)
+  },
+
+  uploadManyMedia(files, folder = 'general', options = {}) {
+    const form = new FormData()
+
+    Array.from(files).forEach((file) => {
+      form.append('files', file)
+    })
+
+    form.append('folder', folder)
+
+    return request(
+      'POST',
+      '/upload/media/multiple',
+      form,
+      true,
+      options
+    )
+  },
+
+  deleteUploadedFile(url, options = {}) {
+    return request(
+      'DELETE',
+      '/upload',
+      { url },
+      false,
+      options
+    )
   },
 }
 
