@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { resolveMediaUrl } from '../lib/media'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
-import AdminPreloader from './AdminPreloader'
+import { useGlobalLoading } from '../context/LoadingContext'
 import {
   Newspaper,
   Calendar,
@@ -26,6 +26,7 @@ import {
 
 export default function Dashboard() {
   const { t, isRtl, admin } = useAdminLang()
+  const { startLoading, stopLoading } = useGlobalLoading()
 
   const [stats, setStats] = useState({
     news: 0,
@@ -48,6 +49,7 @@ export default function Dashboard() {
     if (!admin?.role) return
 
     let cancelled = false
+    const dashboardLoadingToken = startLoading('admin-dashboard-data')
 
     const loadDashboard = async () => {
       setLoading(true)
@@ -59,42 +61,54 @@ export default function Dashboard() {
         if (features.viewNews) {
           requests.push({
             type: 'news',
-            request: api.get('/news/all'),
+            request: api.get('/news/all', {
+              loadingLabel: 'dashboard-news',
+            }),
           })
         }
 
         if (features.viewEvents) {
           requests.push({
             type: 'events',
-            request: api.get('/events/all'),
+            request: api.get('/events/all', {
+              loadingLabel: 'dashboard-events',
+            }),
           })
         }
 
         if (features.viewAdmins) {
           requests.push({
             type: 'admins',
-            request: api.get('/admins'),
+            request: api.get('/admins', {
+              loadingLabel: 'dashboard-admins',
+            }),
           })
         }
 
         if (features.viewMessages) {
           requests.push({
             type: 'messages',
-            request: api.get('/contact'),
+            request: api.get('/contact', {
+              loadingLabel: 'dashboard-messages',
+            }),
           })
         }
 
         if (features.viewHeritage) {
           requests.push({
             type: 'heritage',
-            request: api.get('/heritage/all'),
+            request: api.get('/heritage/all', {
+              loadingLabel: 'dashboard-heritage',
+            }),
           })
         }
 
         if (features.viewPartners) {
           requests.push({
             type: 'partners',
-            request: api.get('/partners/all'),
+            request: api.get('/partners/all', {
+              loadingLabel: 'dashboard-partners',
+            }),
           })
         }
 
@@ -102,8 +116,14 @@ export default function Dashboard() {
           requests.push({
             type: 'gallery',
             request: api
-              .get('/gallery/collections/all')
-              .catch(() => api.get('/gallery/all')),
+              .get('/gallery/collections/all', {
+                loadingLabel: 'dashboard-gallery',
+              })
+              .catch(() =>
+                api.get('/gallery/all', {
+                  loadingLabel: 'dashboard-gallery-fallback',
+                })
+              ),
           })
         }
 
@@ -175,6 +195,7 @@ export default function Dashboard() {
         if (!cancelled) {
           setLoading(false)
         }
+        stopLoading(dashboardLoadingToken)
       }
     }
 
@@ -182,8 +203,9 @@ export default function Dashboard() {
 
     return () => {
       cancelled = true
+      stopLoading(dashboardLoadingToken)
     }
-  }, [admin?.role])
+  }, [admin?.role, startLoading, stopLoading])
 
   const features = useMemo(() => {
     if (!admin?.role) return {}
@@ -262,18 +284,10 @@ export default function Dashboard() {
     }
   }
 
+  // The global application preloader remains visible until
+  // every dashboard request registered by api.js is complete.
   if (!admin || loading) {
-    return (
-      <AdminPreloader
-        lang={isRtl ? 'ar' : 'en'}
-        compact
-        text={
-          isRtl
-            ? 'جارٍ تحميل بيانات لوحة التحكم...'
-            : 'Loading dashboard data...'
-        }
-      />
-    )
+    return null
   }
 
   return (
