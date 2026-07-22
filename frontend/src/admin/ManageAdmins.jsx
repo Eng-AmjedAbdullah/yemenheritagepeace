@@ -1,17 +1,19 @@
-import { useContext, useEffect, useState } from 'react'
-import api from '../lib/api'
+import { useContext, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import {
-  Trash2,
+  CalendarClock,
   Edit,
-  X,
-  UserPlus,
-  Shield,
-  ShieldCheck,
   Key,
   Mail,
-  CalendarClock,
+  Shield,
+  ShieldCheck,
+  Trash2,
+  UserPlus,
 } from 'lucide-react'
+
+import api from '../lib/api'
+import AdminModal from './AdminModal'
+import ValidatedField from './ValidatedField'
 import { ConfirmContext } from './AdminLayout'
 import { useAdminLang } from './adminI18n'
 
@@ -25,36 +27,8 @@ const INITIAL_FORM = {
 }
 
 const toastTheme = {
-  success: {
-    duration: 3000,
-    style: {
-      background: '#166534',
-      color: '#ffffff',
-      border: '1px solid #15803d',
-      borderRadius: '12px',
-      fontSize: '14px',
-      padding: '14px 18px',
-    },
-    iconTheme: {
-      primary: '#ffffff',
-      secondary: '#166534',
-    },
-  },
-  error: {
-    duration: 4000,
-    style: {
-      background: '#7f1d1d',
-      color: '#ffffff',
-      border: '1px solid #991b1b',
-      borderRadius: '12px',
-      fontSize: '14px',
-      padding: '14px 18px',
-    },
-    iconTheme: {
-      primary: '#ffffff',
-      secondary: '#7f1d1d',
-    },
-  },
+  success: { duration: 3000, style: { background: '#166534', color: '#fff' } },
+  error: { duration: 4500, style: { background: '#7f1d1d', color: '#fff' } },
 }
 
 function safeStoredAdmin() {
@@ -66,30 +40,89 @@ function safeStoredAdmin() {
 }
 
 function isActiveAccount(value) {
-  return value === 1 || value === true
+  return value === 1 || value === true || value === '1'
+}
+
+function validateEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+}
+
+function validatePassword(value) {
+  return Boolean(value) && value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value)
+}
+
+function validateForm(form, mode, isRtl, editId, me) {
+  const errors = {}
+  const name = form.name.trim()
+  const email = form.email.trim().toLowerCase()
+
+  if (mode !== 'password') {
+    if (name.length < 2) {
+      errors.name = isRtl
+        ? 'الاسم مطلوب ويجب أن يكون حرفين على الأقل'
+        : 'Name is required and must be at least 2 characters'
+    }
+
+    if (!email) {
+      errors.email = isRtl ? 'البريد الإلكتروني مطلوب' : 'Email is required'
+    } else if (!validateEmail(email)) {
+      errors.email = isRtl ? 'صيغة البريد الإلكتروني غير صحيحة' : 'Invalid email address'
+    }
+
+    if (!['admin', 'super_admin'].includes(form.role)) {
+      errors.role = isRtl ? 'الصلاحية غير صحيحة' : 'Invalid role'
+    }
+  }
+
+  if (mode === 'add' || mode === 'password') {
+    if (!validatePassword(form.password)) {
+      errors.password = isRtl
+        ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام'
+        : 'Password must be at least 8 characters and include letters and numbers'
+    }
+
+    if (form.password !== form.confirm_password) {
+      errors.confirm_password = isRtl ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match'
+    }
+  }
+
+  if (mode === 'edit' && Number(editId) === Number(me?.id)) {
+    if (me?.role === 'super_admin' && form.role !== 'super_admin') {
+      errors.role = isRtl
+        ? 'لا يمكنك تخفيض صلاحيات حسابك الرئيسي'
+        : 'You cannot demote your own super-admin account'
+    }
+    if (!isActiveAccount(form.is_active)) {
+      errors.is_active = isRtl
+        ? 'لا يمكنك إيقاف حسابك الخاص'
+        : 'You cannot deactivate your own account'
+    }
+  }
+
+  return errors
 }
 
 export default function ManageAdmins() {
   const { t, isRtl, admin } = useAdminLang()
   const { requestConfirm } = useContext(ConfirmContext)
+  const me = admin || safeStoredAdmin()
 
   const [admins, setAdmins] = useState([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState(INITIAL_FORM)
-  const [editId, setEditId] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [formErrors, setFormErrors] = useState({})
-
-  const me = admin || safeStoredAdmin()
+  const [modal, setModal] = useState(null)
+  const [editId, setEditId] = useState(null)
+  const [form, setForm] = useState(INITIAL_FORM)
+  const [touched, setTouched] = useState({})
+  const [submitError, setSubmitError] = useState('')
 
   const load = async () => {
     setLoading(true)
-
     try {
-      const data = await api.get('/admins')
+      const data = await api.get('/admins', { loadingLabel: 'admin-users' })
       setAdmins(Array.isArray(data) ? data : [])
-    } catch {
+    } catch (error) {
+      console.error('Failed to load admins:', error)
       setAdmins([])
     } finally {
       setLoading(false)
@@ -100,262 +133,23 @@ export default function ManageAdmins() {
     load()
   }, [])
 
-  function validateEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  }
+  const errors = useMemo(
+    () => validateForm(form, modal, isRtl, editId, me),
+    [form, modal, isRtl, editId, me]
+  )
+  const hasErrors = modal ? Object.keys(errors).length > 0 : false
 
-  function validatePassword(password) {
-    return (
-      !!password &&
-      password.length >= 8 &&
-      /[A-Za-z]/.test(password) &&
-      /\d/.test(password)
-    )
-  }
-
-  const updateForm = (key, value) => {
-    setForm((current) => ({
-      ...current,
-      [key]: value,
-    }))
+  const update = (key, value) => {
+    setForm((current) => ({ ...current, [key]: value }))
+    setTouched((current) => ({ ...current, [key]: true }))
+    setSubmitError('')
   }
 
   const resetForm = () => {
     setForm(INITIAL_FORM)
+    setTouched({})
+    setSubmitError('')
     setEditId(null)
-    setFormErrors({})
-  }
-
-  const handleAdd = async () => {
-    const name = (form.name || '').trim()
-    const email = (form.email || '').toLowerCase().trim()
-    const password = form.password || ''
-    const confirmPassword = form.confirm_password || ''
-    const role = form.role
-
-    const errors = {}
-
-    if (!name || name.length < 2) {
-      errors.name = isRtl
-        ? 'الاسم مطلوب ويجب أن يكون حرفين على الأقل'
-        : 'Name is required and must be at least 2 characters'
-    }
-
-    if (!email) {
-      errors.email = t.emailRequired || (isRtl ? 'البريد الإلكتروني مطلوب' : 'Email is required')
-    } else if (!validateEmail(email)) {
-      errors.email = isRtl ? 'صيغة البريد الإلكتروني غير صحيحة' : 'Invalid email address'
-    }
-
-    if (!validatePassword(password)) {
-      errors.password = isRtl
-        ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام'
-        : 'Password must be at least 8 characters and include letters and numbers'
-    }
-
-    if (password !== confirmPassword) {
-      errors.confirm = isRtl ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match'
-    }
-
-    if (!['admin', 'super_admin'].includes(role)) {
-      errors.role = isRtl ? 'صلاحية غير مسموح بها' : 'Invalid role'
-    }
-
-    setFormErrors(errors)
-    if (Object.keys(errors).length) return
-    if (saving) return
-
-    setSaving(true)
-
-    try {
-      await api.post('/admins', {
-        name,
-        email,
-        password,
-        role,
-      })
-
-      toast.success(t.added || (isRtl ? 'تمت الإضافة بنجاح' : 'Added successfully'), toastTheme.success)
-
-      await load()
-      setModal(null)
-      resetForm()
-    } catch (error) {
-      setFormErrors({ submit: error?.message })
-      toast.error(error?.message || (isRtl ? 'حدث خطأ' : 'Something went wrong'), toastTheme.error)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleEdit = async () => {
-    const name = (form.name || '').trim()
-    const email = (form.email || '').toLowerCase().trim()
-    const role = form.role
-    const is_active = form.is_active
-
-    const errors = {}
-
-    if (!name || name.length < 2) {
-      errors.name = isRtl
-        ? 'الاسم مطلوب'
-        : 'Name is required'
-    }
-
-    if (!email) {
-      errors.email = t.emailRequired || (isRtl ? 'البريد الإلكتروني مطلوب' : 'Email is required')
-    } else if (!validateEmail(email)) {
-      errors.email = isRtl ? 'صيغة البريد الإلكتروني غير صحيحة' : 'Invalid email address'
-    }
-
-    if (!['admin', 'super_admin'].includes(role)) {
-      errors.role = isRtl ? 'صلاحية غير مسموح بها' : 'Invalid role'
-    }
-
-    if (editId === me?.id) {
-      if (me.role === 'super_admin' && role !== 'super_admin') {
-        errors.role = isRtl
-          ? 'لا يمكنك تخفيض صلاحيات حسابك الرئيسي'
-          : 'You cannot demote your own super admin account'
-      }
-
-      if (is_active !== 1) {
-        errors.is_active = isRtl
-          ? 'لا يمكنك إيقاف حسابك الخاص'
-          : 'You cannot deactivate your own account'
-      }
-    }
-
-    setFormErrors(errors)
-    if (Object.keys(errors).length) return
-    if (saving) return
-
-    setSaving(true)
-
-    try {
-      await api.put(`/admins/${editId}`, {
-        name,
-        email,
-        role,
-        is_active,
-      })
-
-      toast.success(t.saved || (isRtl ? 'تم الحفظ بنجاح' : 'Saved successfully'), toastTheme.success)
-
-      await load()
-      setModal(null)
-      resetForm()
-    } catch (error) {
-      setFormErrors({ submit: error?.message })
-      toast.error(error?.message || (isRtl ? 'حدث خطأ' : 'Something went wrong'), toastTheme.error)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handlePassword = async () => {
-    const password = form.password || ''
-    const confirmPassword = form.confirm_password || ''
-
-    const errors = {}
-
-    if (!validatePassword(password)) {
-      errors.password = isRtl
-        ? 'كلمة المرور يجب أن تكون 8 أحرف على الأقل وتحتوي على حروف وأرقام'
-        : 'Password must be at least 8 characters and include letters and numbers'
-    }
-
-    if (password !== confirmPassword) {
-      errors.confirm = isRtl ? 'كلمتا المرور غير متطابقتين' : 'Passwords do not match'
-    }
-
-    setFormErrors(errors)
-    if (Object.keys(errors).length) return
-    if (saving) return
-
-    setSaving(true)
-
-    try {
-      await api.put(`/admins/${editId}/password`, { password })
-
-      toast.success(
-        t.passwordChanged || (isRtl ? 'تم تغيير كلمة المرور' : 'Password changed'),
-        toastTheme.success
-      )
-
-      setModal(null)
-      resetForm()
-    } catch (error) {
-      setFormErrors({ submit: error?.message })
-      toast.error(error?.message || (isRtl ? 'حدث خطأ' : 'Something went wrong'), toastTheme.error)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const handleDelete = async (id) => {
-    if (id === me?.id) {
-      toast.error(
-        t.cannotDeleteSelf || (isRtl ? 'لا يمكنك حذف حسابك الخاص' : 'You cannot delete your own account'),
-        toastTheme.error
-      )
-      return
-    }
-
-    const confirmed = await requestConfirm({
-      title: isRtl ? 'تأكيد حذف المشرف' : 'Delete administrator?',
-      message: isRtl
-        ? 'سيتم حذف هذا الحساب الإداري نهائياً.'
-        : 'This administrator account will be permanently removed.',
-      variant: 'danger',
-      confirmText: t.delete,
-    })
-
-    if (!confirmed) return
-
-    try {
-      await api.delete(`/admins/${id}`)
-
-      toast.success(t.deleted || (isRtl ? 'تم الحذف' : 'Deleted'), toastTheme.success)
-
-      await load()
-    } catch (error) {
-      toast.error(error?.message || (isRtl ? 'حدث خطأ أثناء الحذف' : 'Failed to delete'), toastTheme.error)
-    }
-  }
-
-  const openAdd = () => {
-    setForm(INITIAL_FORM)
-    setEditId(null)
-    setFormErrors({})
-    setModal('add')
-  }
-
-  const openEdit = (adminItem) => {
-    setForm({
-      name: adminItem.name || '',
-      email: adminItem.email || '',
-      password: '',
-      confirm_password: '',
-      role: adminItem.role || 'admin',
-      is_active: isActiveAccount(adminItem.is_active) ? 1 : 0,
-    })
-
-    setEditId(adminItem.id)
-    setFormErrors({})
-    setModal('edit')
-  }
-
-  const openPassword = (adminItem) => {
-    setForm({
-      ...INITIAL_FORM,
-      password: '',
-      confirm_password: '',
-    })
-
-    setEditId(adminItem.id)
-    setFormErrors({})
-    setModal('password')
   }
 
   const closeModal = () => {
@@ -363,632 +157,269 @@ export default function ManageAdmins() {
     resetForm()
   }
 
-  const formatLastLogin = (value) => {
-    if (!value) return t.neverLoggedIn
+  const openAdd = () => {
+    resetForm()
+    setModal('add')
+  }
 
-    try {
-      return new Date(value).toLocaleDateString(isRtl ? 'ar-YE' : 'en-US')
-    } catch {
-      return t.neverLoggedIn
+  const openEdit = (item) => {
+    setEditId(item.id)
+    setForm({
+      name: item.name || '',
+      email: item.email || '',
+      password: '',
+      confirm_password: '',
+      role: item.role || 'admin',
+      is_active: isActiveAccount(item.is_active) ? 1 : 0,
+    })
+    setTouched({})
+    setSubmitError('')
+    setModal('edit')
+  }
+
+  const openPassword = (item) => {
+    setEditId(item.id)
+    setForm({ ...INITIAL_FORM, name: item.name || '' })
+    setTouched({})
+    setSubmitError('')
+    setModal('password')
+  }
+
+  const touchRelevant = () => {
+    if (modal === 'password') {
+      setTouched({ password: true, confirm_password: true })
+    } else {
+      setTouched({
+        name: true,
+        email: true,
+        password: modal === 'add',
+        confirm_password: modal === 'add',
+        role: true,
+        is_active: modal === 'edit',
+      })
     }
   }
+
+  const handleSave = async () => {
+    touchRelevant()
+    if (hasErrors || saving) return
+
+    setSaving(true)
+    setSubmitError('')
+
+    try {
+      if (modal === 'add') {
+        await api.post(
+          '/admins',
+          {
+            name: form.name.trim(),
+            email: form.email.trim().toLowerCase(),
+            password: form.password,
+            role: form.role,
+          },
+          { globalLoading: true, loadingLabel: 'create-admin' }
+        )
+      } else if (modal === 'edit') {
+        await api.put(
+          `/admins/${editId}`,
+          {
+            name: form.name.trim(),
+            email: form.email.trim().toLowerCase(),
+            role: form.role,
+            is_active: isActiveAccount(form.is_active) ? 1 : 0,
+          },
+          { globalLoading: true, loadingLabel: 'update-admin' }
+        )
+      } else if (modal === 'password') {
+        await api.put(
+          `/admins/${editId}/password`,
+          { password: form.password },
+          { globalLoading: true, loadingLabel: 'change-admin-password' }
+        )
+      }
+
+      toast.success(
+        modal === 'password'
+          ? isRtl
+            ? 'تم تغيير كلمة المرور'
+            : 'Password changed'
+          : modal === 'edit'
+            ? isRtl
+              ? 'تم تحديث المشرف'
+              : 'Administrator updated'
+            : isRtl
+              ? 'تمت إضافة المشرف'
+              : 'Administrator added',
+        toastTheme.success
+      )
+
+      await load()
+      closeModal()
+    } catch (error) {
+      const message = error?.message || (isRtl ? 'تعذر الحفظ' : 'Save failed')
+      setSubmitError(message)
+      toast.error(message, toastTheme.error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async (item) => {
+    if (Number(item.id) === Number(me?.id)) {
+      toast.error(
+        isRtl ? 'لا يمكنك حذف حسابك الخاص' : 'You cannot delete your own account',
+        toastTheme.error
+      )
+      return
+    }
+
+    const confirmed = await requestConfirm({
+      title: isRtl ? 'حذف المشرف' : 'Delete administrator',
+      message: isRtl
+        ? `سيتم حذف حساب «${item.name || item.email}» نهائيًا.`
+        : `“${item.name || item.email}” will be permanently deleted.`,
+      variant: 'danger',
+      confirmText: t.delete || (isRtl ? 'حذف' : 'Delete'),
+    })
+    if (!confirmed) return
+
+    try {
+      await api.delete(`/admins/${item.id}`, null, {
+        globalLoading: true,
+        loadingLabel: 'delete-admin',
+      })
+      toast.success(isRtl ? 'تم حذف المشرف' : 'Administrator deleted', toastTheme.success)
+      await load()
+    } catch (error) {
+      toast.error(error?.message || (isRtl ? 'تعذر الحذف' : 'Delete failed'), toastTheme.error)
+    }
+  }
+
+  if (loading) return null
 
   return (
     <div className="w-full max-w-full overflow-hidden">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-bold text-dark md:text-3xl">
-            {t.manageAdmins}
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-dark sm:text-3xl">
+            <ShieldCheck className="text-primary" />
+            {t.manageAdmins || (isRtl ? 'إدارة المشرفين' : 'Manage Administrators')}
           </h1>
-
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-gray-500">
             {isRtl
-              ? 'إدارة المشرفين والصلاحيات وحالة الحسابات'
-              : 'Manage administrators, roles, and account status'}
+              ? 'إدارة حسابات المشرفين والصلاحيات وحالة الحساب.'
+              : 'Manage administrator accounts, roles, and status.'}
           </p>
         </div>
-
-        <button
-          type="button"
-          onClick={openAdd}
-          className="btn-primary w-full justify-center sm:w-auto"
-        >
-          <UserPlus size={16} />
-          {t.addAdmin}
+        <button type="button" onClick={openAdd} className="btn-primary">
+          <UserPlus size={17} />
+          {t.addAdmin || (isRtl ? 'إضافة مشرف' : 'Add Administrator')}
         </button>
       </div>
 
-      <div className="md:hidden">
-        {loading ? (
-          <EmptyState text={t.loading} />
-        ) : admins.length === 0 ? (
-          <EmptyState text={isRtl ? 'لا يوجد مشرفون' : 'No administrators found'} />
-        ) : (
-          <div className="space-y-3">
-            {admins.map((adminItem) => {
-              const active = isActiveAccount(adminItem.is_active)
-              const isMe = adminItem.id === me?.id
+      {admins.length === 0 ? (
+        <EmptyState text={isRtl ? 'لا يوجد مشرفون' : 'No administrators found'} />
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {admins.map((item) => {
+            const active = isActiveAccount(item.is_active)
+            const isMe = Number(item.id) === Number(me?.id)
 
-              return (
-                <div
-                  key={adminItem.id}
-                  className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        {adminItem.role === 'super_admin' ? (
-                          <ShieldCheck size={16} className="shrink-0 text-primary" />
-                        ) : (
-                          <Shield size={16} className="shrink-0 text-gray-400" />
-                        )}
-
-                        <h3 className="truncate text-base font-bold text-dark">
-                          {adminItem.name || '—'}
-                        </h3>
-
-                        {isMe && (
-                          <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                            {t.you}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="mt-2 flex min-w-0 items-center gap-2 text-sm text-gray-500" dir="ltr">
-                        <Mail size={14} className="shrink-0" />
-                        <span className="truncate">{adminItem.email || '—'}</span>
-                      </div>
-
-                      <div className="mt-2 flex items-center gap-2 text-xs text-gray-400">
-                        <CalendarClock size={14} />
-                        <span>{formatLastLogin(adminItem.last_login)}</span>
-                      </div>
+            return (
+              <article key={item.id} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
+                <div className="flex items-start gap-4">
+                  <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${item.role === 'super_admin' ? 'bg-primary/10 text-primary' : 'bg-blue-50 text-blue-600'}`}>
+                    {item.role === 'super_admin' ? <ShieldCheck size={23} /> : <Shield size={23} />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="font-bold text-dark">{item.name || '—'}</h2>
+                      {isMe && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary">{isRtl ? 'أنت' : 'You'}</span>}
                     </div>
-
-                    <span
-                      className={`shrink-0 rounded-full px-2 py-1 text-xs font-semibold ${
-                        active
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {active ? t.active : t.inactive}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span
-                      className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        adminItem.role === 'super_admin'
-                          ? 'bg-primary/10 text-primary'
-                          : 'bg-gray-100 text-gray-500'
-                      }`}
-                    >
-                      {adminItem.role === 'super_admin'
-                        ? isRtl
-                          ? 'مشرف رئيسي'
-                          : 'Super Admin'
-                        : isRtl
-                          ? 'مشرف'
-                          : 'Admin'}
-                    </span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(adminItem)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-600"
-                    >
-                      <Edit size={15} />
-                      {t.edit}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => openPassword(adminItem)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-600"
-                    >
-                      <Key size={15} />
-                      {t.changePassword}
-                    </button>
-
-                    {!isMe && (
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(adminItem.id)}
-                        className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600"
-                      >
-                        <Trash2 size={15} />
-                        {t.delete}
-                      </button>
-                    )}
+                    <p className="mt-1 flex items-center gap-2 text-sm text-gray-500"><Mail size={14} />{item.email || '—'}</p>
+                    <p className="mt-2 flex items-center gap-2 text-xs text-gray-400"><CalendarClock size={14} />{formatLastLogin(item.last_login, isRtl)}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{active ? (isRtl ? 'نشط' : 'Active') : (isRtl ? 'متوقف' : 'Inactive')}</span>
+                      <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">{item.role === 'super_admin' ? (isRtl ? 'مشرف رئيسي' : 'Super Admin') : (isRtl ? 'مشرف' : 'Admin')}</span>
+                    </div>
                   </div>
                 </div>
-              )
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="hidden overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm md:block">
-        <div className="overflow-x-auto p-4 md:p-6">
-          <table className="w-full min-w-[820px] table-fixed text-sm">
-            <colgroup>
-              <col className="w-[190px]" />
-              <col className="w-[230px]" />
-              <col className="w-[130px]" />
-              <col className="w-[110px]" />
-              <col className="w-[150px]" />
-              <col className="w-[140px]" />
-            </colgroup>
-
-            <thead className="border-b border-gray-100 bg-gray-50">
-              <tr>
-                <TableHead isRtl={isRtl}>{t.name}</TableHead>
-                <TableHead isRtl={isRtl}>{t.email}</TableHead>
-                <TableHead isRtl={isRtl}>{t.role}</TableHead>
-                <TableHead isRtl={isRtl}>{t.status}</TableHead>
-                <TableHead isRtl={isRtl}>{t.lastLogin}</TableHead>
-                <TableHead isRtl={isRtl}>{t.actions}</TableHead>
-              </tr>
-            </thead>
-
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-400">
-                    {t.loading}
-                  </td>
-                </tr>
-              ) : admins.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-400">
-                    {isRtl ? 'لا يوجد مشرفون' : 'No administrators found'}
-                  </td>
-                </tr>
-              ) : (
-                admins.map((adminItem) => {
-                  const active = isActiveAccount(adminItem.is_active)
-                  const isMe = adminItem.id === me?.id
-
-                  return (
-                    <tr
-                      key={adminItem.id}
-                      className="border-b border-gray-50 transition hover:bg-gray-50/70"
-                    >
-                      <td className="p-4 font-medium text-dark">
-                        <div className="flex min-w-0 items-center gap-2">
-                          {adminItem.role === 'super_admin' ? (
-                            <ShieldCheck size={14} className="shrink-0 text-primary" />
-                          ) : (
-                            <Shield size={14} className="shrink-0 text-gray-400" />
-                          )}
-
-                          <span className="truncate">
-                            {adminItem.name || '—'}
-                          </span>
-
-                          {isMe && (
-                            <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                              {t.you}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="p-4 text-gray-500" dir="ltr">
-                        <div className="truncate">{adminItem.email || '—'}</div>
-                      </td>
-
-                      <td className="p-4">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            adminItem.role === 'super_admin'
-                              ? 'bg-primary/10 text-primary'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {adminItem.role === 'super_admin'
-                            ? isRtl
-                              ? 'رئيسي'
-                              : 'Super Admin'
-                            : isRtl
-                              ? 'مشرف'
-                              : 'Admin'}
-                        </span>
-                      </td>
-
-                      <td className="p-4">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs ${
-                            active
-                              ? 'bg-green-100 text-green-700'
-                              : 'bg-gray-100 text-gray-500'
-                          }`}
-                        >
-                          {active ? t.active : t.inactive}
-                        </span>
-                      </td>
-
-                      <td className="p-4 text-xs text-gray-400">
-                        {formatLastLogin(adminItem.last_login)}
-                      </td>
-
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openEdit(adminItem)}
-                            className="rounded-lg p-2 text-blue-500 transition hover:bg-blue-50"
-                            title={t.edit}
-                          >
-                            <Edit size={15} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => openPassword(adminItem)}
-                            className="rounded-lg p-2 text-amber-500 transition hover:bg-amber-50"
-                            title={t.changePassword}
-                          >
-                            <Key size={15} />
-                          </button>
-
-                          {!isMe && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(adminItem.id)}
-                              className="rounded-lg p-2 text-red-500 transition hover:bg-red-50"
-                              title={t.delete}
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })
-              )}
-            </tbody>
-          </table>
+                <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <button type="button" onClick={() => openEdit(item)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 px-3 py-2 text-sm font-bold text-blue-600"><Edit size={15} />{t.edit || (isRtl ? 'تعديل' : 'Edit')}</button>
+                  <button type="button" onClick={() => openPassword(item)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-600"><Key size={15} />{isRtl ? 'كلمة المرور' : 'Password'}</button>
+                  {!isMe && <button type="button" onClick={() => handleDelete(item)} className="col-span-2 inline-flex items-center justify-center gap-2 rounded-xl bg-red-50 px-3 py-2 text-sm font-bold text-red-600 sm:col-span-1"><Trash2 size={15} />{t.delete || (isRtl ? 'حذف' : 'Delete')}</button>}
+                </div>
+              </article>
+            )
+          })}
         </div>
-      </div>
-
-      {modal === 'add' && (
-        <AdminModal
-          title={t.addNewAdmin}
-          onClose={closeModal}
-          isRtl={isRtl}
-        >
-          <AdminForm
-            type="add"
-            form={form}
-            setForm={setForm}
-            formErrors={formErrors}
-            t={t}
-            isRtl={isRtl}
-          />
-
-          <ModalActions>
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={saving}
-              className="btn-primary w-full justify-center sm:w-auto"
-            >
-              <UserPlus size={16} />
-              {saving ? '...' : t.add}
-            </button>
-
-            <button
-              type="button"
-              onClick={closeModal}
-              className="btn-outline w-full justify-center sm:w-auto"
-            >
-              {t.cancel}
-            </button>
-          </ModalActions>
-        </AdminModal>
       )}
 
-      {modal === 'edit' && (
-        <AdminModal
-          title={t.editAdmin}
-          onClose={closeModal}
-          isRtl={isRtl}
-        >
-          <AdminForm
-            type="edit"
-            form={form}
-            setForm={setForm}
-            formErrors={formErrors}
-            t={t}
-            isRtl={isRtl}
-          />
-
-          <ModalActions>
-            <button
-              type="button"
-              onClick={handleEdit}
-              disabled={saving}
-              className="btn-primary w-full justify-center sm:w-auto"
-            >
-              <Edit size={16} />
-              {saving ? '...' : t.save}
-            </button>
-
-            <button
-              type="button"
-              onClick={closeModal}
-              className="btn-outline w-full justify-center sm:w-auto"
-            >
-              {t.cancel}
-            </button>
-          </ModalActions>
-        </AdminModal>
-      )}
-
-      {modal === 'password' && (
-        <AdminModal
-          title={t.changePassword}
-          onClose={closeModal}
-          isRtl={isRtl}
-        >
-          <div className="space-y-4 p-4 sm:p-6">
-            <PasswordField
-              label={t.newPassword}
-              value={form.password}
-              onChange={(value) => updateForm('password', value)}
-              placeholder={t.min8Chars}
-              error={formErrors.password}
-            />
-
-            <PasswordField
-              label={t.confirmPassword || (isRtl ? 'تأكيد كلمة المرور' : 'Confirm password')}
-              value={form.confirm_password}
-              onChange={(value) => updateForm('confirm_password', value)}
-              placeholder={t.min8Chars}
-              error={formErrors.confirm}
-            />
-
-            {formErrors.submit && (
-              <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-                {formErrors.submit}
-              </div>
-            )}
+      <AdminModal
+        open={Boolean(modal)}
+        title={getModalTitle(modal, isRtl)}
+        subtitle={isRtl ? 'يتم التحقق من البيانات مباشرة قبل الحفظ.' : 'Data is validated in realtime before saving.'}
+        icon={modal === 'password' ? Key : UserPlus}
+        isRtl={isRtl}
+        size="compact"
+        onClose={closeModal}
+        closeDisabled={saving}
+        footer={
+          <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button type="button" onClick={closeModal} disabled={saving} className="btn-outline min-w-32 justify-center">{t.cancel || (isRtl ? 'إلغاء' : 'Cancel')}</button>
+            <button type="button" onClick={handleSave} disabled={saving || hasErrors} className="btn-primary min-w-36 justify-center">{saving ? (isRtl ? 'جارٍ الحفظ...' : 'Saving...') : modal === 'password' ? (isRtl ? 'تغيير كلمة المرور' : 'Change Password') : (t.save || (isRtl ? 'حفظ' : 'Save'))}</button>
           </div>
+        }
+      >
+        <div className="space-y-4">
+          {modal !== 'password' && (
+            <>
+              <ValidatedField label={isRtl ? 'الاسم الكامل' : 'Full name'} value={form.name} onChange={(value) => update('name', value)} error={errors.name} touched={touched.name} required />
+              <ValidatedField label={isRtl ? 'البريد الإلكتروني' : 'Email'} value={form.email} onChange={(value) => update('email', value)} error={errors.email} touched={touched.email} required type="email" dir="ltr" placeholder="admin@example.com" />
+            </>
+          )}
 
-          <ModalActions>
-            <button
-              type="button"
-              onClick={handlePassword}
-              disabled={saving}
-              className="btn-primary w-full justify-center sm:w-auto"
-            >
-              <Key size={16} />
-              {saving ? '...' : t.changePassword}
-            </button>
+          {(modal === 'add' || modal === 'password') && (
+            <>
+              <ValidatedField label={isRtl ? 'كلمة المرور' : 'Password'} value={form.password} onChange={(value) => update('password', value)} error={errors.password} touched={touched.password} required type="password" dir="ltr" hint={isRtl ? '8 أحرف على الأقل، وتحتوي على حروف وأرقام.' : 'At least 8 characters with letters and numbers.'} />
+              <ValidatedField label={isRtl ? 'تأكيد كلمة المرور' : 'Confirm password'} value={form.confirm_password} onChange={(value) => update('confirm_password', value)} error={errors.confirm_password} touched={touched.confirm_password} required type="password" dir="ltr" />
+            </>
+          )}
 
-            <button
-              type="button"
-              onClick={closeModal}
-              className="btn-outline w-full justify-center sm:w-auto"
-            >
-              {t.cancel}
-            </button>
-          </ModalActions>
-        </AdminModal>
-      )}
+          {modal !== 'password' && (
+            <ValidatedField label={isRtl ? 'الصلاحية' : 'Role'} value={form.role} onChange={(value) => update('role', value)} error={errors.role} touched={touched.role} as="select" options={[{ value: 'admin', label: isRtl ? 'مشرف' : 'Admin' }, { value: 'super_admin', label: isRtl ? 'مشرف رئيسي' : 'Super Admin' }]} />
+          )}
+
+          {modal === 'edit' && (
+            <div>
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <input type="checkbox" checked={isActiveAccount(form.is_active)} onChange={(event) => update('is_active', event.target.checked ? 1 : 0)} className="h-5 w-5 accent-primary" />
+                <span className="text-sm font-bold text-gray-700">{isRtl ? 'الحساب نشط' : 'Account is active'}</span>
+              </label>
+              {touched.is_active && errors.is_active && <p className="mt-2 text-xs font-bold text-red-600">{errors.is_active}</p>}
+            </div>
+          )}
+
+          {submitError && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{submitError}</p>}
+        </div>
+      </AdminModal>
     </div>
   )
 }
 
-function TableHead({ children, isRtl }) {
-  return (
-    <th
-      className={`${isRtl ? 'text-right' : 'text-left'} p-4 font-semibold text-gray-600`}
-    >
-      {children}
-    </th>
-  )
+function getModalTitle(mode, isRtl) {
+  if (mode === 'add') return isRtl ? 'إضافة مشرف' : 'Add Administrator'
+  if (mode === 'edit') return isRtl ? 'تعديل المشرف' : 'Edit Administrator'
+  if (mode === 'password') return isRtl ? 'تغيير كلمة المرور' : 'Change Password'
+  return ''
+}
+
+function formatLastLogin(value, isRtl) {
+  if (!value) return isRtl ? 'لم يسجل الدخول بعد' : 'Never logged in'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(isRtl ? 'ar-YE' : 'en-US')
 }
 
 function EmptyState({ text }) {
-  return (
-    <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center text-gray-400 shadow-sm">
-      {text}
-    </div>
-  )
-}
-
-function AdminModal({ title, children, onClose, isRtl }) {
-  return (
-    <div
-      className="modal-overlay"
-      onClick={(event) => event.target === event.currentTarget && onClose()}
-    >
-      <div
-        className="modal-box w-[calc(100vw-24px)] max-w-md max-h-[90vh] overflow-y-auto"
-        dir={isRtl ? 'rtl' : 'ltr'}
-      >
-        <div className="flex items-center justify-between border-b p-4 sm:p-6">
-          <h2 className="text-lg font-bold text-dark sm:text-xl">
-            {title}
-          </h2>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-gray-400 transition hover:text-gray-600"
-            aria-label={isRtl ? 'إغلاق' : 'Close'}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function ModalActions({ children }) {
-  return (
-    <div className="flex flex-col-reverse gap-3 border-t p-4 sm:flex-row sm:p-6">
-      {children}
-    </div>
-  )
-}
-
-function TextInput({
-  label,
-  value,
-  onChange,
-  type = 'text',
-  dir,
-  placeholder,
-  error,
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-medium text-gray-700">
-        {label}
-      </label>
-
-      <input
-        type={type}
-        value={value || ''}
-        onChange={(event) => onChange(event.target.value)}
-        className="input-field"
-        dir={dir || ''}
-        placeholder={placeholder || ''}
-      />
-
-      {error && (
-        <div className="mt-1 text-xs text-red-500">
-          {error}
-        </div>
-      )}
-    </div>
-  )
-}
-
-function PasswordField({ label, value, onChange, placeholder, error }) {
-  return (
-    <TextInput
-      label={label}
-      type="password"
-      value={value}
-      onChange={onChange}
-      dir="ltr"
-      placeholder={placeholder}
-      error={error}
-    />
-  )
-}
-
-function AdminForm({ type, form, setForm, formErrors, t, isRtl }) {
-  const update = (key, value) => {
-    setForm((current) => ({
-      ...current,
-      [key]: value,
-    }))
-  }
-
-  return (
-    <div className="space-y-4 p-4 sm:p-6">
-      <TextInput
-        label={t.name}
-        value={form.name}
-        onChange={(value) => update('name', value)}
-        placeholder={t.fullName}
-        error={formErrors.name}
-      />
-
-      <TextInput
-        label={`${t.email} *`}
-        type="email"
-        value={form.email}
-        onChange={(value) => update('email', value)}
-        dir="ltr"
-        placeholder="admin@example.com"
-        error={formErrors.email}
-      />
-
-      {type === 'add' && (
-        <>
-          <PasswordField
-            label={`${t.password} *`}
-            value={form.password}
-            onChange={(value) => update('password', value)}
-            placeholder={t.min8Chars}
-            error={formErrors.password}
-          />
-
-          <PasswordField
-            label={t.confirmPassword || (isRtl ? 'تأكيد كلمة المرور' : 'Confirm password')}
-            value={form.confirm_password}
-            onChange={(value) => update('confirm_password', value)}
-            placeholder={t.min8Chars}
-            error={formErrors.confirm}
-          />
-        </>
-      )}
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">
-          {t.role}
-        </label>
-
-        <select
-          value={form.role}
-          onChange={(event) => update('role', event.target.value)}
-          className="input-field"
-        >
-          <option value="admin">
-            {isRtl ? 'مشرف عادي' : 'Admin'}
-          </option>
-          <option value="super_admin">
-            {isRtl ? 'مشرف رئيسي' : 'Super Admin'}
-          </option>
-        </select>
-
-        {formErrors.role && (
-          <div className="mt-1 text-xs text-red-500">
-            {formErrors.role}
-          </div>
-        )}
-      </div>
-
-      {type === 'edit' && (
-        <>
-          <label className="flex cursor-pointer items-center gap-2 rounded-xl bg-gray-50 px-3 py-3">
-            <input
-              type="checkbox"
-              checked={form.is_active === 1}
-              onChange={(event) => update('is_active', event.target.checked ? 1 : 0)}
-              className="h-4 w-4 accent-primary"
-            />
-            <span className="text-sm text-gray-700">
-              {t.activeAccount}
-            </span>
-          </label>
-
-          {formErrors.is_active && (
-            <div className="text-xs text-red-500">
-              {formErrors.is_active}
-            </div>
-          )}
-        </>
-      )}
-
-      {formErrors.submit && (
-        <div className="rounded-xl bg-red-50 p-3 text-sm text-red-600">
-          {formErrors.submit}
-        </div>
-      )}
-    </div>
-  )
+  return <div className="rounded-2xl border border-gray-100 bg-white p-10 text-center text-gray-400 shadow-sm">{text}</div>
 }
