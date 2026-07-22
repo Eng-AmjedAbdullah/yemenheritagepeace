@@ -22,7 +22,6 @@ import {
 import api from '../lib/api'
 import { resolveMediaUrl } from '../lib/media'
 
-import ImageUpload from './ImageUpload'
 import AdminModal from './AdminModal'
 import ValidatedField from './ValidatedField'
 
@@ -47,7 +46,6 @@ const EMPTY_COLLECTION = {
   title: '',
   title_en: '',
   type: 'photo',
-  cover_url: '',
   sort_order: 0,
   is_active: true,
 }
@@ -55,7 +53,6 @@ const EMPTY_COLLECTION = {
 const EMPTY_TOUCHED = {
   title: false,
   title_en: false,
-  cover_url: false,
   sort_order: false,
   media: false,
   video_urls: false,
@@ -172,22 +169,6 @@ function validateForm(
     errors.title_en = isRtl
       ? 'العنوان الإنجليزي طويل جدًا'
       : 'English title is too long'
-  }
-
-  /*
-   * Cover validation applies only to
-   * photo collections.
-   *
-   * Video collections do not use covers.
-   */
-  if (
-    form.type === 'photo' &&
-    form.cover_url &&
-    !isValidHttpUrl(form.cover_url)
-  ) {
-    errors.cover_url = isRtl
-      ? 'رابط غلاف مجموعة الصور غير صحيح'
-      : 'Photo collection cover URL is invalid'
   }
 
   if (
@@ -320,6 +301,7 @@ export default function ManageGallery() {
         '/gallery/collections/all',
         {
           globalLoading: false,
+
           loadingLabel:
             'admin-gallery-collections',
         }
@@ -406,27 +388,10 @@ export default function ManageGallery() {
     key,
     value
   ) => {
-    setForm((current) => {
-      /*
-       * Remove any photo cover value
-       * when changing to video.
-       */
-      if (
-        key === 'type' &&
-        value === 'video'
-      ) {
-        return {
-          ...current,
-          type: value,
-          cover_url: '',
-        }
-      }
-
-      return {
-        ...current,
-        [key]: value,
-      }
-    })
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+    }))
 
     setTouched((current) => ({
       ...current,
@@ -454,7 +419,6 @@ export default function ManageGallery() {
     setForm({
       ...EMPTY_COLLECTION,
       type,
-      cover_url: '',
     })
 
     setModalOpen(true)
@@ -478,15 +442,6 @@ export default function ManageGallery() {
         type:
           collection.type ||
           'photo',
-
-        /*
-         * Video collections must not
-         * use a cover image.
-         */
-        cover_url:
-          collection.type === 'photo'
-            ? collection.cover_url || ''
-            : '',
 
         sort_order:
           collection.sort_order || 0,
@@ -628,7 +583,6 @@ export default function ManageGallery() {
     }
 
     setVideoFiles(files)
-
     markTouched('media')
   }
 
@@ -683,6 +637,8 @@ export default function ManageGallery() {
     markTouched(
       'video_urls'
     )
+
+    markTouched('media')
   }
 
   const buildCollectionPayload =
@@ -697,13 +653,13 @@ export default function ManageGallery() {
         form.type,
 
       /*
-       * Only photo collections can
-       * save a cover URL.
+       * No collection cover is used
+       * for photos or videos.
+       *
+       * Keep an empty value for backend
+       * compatibility.
        */
-      cover_url:
-        form.type === 'photo'
-          ? form.cover_url || ''
-          : '',
+      cover_url: '',
 
       sort_order:
         toNumber(
@@ -755,6 +711,10 @@ export default function ManageGallery() {
             image_url:
               file.url,
 
+            /*
+             * This is an individual photo
+             * thumbnail, not a collection cover.
+             */
             thumbnail_url:
               file.url,
 
@@ -770,10 +730,6 @@ export default function ManageGallery() {
         )
       }
 
-      /*
-       * Direct video links do not use
-       * a collection cover or thumbnail.
-       */
       const directItems =
         videoUrls
           .map(
@@ -793,7 +749,6 @@ export default function ManageGallery() {
                 collectionPayload.title_en,
 
               image_url: '',
-
               thumbnail_url: '',
 
               video_url:
@@ -836,7 +791,6 @@ export default function ManageGallery() {
               collectionPayload.title_en,
 
             image_url: '',
-
             thumbnail_url: '',
 
             video_url:
@@ -864,7 +818,6 @@ export default function ManageGallery() {
       setTouched({
         title: true,
         title_en: true,
-        cover_url: true,
         sort_order: true,
         media: true,
         video_urls: true,
@@ -888,21 +841,6 @@ export default function ManageGallery() {
           await uploadNewItems(
             collectionPayload
           )
-
-        /*
-         * When a new photo collection
-         * has no separate cover, use
-         * the first uploaded image.
-         */
-        if (
-          collectionPayload.type ===
-            'photo' &&
-          !collectionPayload.cover_url &&
-          items[0]?.image_url
-        ) {
-          collectionPayload.cover_url =
-            items[0].image_url
-        }
 
         if (editCollectionId) {
           await api.put(
@@ -951,7 +889,13 @@ export default function ManageGallery() {
         )
 
         await load()
-        closeModal()
+
+        /*
+         * Close directly because saving
+         * remains true until finally runs.
+         */
+        setModalOpen(false)
+        resetModalState()
       } catch (error) {
         toast.error(
           error?.message ||
@@ -1066,6 +1010,13 @@ export default function ManageGallery() {
         )
 
         await load()
+
+        toast.success(
+          isRtl
+            ? 'تم حذف العنصر بنجاح'
+            : 'Item deleted successfully',
+          toastTheme.success
+        )
       } catch (error) {
         toast.error(
           error?.message ||
@@ -1103,8 +1054,8 @@ export default function ManageGallery() {
 
           <p className="mt-2 text-sm leading-6 text-gray-500">
             {isRtl
-              ? 'إدارة مجموعات الصور والفيديوهات باستخدام العناوين والملفات أو الروابط المباشرة.'
-              : 'Manage photo and video collections using titles, uploaded files, or direct links.'}
+              ? 'إدارة مجموعات الصور والفيديوهات دون استخدام صور غلاف للمجموعات.'
+              : 'Manage photo and video collections without collection cover images.'}
           </p>
         </div>
 
@@ -1216,11 +1167,14 @@ export default function ManageGallery() {
                 key={
                   collection.id
                 }
-                className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm"
+                className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
-                <CollectionCover
+                <CollectionHeader
                   collection={
                     collection
+                  }
+                  isRtl={
+                    isRtl
                   }
                 />
 
@@ -1372,8 +1326,8 @@ export default function ManageGallery() {
               ? 'يمكنك إضافة روابط فيديو مباشرة أو رفع ملفات فيديو من جهازك.'
               : 'Add direct video links or upload video files from your device.'
             : isRtl
-              ? `يمكن رفع حتى ${MAX_IMAGES} صورة للمجموعة.`
-              : `Upload up to ${MAX_IMAGES} images per collection.`
+              ? `يمكن رفع حتى ${MAX_IMAGES} صورة من جهازك، ولا تحتاج المجموعة إلى صورة غلاف.`
+              : `Upload up to ${MAX_IMAGES} images from your device. No collection cover is required.`
         }
         icon={
           form.type ===
@@ -1383,7 +1337,9 @@ export default function ManageGallery() {
         }
         isRtl={isRtl}
         size="wide"
-        onClose={closeModal}
+        onClose={
+          closeModal
+        }
         closeDisabled={
           saving
         }
@@ -1577,44 +1533,17 @@ export default function ManageGallery() {
             />
           </div>
 
-          {/*
-           * Cover upload appears only
-           * for photo collections.
-           */}
-          {form.type ===
-            'photo' && (
-            <ImageUpload
-              value={
-                form.cover_url
-              }
-              onChange={(
-                value
-              ) =>
-                updateForm(
-                  'cover_url',
-                  value
-                )
-              }
-              folder="gallery/photos"
-              label={
-                isRtl
-                  ? 'غلاف مجموعة الصور (اختياري)'
-                  : 'Photo Collection Cover (Optional)'
-              }
-            />
-          )}
-
           {form.type ===
           'photo' ? (
             <MediaPicker
               label={
                 editCollectionId
                   ? isRtl
-                    ? 'إضافة صور جديدة للمجموعة (اختياري)'
-                    : 'Add New Images (Optional)'
+                    ? 'إضافة صور جديدة من الجهاز (اختياري)'
+                    : 'Upload New Images from Device (Optional)'
                   : isRtl
-                    ? 'صور المجموعة'
-                    : 'Collection Images'
+                    ? 'رفع صور المجموعة من الجهاز'
+                    : 'Upload Collection Images from Device'
               }
               accept="image/*"
               files={
@@ -1637,8 +1566,8 @@ export default function ManageGallery() {
               }
               hint={
                 isRtl
-                  ? `حتى ${MAX_IMAGES} صورة، 10MB لكل صورة`
-                  : `Up to ${MAX_IMAGES} images, 10MB each`
+                  ? `حتى ${MAX_IMAGES} صورة، وحجم كل صورة لا يتجاوز 10MB`
+                  : `Up to ${MAX_IMAGES} images, no larger than 10MB each`
               }
             />
           ) : (
@@ -1674,8 +1603,8 @@ export default function ManageGallery() {
                 }
                 hint={
                   isRtl
-                    ? `حتى ${MAX_VIDEO_FILES} فيديوهات، 250MB لكل فيديو`
-                    : `Up to ${MAX_VIDEO_FILES} videos, 250MB each`
+                    ? `حتى ${MAX_VIDEO_FILES} فيديوهات، وحجم كل فيديو لا يتجاوز 250MB`
+                    : `Up to ${MAX_VIDEO_FILES} videos, no larger than 250MB each`
                 }
               />
 
@@ -2022,43 +1951,39 @@ function MediaPicker({
   )
 }
 
-function CollectionCover({
+function CollectionHeader({
   collection,
+  isRtl,
 }) {
-  /*
-   * Video collections never display
-   * a cover image, including old
-   * collections that may still have
-   * a saved cover URL.
-   */
-  if (
+  const isPhoto =
     collection.type ===
-      'photo' &&
-    collection.cover_url
-  ) {
-    return (
-      <img
-        src={resolveMediaUrl(
-          collection.cover_url
-        )}
-        alt=""
-        className="aspect-[16/8] w-full bg-gray-50 object-cover"
-      />
-    )
-  }
+    'photo'
 
   return (
-    <div className="flex aspect-[16/8] w-full items-center justify-center bg-gradient-to-br from-primary/10 to-primary/5 text-primary">
-      {collection.type ===
-      'video' ? (
-        <Video
-          size={34}
-        />
-      ) : (
-        <ImageIcon
-          size={34}
-        />
-      )}
+    <div className="flex min-h-[112px] items-center justify-center bg-gradient-to-br from-primary/10 via-primary/5 to-white">
+      <div className="text-center">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-primary/10">
+          {isPhoto ? (
+            <ImageIcon
+              size={27}
+            />
+          ) : (
+            <Video
+              size={27}
+            />
+          )}
+        </div>
+
+        <p className="mt-2 text-xs font-semibold text-primary/80">
+          {isPhoto
+            ? isRtl
+              ? 'مجموعة صور'
+              : 'Photo Collection'
+            : isRtl
+              ? 'مجموعة فيديوهات'
+              : 'Video Collection'}
+        </p>
+      </div>
     </div>
   )
 }
@@ -2068,9 +1993,10 @@ function ItemThumb({
   type,
 }) {
   /*
-   * Photos show their images.
-   * Videos show a video icon and do
-   * not depend on a collection cover.
+   * Individual photo items can still show
+   * their own image preview.
+   *
+   * This is not a collection cover.
    */
   if (
     type === 'photo'
