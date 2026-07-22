@@ -178,12 +178,12 @@ export default function ManageHeritage() {
 
       if (editId) {
         await api.put(`/heritage/${editId}`, payload, {
-          globalLoading: true,
+          globalLoading: false,
           loadingLabel: 'update-heritage',
         })
       } else {
         await api.post('/heritage', payload, {
-          globalLoading: true,
+          globalLoading: false,
           loadingLabel: 'create-heritage',
         })
       }
@@ -220,7 +220,7 @@ export default function ManageHeritage() {
 
     try {
       await api.delete(`/heritage/${item.id}`, null, {
-        globalLoading: true,
+        globalLoading: false,
         loadingLabel: 'delete-heritage',
       })
       toast.success(isRtl ? 'تم الحذف' : 'Deleted', toastTheme.success)

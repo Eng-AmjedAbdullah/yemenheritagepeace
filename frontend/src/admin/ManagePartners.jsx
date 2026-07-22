@@ -128,9 +128,9 @@ export default function ManagePartners() {
       }
 
       if (editId) {
-        await api.put(`/partners/${editId}`, payload, { globalLoading: true, loadingLabel: 'update-partner' })
+        await api.put(`/partners/${editId}`, payload, { globalLoading: false, loadingLabel: 'update-partner' })
       } else {
-        await api.post('/partners', payload, { globalLoading: true, loadingLabel: 'create-partner' })
+        await api.post('/partners', payload, { globalLoading: false, loadingLabel: 'create-partner' })
       }
 
       toast.success(editId ? (isRtl ? 'تم تحديث الشريك' : 'Partner updated') : (isRtl ? 'تمت إضافة الشريك' : 'Partner added'), toastTheme.success)
@@ -153,7 +153,7 @@ export default function ManagePartners() {
     if (!confirmed) return
 
     try {
-      await api.delete(`/partners/${item.id}`, null, { globalLoading: true, loadingLabel: 'delete-partner' })
+      await api.delete(`/partners/${item.id}`, null, { globalLoading: false, loadingLabel: 'delete-partner' })
       toast.success(isRtl ? 'تم الحذف' : 'Deleted', toastTheme.success)
       await load()
     } catch (error) {

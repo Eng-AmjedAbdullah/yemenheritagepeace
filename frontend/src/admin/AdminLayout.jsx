@@ -281,7 +281,7 @@ export default function AdminLayout() {
 
       return api
         .get('/contact/unread-count', {
-          globalLoading: options.globalLoading === true,
+          globalLoading: false,
           loadingLabel: 'admin-unread-messages',
         })
         .then((data) => setUnreadCount(data?.count || 0))
@@ -308,11 +308,13 @@ export default function AdminLayout() {
           navigate('/admin/login', { replace: true })
         }
 
+        stopLoading(layoutLoadingToken)
         return
       }
 
       try {
         const freshAdmin = await api.get('/auth/me', {
+          globalLoading: false,
           loadingLabel: 'admin-session',
         })
 
@@ -322,9 +324,7 @@ export default function AdminLayout() {
         localStorage.setItem('yhpo_admin', JSON.stringify(freshAdmin))
 
         if (freshAdmin.role === 'super_admin') {
-          await fetchUnread(freshAdmin.role, {
-            globalLoading: true,
-          })
+          await fetchUnread(freshAdmin.role)
 
           if (cancelled) return
 
@@ -590,7 +590,7 @@ export default function AdminLayout() {
             )}
 
             <div className="flex h-full flex-col">
-              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
+              <nav className="admin-sidebar-scrollbar flex-1 space-y-1 overflow-y-auto p-3 pt-6">
                 {isMobile && (
                   <button
                     type="button"

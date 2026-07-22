@@ -217,7 +217,7 @@ export default function ManageAdmins() {
             password: form.password,
             role: form.role,
           },
-          { globalLoading: true, loadingLabel: 'create-admin' }
+          { globalLoading: false, loadingLabel: 'create-admin' }
         )
       } else if (modal === 'edit') {
         await api.put(
@@ -228,13 +228,13 @@ export default function ManageAdmins() {
             role: form.role,
             is_active: isActiveAccount(form.is_active) ? 1 : 0,
           },
-          { globalLoading: true, loadingLabel: 'update-admin' }
+          { globalLoading: false, loadingLabel: 'update-admin' }
         )
       } else if (modal === 'password') {
         await api.put(
           `/admins/${editId}/password`,
           { password: form.password },
-          { globalLoading: true, loadingLabel: 'change-admin-password' }
+          { globalLoading: false, loadingLabel: 'change-admin-password' }
         )
       }
 
@@ -285,7 +285,7 @@ export default function ManageAdmins() {
 
     try {
       await api.delete(`/admins/${item.id}`, null, {
-        globalLoading: true,
+        globalLoading: false,
         loadingLabel: 'delete-admin',
       })
       toast.success(isRtl ? 'تم حذف المشرف' : 'Administrator deleted', toastTheme.success)

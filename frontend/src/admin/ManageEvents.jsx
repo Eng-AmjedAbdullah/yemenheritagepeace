@@ -355,12 +355,12 @@ export default function ManageEvents() {
 
       if (editId) {
         await api.put(`/events/${editId}`, payload, {
-          globalLoading: true,
+          globalLoading: false,
           loadingLabel: 'update-event',
         })
       } else {
         await api.post('/events', payload, {
-          globalLoading: true,
+          globalLoading: false,
           loadingLabel: 'create-event',
         })
       }
@@ -402,7 +402,7 @@ export default function ManageEvents() {
 
     try {
       await api.delete(`/events/${item.id}`, null, {
-        globalLoading: true,
+        globalLoading: false,
         loadingLabel: 'delete-event',
       })
       toast.success(isRtl ? 'تم حذف الفعالية' : 'Event deleted', toastTheme.success)

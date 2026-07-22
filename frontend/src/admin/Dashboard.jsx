@@ -24,6 +24,8 @@ import {
   ADMIN_ROLES,
 } from './adminPermissions'
 
+let dashboardHasLoadedOnce = false
+
 export default function Dashboard() {
   const { t, isRtl, admin } = useAdminLang()
   const { startLoading, stopLoading } = useGlobalLoading()
@@ -49,7 +51,10 @@ export default function Dashboard() {
     if (!admin?.role) return
 
     let cancelled = false
-    const dashboardLoadingToken = startLoading('admin-dashboard-data')
+
+    const dashboardLoadingToken = dashboardHasLoadedOnce
+      ? null
+      : startLoading('admin-dashboard-data')
 
     const loadDashboard = async () => {
       setLoading(true)
@@ -62,6 +67,7 @@ export default function Dashboard() {
           requests.push({
             type: 'news',
             request: api.get('/news/all', {
+              globalLoading: false,
               loadingLabel: 'dashboard-news',
             }),
           })
@@ -71,6 +77,7 @@ export default function Dashboard() {
           requests.push({
             type: 'events',
             request: api.get('/events/all', {
+              globalLoading: false,
               loadingLabel: 'dashboard-events',
             }),
           })
@@ -80,6 +87,7 @@ export default function Dashboard() {
           requests.push({
             type: 'admins',
             request: api.get('/admins', {
+              globalLoading: false,
               loadingLabel: 'dashboard-admins',
             }),
           })
@@ -89,6 +97,7 @@ export default function Dashboard() {
           requests.push({
             type: 'messages',
             request: api.get('/contact', {
+              globalLoading: false,
               loadingLabel: 'dashboard-messages',
             }),
           })
@@ -98,6 +107,7 @@ export default function Dashboard() {
           requests.push({
             type: 'heritage',
             request: api.get('/heritage/all', {
+              globalLoading: false,
               loadingLabel: 'dashboard-heritage',
             }),
           })
@@ -107,6 +117,7 @@ export default function Dashboard() {
           requests.push({
             type: 'partners',
             request: api.get('/partners/all', {
+              globalLoading: false,
               loadingLabel: 'dashboard-partners',
             }),
           })
@@ -117,10 +128,12 @@ export default function Dashboard() {
             type: 'gallery',
             request: api
               .get('/gallery/collections/all', {
+                globalLoading: false,
                 loadingLabel: 'dashboard-gallery',
               })
               .catch(() =>
                 api.get('/gallery/all', {
+                  globalLoading: false,
                   loadingLabel: 'dashboard-gallery-fallback',
                 })
               ),
@@ -193,9 +206,13 @@ export default function Dashboard() {
         }
       } finally {
         if (!cancelled) {
+          dashboardHasLoadedOnce = true
           setLoading(false)
         }
-        stopLoading(dashboardLoadingToken)
+
+        if (dashboardLoadingToken) {
+          stopLoading(dashboardLoadingToken)
+        }
       }
     }
 
@@ -203,7 +220,10 @@ export default function Dashboard() {
 
     return () => {
       cancelled = true
-      stopLoading(dashboardLoadingToken)
+
+      if (dashboardLoadingToken) {
+        stopLoading(dashboardLoadingToken)
+      }
     }
   }, [admin?.role, startLoading, stopLoading])
 
@@ -284,10 +304,20 @@ export default function Dashboard() {
     }
   }
 
-  // The global application preloader remains visible until
-  // every dashboard request registered by api.js is complete.
-  if (!admin || loading) {
+  if (!admin) {
     return null
+  }
+
+  /*
+   * The first dashboard load is covered by the global preloader.
+   * Later revisits use a small page-level loading state instead.
+   */
+  if (loading) {
+    return (
+      <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-gray-100 bg-white text-sm font-medium text-gray-400 shadow-sm">
+        {t.loading || (isRtl ? 'جارٍ تحميل البيانات...' : 'Loading data...')}
+      </div>
+    )
   }
 
   return (

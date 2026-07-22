@@ -123,8 +123,8 @@ export default function ManageHero() {
 
     try {
       const payload = { ...form, sort_order: Number(form.sort_order) || 0, is_active: Boolean(form.is_active) }
-      if (editId) await api.put(`/hero/${editId}`, payload, { globalLoading: true, loadingLabel: 'update-hero' })
-      else await api.post('/hero', payload, { globalLoading: true, loadingLabel: 'create-hero' })
+      if (editId) await api.put(`/hero/${editId}`, payload, { globalLoading: false, loadingLabel: 'update-hero' })
+      else await api.post('/hero', payload, { globalLoading: false, loadingLabel: 'create-hero' })
       toast.success(editId ? (isRtl ? 'تم تحديث صورة الواجهة' : 'Slide updated') : (isRtl ? 'تمت إضافة صورة الواجهة' : 'Slide added'), toastTheme.success)
       await load()
       closeModal()
@@ -139,7 +139,7 @@ export default function ManageHero() {
     const confirmed = await requestConfirm({ title: isRtl ? 'حذف صورة الواجهة' : 'Delete hero slide', message: isRtl ? 'سيتم حذف صورة الواجهة نهائيًا.' : 'This hero slide will be permanently deleted.', variant: 'danger', confirmText: t.delete || (isRtl ? 'حذف' : 'Delete') })
     if (!confirmed) return
     try {
-      await api.delete(`/hero/${item.id}`, null, { globalLoading: true, loadingLabel: 'delete-hero' })
+      await api.delete(`/hero/${item.id}`, null, { globalLoading: false, loadingLabel: 'delete-hero' })
       toast.success(isRtl ? 'تم الحذف' : 'Deleted', toastTheme.success)
       await load()
     } catch (error) {

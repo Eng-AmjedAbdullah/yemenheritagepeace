@@ -209,12 +209,12 @@ export default function ManageNews() {
 
       if (editId) {
         await api.put(`/news/${editId}`, payload, {
-          globalLoading: true,
+          globalLoading: false,
           loadingLabel: 'update-news',
         })
       } else {
         await api.post('/news', payload, {
-          globalLoading: true,
+          globalLoading: false,
           loadingLabel: 'create-news',
         })
       }
@@ -251,7 +251,7 @@ export default function ManageNews() {
 
     try {
       await api.delete(`/news/${item.id}`, null, {
-        globalLoading: true,
+        globalLoading: false,
         loadingLabel: 'delete-news',
       })
       toast.success(isRtl ? 'تم حذف الخبر' : 'News deleted', toastTheme.success)
