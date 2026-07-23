@@ -26,7 +26,6 @@ import {
 import { adminTranslations, AdminLangContext } from './adminI18n'
 import { getSidebarItems, canAccessPage } from './adminPermissions'
 import api from '../lib/api'
-import { useGlobalLoading } from '../context/LoadingContext'
 
 export const ConfirmContext = React.createContext()
 
@@ -95,21 +94,14 @@ function clearAdminSession() {
 
 function ConfirmModal({ modal, close, isRtl }) {
   useEffect(() => {
-    if (!modal.isOpen) return undefined
-
-    const previousOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
+    if (!modal.isOpen) return
 
     const onKeyDown = (event) => {
       if (event.key === 'Escape') close(false)
     }
 
     document.addEventListener('keydown', onKeyDown)
-
-    return () => {
-      document.body.style.overflow = previousOverflow
-      document.removeEventListener('keydown', onKeyDown)
-    }
+    return () => document.removeEventListener('keydown', onKeyDown)
   }, [modal.isOpen, close])
 
   if (!modal.isOpen) return null
@@ -119,36 +111,28 @@ function ConfirmModal({ modal, close, isRtl }) {
 
   return (
     <div
-      className="modal-overlay confirm-modal-overlay"
-      onMouseDown={(event) =>
-        event.target === event.currentTarget && close(false)
-      }
+      className="modal-overlay"
+      onClick={(event) => event.target === event.currentTarget && close(false)}
     >
-      <section
-        className="confirm-modal-panel"
+      <div
+        className="modal-box w-[calc(100vw-24px)] max-w-md"
         dir={isRtl ? 'rtl' : 'ltr'}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-modal-title"
       >
-        <div className="p-5 sm:p-6">
-          <div className="flex items-start gap-3">
+        <div className="border-b border-gray-100 p-4 sm:p-6">
+          <div className="flex items-start gap-4">
             <div
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${variant.iconClass}`}
+              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${variant.iconClass}`}
             >
-              <Icon size={20} />
+              <Icon size={22} />
             </div>
 
             <div className="min-w-0 flex-1">
-              <h3
-                id="confirm-modal-title"
-                className="text-base font-bold leading-7 text-dark sm:text-lg"
-              >
+              <h3 className="text-lg font-bold text-dark">
                 {modal.title}
               </h3>
 
               {modal.message && (
-                <p className="mt-1.5 text-sm leading-6 text-gray-500">
+                <p className="mt-2 text-sm leading-6 text-gray-500">
                   {modal.message}
                 </p>
               )}
@@ -157,19 +141,19 @@ function ConfirmModal({ modal, close, isRtl }) {
             <button
               type="button"
               onClick={() => close(false)}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+              className="text-gray-400 transition-colors hover:text-gray-600"
               aria-label={isRtl ? 'إغلاق' : 'Close'}
             >
-              <X size={17} />
+              <X size={18} />
             </button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 border-t border-gray-100 bg-gray-50/80 p-4">
+        <div className="flex flex-col-reverse gap-3 rounded-b-2xl bg-gray-50/70 p-4 sm:flex-row sm:justify-end sm:p-6">
           <button
             type="button"
             onClick={() => close(false)}
-            className="inline-flex h-11 items-center justify-center rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-600 transition hover:border-gray-300 hover:bg-gray-50"
+            className="btn-outline min-w-[120px] justify-center"
           >
             {modal.cancelText}
           </button>
@@ -177,12 +161,12 @@ function ConfirmModal({ modal, close, isRtl }) {
           <button
             type="button"
             onClick={() => close(true)}
-            className={`inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-bold shadow-sm transition ${variant.buttonClass}`}
+            className={`inline-flex min-w-[120px] items-center justify-center gap-2 rounded-lg px-6 py-3 font-semibold transition-all duration-300 ${variant.buttonClass}`}
           >
             {modal.confirmText}
           </button>
         </div>
-      </section>
+      </div>
     </div>
   )
 }
@@ -217,7 +201,6 @@ export default function AdminLayout() {
 
   const navigate = useNavigate()
   const location = useLocation()
-  const { startLoading, stopLoading } = useGlobalLoading()
 
   const t = adminTranslations[adminLang]
   const isRtl = adminLang === 'ar'
@@ -272,28 +255,21 @@ export default function AdminLayout() {
     [isRtl]
   )
 
-  const fetchUnread = useCallback(
-    (role, options = {}) => {
-      if (role !== 'super_admin') {
-        setUnreadCount(0)
-        return Promise.resolve()
-      }
+  const fetchUnread = useCallback((role) => {
+    if (role !== 'super_admin') {
+      setUnreadCount(0)
+      return Promise.resolve()
+    }
 
-      return api
-        .get('/contact/unread-count', {
-          globalLoading: false,
-          loadingLabel: 'admin-unread-messages',
-        })
-        .then((data) => setUnreadCount(data?.count || 0))
-        .catch(() => {})
-    },
-    []
-  )
+    return api
+      .get('/contact/unread-count')
+      .then((data) => setUnreadCount(data?.count || 0))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     let cancelled = false
     let interval = null
-    const layoutLoadingToken = startLoading('admin-layout-bootstrap')
 
     const refreshAdmin = async () => {
       setLoading(true)
@@ -308,15 +284,11 @@ export default function AdminLayout() {
           navigate('/admin/login', { replace: true })
         }
 
-        stopLoading(layoutLoadingToken)
         return
       }
 
       try {
-        const freshAdmin = await api.get('/auth/me', {
-          globalLoading: false,
-          loadingLabel: 'admin-session',
-        })
+        const freshAdmin = await api.get('/auth/me')
 
         if (cancelled) return
 
@@ -324,14 +296,8 @@ export default function AdminLayout() {
         localStorage.setItem('yhpo_admin', JSON.stringify(freshAdmin))
 
         if (freshAdmin.role === 'super_admin') {
-          await fetchUnread(freshAdmin.role)
-
-          if (cancelled) return
-
-          interval = setInterval(
-            () => fetchUnread(freshAdmin.role),
-            30000
-          )
+          fetchUnread(freshAdmin.role)
+          interval = setInterval(() => fetchUnread(freshAdmin.role), 30000)
         } else {
           setUnreadCount(0)
         }
@@ -351,7 +317,6 @@ export default function AdminLayout() {
         navigate('/admin/login', { replace: true })
       } finally {
         if (!cancelled) setLoading(false)
-        stopLoading(layoutLoadingToken)
       }
     }
 
@@ -359,10 +324,9 @@ export default function AdminLayout() {
 
     return () => {
       cancelled = true
-      stopLoading(layoutLoadingToken)
       if (interval) clearInterval(interval)
     }
-  }, [navigate, fetchUnread, isRtl, startLoading, stopLoading])
+  }, [navigate, fetchUnread, isRtl])
 
   useEffect(() => {
     const handleResize = () => {
@@ -406,8 +370,8 @@ export default function AdminLayout() {
     navigate('/admin/login', { replace: true })
   }
 
-  // The global application preloader covers authentication
-  // and the initial admin layout data.
+  // The single global application preloader handles this loading state.
+  // Returning null prevents a second admin-specific preloader from rendering.
   if (loading) {
     return null
   }
@@ -590,7 +554,7 @@ export default function AdminLayout() {
             )}
 
             <div className="flex h-full flex-col">
-              <nav className="admin-sidebar-scrollbar flex-1 space-y-1 overflow-y-auto p-3 pt-6">
+              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
                 {isMobile && (
                   <button
                     type="button"
