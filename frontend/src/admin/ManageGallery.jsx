@@ -2141,18 +2141,6 @@ export default function ManageGallery() {
         }
       >
         <div className="space-y-6">
-          {uploadProgress.active && (
-            <UploadProgressPanel
-              progress={
-                uploadProgress
-              }
-              isRtl={isRtl}
-              onCancel={
-                cancelUpload
-              }
-            />
-          )}
-
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ValidatedField
               label={
@@ -2289,7 +2277,20 @@ export default function ManageGallery() {
 
           {form.type ===
           'photo' ? (
-            <MediaPicker
+            <div className="space-y-3">
+              {uploadProgress.active && (
+                <UploadProgressPanel
+                  progress={
+                    uploadProgress
+                  }
+                  isRtl={isRtl}
+                  onCancel={
+                    cancelUpload
+                  }
+                />
+              )}
+
+              <MediaPicker
               label={
                 editCollectionId
                   ? isRtl
@@ -2322,8 +2323,20 @@ export default function ManageGallery() {
                   : `Up to ${MAX_IMAGES} images, no larger than 10MB each`
               }
             />
+            </div>
           ) : (
             <div className="space-y-5">
+              {uploadProgress.active && (
+                <UploadProgressPanel
+                  progress={
+                    uploadProgress
+                  }
+                  isRtl={isRtl}
+                  onCancel={
+                    cancelUpload
+                  }
+                />
+              )}
               <MediaPicker
                 label={
                   editCollectionId
