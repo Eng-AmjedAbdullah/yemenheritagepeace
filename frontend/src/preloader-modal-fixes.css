@@ -1,24 +1,108 @@
 /*
- * Global preloader and admin modal fixes.
- * Imported after index.css so these rules safely override the old modal styles.
+ * Global preloader, modal, admin document scrollbar, and sidebar scrollbar fixes.
+ *
+ * IMPORTANT:
+ * This file must be located at:
+ * frontend/src/preloader-modal-fixes.css
+ *
+ * It is imported after index.css from main.jsx, so these scoped rules safely
+ * override the older global scrollbar and modal rules without deleting them.
  */
 
+/* =========================================================
+ * ADMIN DOCUMENT / MAIN PAGE SCROLLBAR
+ * =========================================================
+ *
+ * AdminLayout.jsx sets the real <html> and <body> direction:
+ *
+ * RTL -> sidebar on the right, main document scrollbar on the far left.
+ * LTR -> sidebar on the left, main document scrollbar on the far right.
+ *
+ * Styling the root document scrollbar also prevents the browser's dark
+ * default scrollbar from appearing beside the sidebar.
+ */
+html.admin-document-active {
+  overflow-x: hidden;
+  overflow-y: scroll;
+  color-scheme: light;
+  scrollbar-width: thin;
+  scrollbar-color: #18a2be #eef7f9;
+  scrollbar-gutter: stable;
+}
+
+body.admin-document-active {
+  min-height: 100%;
+  overflow-x: hidden;
+  color-scheme: light;
+  background: #f8fafc;
+}
+
+html.admin-document-active::-webkit-scrollbar,
+body.admin-document-active::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+html.admin-document-active::-webkit-scrollbar-track,
+body.admin-document-active::-webkit-scrollbar-track {
+  background: #eef7f9 !important;
+}
+
+html.admin-document-active::-webkit-scrollbar-thumb,
+body.admin-document-active::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 2px solid #eef7f9;
+  border-radius: 9999px;
+  background: #18a2be !important;
+  background-clip: padding-box;
+}
+
+html.admin-document-active::-webkit-scrollbar-thumb:hover,
+body.admin-document-active::-webkit-scrollbar-thumb:hover {
+  background: #0d7a91 !important;
+}
+
+html.admin-document-active::-webkit-scrollbar-corner,
+body.admin-document-active::-webkit-scrollbar-corner {
+  background: #eef7f9 !important;
+}
+
+/*
+ * The admin page content must use the document scrollbar only.
+ * Do not create a second page scrollbar inside <main>.
+ */
+.admin-page-main,
+.admin-layout-root {
+  overflow: visible;
+}
+
+/* =========================================================
+ * MODAL SCROLLING
+ * ========================================================= */
 body.modal-open {
   overflow: hidden !important;
 }
 
-/* Prevent the overlay and the modal card from both creating vertical scrollbars. */
+/*
+ * When AdminModal adds modal-open to body, also stop the root document from
+ * scrolling. Modern Chromium, Firefox, and Safari support :has().
+ */
+html.admin-document-active:has(body.modal-open) {
+  overflow: hidden !important;
+}
+
+/* Prevent the overlay and modal card from both creating vertical scrollbars. */
 .modal-overlay {
   overflow: hidden !important;
   padding: 12px !important;
 }
 
 .modal-box {
+  display: flex;
   width: 100%;
   max-height: calc(100dvh - 24px) !important;
-  overflow: hidden !important;
-  display: flex;
   flex-direction: column;
+  overflow: hidden !important;
 }
 
 .admin-modal-overlay,
@@ -31,11 +115,11 @@ body.modal-open {
 }
 
 .admin-modal-panel {
+  display: flex;
   width: 100%;
   max-height: calc(100dvh - 24px);
-  overflow: hidden;
-  display: flex;
   flex-direction: column;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 24px;
   background: #ffffff;
@@ -60,6 +144,8 @@ body.modal-open {
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(24, 162, 190, 0.58) transparent;
   scrollbar-gutter: stable;
 }
 
@@ -72,15 +158,20 @@ body.modal-open {
 
 .admin-modal-body::-webkit-scrollbar {
   width: 7px;
+  height: 7px;
 }
 
 .admin-modal-body::-webkit-scrollbar-track {
-  background: transparent;
+  background: transparent !important;
 }
 
 .admin-modal-body::-webkit-scrollbar-thumb {
   border-radius: 9999px;
-  background: rgba(24, 162, 190, 0.5);
+  background: rgba(24, 162, 190, 0.58) !important;
+}
+
+.admin-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #18a2be !important;
 }
 
 .confirm-modal-panel {
@@ -93,7 +184,7 @@ body.modal-open {
   animation: yhpoModalIn 170ms ease-out;
 }
 
-/* Existing admin pages that still use .modal-box receive a single inner scroller. */
+/* Existing admin pages that still use .modal-box receive one inner scroller. */
 .modal-box > :first-child:not(.admin-modal-header) {
   flex: 0 0 auto;
 }
@@ -105,7 +196,131 @@ body.modal-open {
   overflow-y: auto;
 }
 
-/* Realtime validation visual states shared by all updated add/edit forms. */
+/* =========================================================
+ * ADMIN SIDEBAR DUAL WHITE SCROLLBARS
+ * =========================================================
+ *
+ * The native scrollbar remains on the normal inner side of the sidebar:
+ *
+ * RTL -> native scrollbar on the sidebar's left inner edge.
+ * LTR -> native scrollbar on the sidebar's right inner edge.
+ *
+ * AdminLayout.jsx renders a synchronized custom scrollbar on the opposite,
+ * outer side. Both sidebar scrollbars are white.
+ */
+.admin-sidebar-scroll-shell {
+  position: relative;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.admin-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.96) transparent;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 36px;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.96) !important;
+  background-clip: padding-box;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: #ffffff !important;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-corner {
+  background: transparent !important;
+}
+
+/* Additional synchronized scrollbar track. */
+.admin-sidebar-mirror-track {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  z-index: 20;
+  width: 8px;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  touch-action: none;
+  transition:
+    opacity 160ms ease,
+    background-color 160ms ease;
+}
+
+.admin-sidebar-mirror-track.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.admin-sidebar-mirror-track:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* RTL sidebar is on the right, so the extra scrollbar goes on its far right. */
+.admin-sidebar-mirror-track-right {
+  right: 2px;
+}
+
+/* LTR sidebar is on the left, so the extra scrollbar goes on its far left. */
+.admin-sidebar-mirror-track-left {
+  left: 2px;
+}
+
+.admin-sidebar-mirror-thumb {
+  position: absolute;
+  top: 0;
+  right: 1px;
+  left: 1px;
+  display: block;
+  width: calc(100% - 2px);
+  min-height: 36px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.2);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  will-change: transform;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.admin-sidebar-mirror-thumb:hover {
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.28);
+}
+
+.admin-sidebar-mirror-thumb:active {
+  cursor: grabbing;
+  background: #ffffff;
+}
+
+/* =========================================================
+ * VALIDATION STATES
+ * ========================================================= */
 .input-field[aria-invalid='true'],
 .input-field.is-invalid {
   border-color: #f87171 !important;
@@ -117,6 +332,9 @@ body.modal-open {
   box-shadow: 0 0 0 4px rgba(220, 252, 231, 0.78) !important;
 }
 
+/* =========================================================
+ * RESPONSIVE MODALS AND SIDEBAR SCROLLBARS
+ * ========================================================= */
 @media (min-width: 640px) {
   .modal-overlay {
     padding: 20px !important;
@@ -140,6 +358,12 @@ body.modal-open {
   }
 }
 
+@media (max-width: 1023px) {
+  .admin-sidebar-mirror-track {
+    width: 9px;
+  }
+}
+
 @media (max-width: 479px) {
   .confirm-modal-panel {
     width: min(100%, 350px);
@@ -155,13 +379,19 @@ body.modal-open {
     opacity: 0;
     transform: translateY(8px) scale(0.985);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
 }
 
-/* The logo remains static while only the two surrounding rings animate. */
+/* =========================================================
+ * PRELOADER LOGO
+ * =========================================================
+ * Keep the logo static and visible. Only the surrounding rings may animate
+ * through the existing index.css rules.
+ */
 .yhpo-preloader-logo-shell,
 .yhpo-preloader-logo {
   animation: none !important;
