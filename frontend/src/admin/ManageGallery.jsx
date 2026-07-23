@@ -1,7 +1,10 @@
 import {
+  useCallback,
   useContext,
   useEffect,
+  useId,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 
@@ -12,11 +15,13 @@ import {
   Film,
   Image as ImageIcon,
   Link as LinkIcon,
+  Loader2,
   Plus,
   Save,
   Trash2,
   UploadCloud,
   Video,
+  X,
 } from 'lucide-react'
 
 import api from '../lib/api'
@@ -42,6 +47,9 @@ const MAX_IMAGE_SIZE =
 const MAX_VIDEO_SIZE =
   250 * 1024 * 1024
 
+const VIDEO_UPLOAD_TIMEOUT =
+  45 * 60 * 1000
+
 const EMPTY_COLLECTION = {
   title: '',
   title_en: '',
@@ -56,6 +64,15 @@ const EMPTY_TOUCHED = {
   sort_order: false,
   media: false,
   video_urls: false,
+}
+
+const EMPTY_UPLOAD_PROGRESS = {
+  active: false,
+  stage: 'idle',
+  fileName: '',
+  current: 0,
+  total: 0,
+  percent: 0,
 }
 
 const toastTheme = {
@@ -73,7 +90,7 @@ const toastTheme = {
   },
 
   error: {
-    duration: 4500,
+    duration: 5000,
 
     style: {
       background: '#7f1d1d',
@@ -84,6 +101,15 @@ const toastTheme = {
       padding: '14px 18px',
     },
   },
+}
+
+const VIDEO_EXTENSION_TYPES = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+  ogg: 'video/ogg',
+  mov: 'video/quicktime',
+  m4v: 'video/x-m4v',
+  mkv: 'video/x-matroska',
 }
 
 function isActive(value) {
@@ -137,6 +163,197 @@ function isValidHttpUrl(value) {
   }
 }
 
+function getFileExtension(fileName) {
+  const segments =
+    String(fileName || '')
+      .toLowerCase()
+      .split('.')
+
+  return segments.length > 1
+    ? segments.pop()
+    : ''
+}
+
+function isSupportedVideoFile(file) {
+  if (!file) {
+    return false
+  }
+
+  if (
+    String(file.type || '')
+      .toLowerCase()
+      .startsWith('video/')
+  ) {
+    return true
+  }
+
+  const extension =
+    getFileExtension(file.name)
+
+  return Boolean(
+    VIDEO_EXTENSION_TYPES[extension]
+  )
+}
+
+function normalizeVideoFile(file) {
+  if (!file || file.type) {
+    return file
+  }
+
+  const extension =
+    getFileExtension(file.name)
+
+  const inferredType =
+    VIDEO_EXTENSION_TYPES[extension]
+
+  if (!inferredType) {
+    return file
+  }
+
+  try {
+    return new File(
+      [file],
+      file.name,
+      {
+        type: inferredType,
+        lastModified:
+          file.lastModified,
+      }
+    )
+  } catch {
+    return file
+  }
+}
+
+function resolveCollectionMediaUrl(value) {
+  const cleanValue =
+    String(value || '').trim()
+
+  if (!cleanValue) {
+    return ''
+  }
+
+  if (
+    /^https?:\/\//i.test(
+      cleanValue
+    )
+  ) {
+    return cleanValue
+  }
+
+  return resolveMediaUrl(cleanValue)
+}
+
+function isDirectPlayableVideoUrl(url) {
+  return /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(
+    String(url || '')
+  )
+}
+
+function getItemMediaUrl(item) {
+  return (
+    item?.thumbnail_url ||
+    item?.image_url ||
+    item?.video_url ||
+    ''
+  )
+}
+
+function normalizeErrorMessage(
+  error,
+  isRtl
+) {
+  if (
+    error?.name ===
+    'AbortError'
+  ) {
+    return isRtl
+      ? 'تم إلغاء عملية رفع الملفات.'
+      : 'The file upload was cancelled.'
+  }
+
+  const rawMessage =
+    String(
+      error?.message || ''
+    ).trim()
+
+  const lowerMessage =
+    rawMessage.toLowerCase()
+
+  if (
+    lowerMessage.includes('413') ||
+    lowerMessage.includes(
+      'too large'
+    ) ||
+    lowerMessage.includes(
+      'file size'
+    ) ||
+    lowerMessage.includes(
+      'payload too large'
+    ) ||
+    lowerMessage.includes(
+      'maximum'
+    )
+  ) {
+    return isRtl
+      ? 'حجم الملف يتجاوز الحد المسموح به في إعدادات التخزين أو الخادم.'
+      : 'The file exceeds the size limit configured for storage or the server.'
+  }
+
+  if (
+    lowerMessage.includes(
+      'timeout'
+    ) ||
+    lowerMessage.includes(
+      'timed out'
+    ) ||
+    lowerMessage.includes(
+      'انتهت مهلة'
+    )
+  ) {
+    return isRtl
+      ? 'انتهت مهلة رفع الملف. تحقق من سرعة الإنترنت ثم أعد المحاولة.'
+      : 'The upload timed out. Check your internet connection and try again.'
+  }
+
+  if (
+    lowerMessage.includes(
+      'failed to fetch'
+    ) ||
+    lowerMessage.includes(
+      'network'
+    ) ||
+    lowerMessage.includes(
+      'connection'
+    )
+  ) {
+    return isRtl
+      ? 'انقطع الاتصال أثناء رفع الملف. تحقق من الإنترنت ثم أعد المحاولة.'
+      : 'The connection failed during upload. Check your internet connection and try again.'
+  }
+
+  if (
+    lowerMessage.includes(
+      'signed'
+    ) ||
+    lowerMessage.includes(
+      'upload information'
+    )
+  ) {
+    return isRtl
+      ? 'تعذر تجهيز رابط رفع الفيديو. تحقق من إعدادات الخادم والتخزين.'
+      : 'Unable to prepare the video upload URL. Check the server and storage settings.'
+  }
+
+  if (rawMessage) {
+    return rawMessage
+  }
+
+  return isRtl
+    ? 'حدث خطأ غير متوقع أثناء حفظ المجموعة.'
+    : 'An unexpected error occurred while saving the collection.'
+}
+
 function validateForm(
   form,
   options
@@ -156,7 +373,8 @@ function validateForm(
       ? 'عنوان المجموعة مطلوب'
       : 'Collection title is required'
   } else if (
-    form.title.trim().length > 180
+    form.title.trim().length >
+    180
   ) {
     errors.title = isRtl
       ? 'العنوان طويل جدًا، الحد الأقصى 180 حرفًا'
@@ -164,7 +382,8 @@ function validateForm(
   }
 
   if (
-    form.title_en.trim().length > 180
+    form.title_en.trim().length >
+    180
   ) {
     errors.title_en = isRtl
       ? 'العنوان الإنجليزي طويل جدًا'
@@ -172,7 +391,9 @@ function validateForm(
   }
 
   if (
-    toNumber(form.sort_order) < 0
+    toNumber(
+      form.sort_order
+    ) < 0
   ) {
     errors.sort_order = isRtl
       ? 'الترتيب لا يمكن أن يكون سالبًا'
@@ -191,7 +412,9 @@ function validateForm(
 
   const cleanVideoUrls =
     videoUrls
-      .map((url) => url.trim())
+      .map((url) =>
+        url.trim()
+      )
       .filter(Boolean)
 
   if (
@@ -227,7 +450,12 @@ export default function ManageGallery() {
 
   const {
     requestConfirm,
-  } = useContext(ConfirmContext)
+  } = useContext(
+    ConfirmContext
+  )
+
+  const uploadAbortRef =
+    useRef(null)
 
   const [
     collections,
@@ -257,12 +485,16 @@ export default function ManageGallery() {
   const [
     form,
     setForm,
-  ] = useState(EMPTY_COLLECTION)
+  ] = useState(
+    EMPTY_COLLECTION
+  )
 
   const [
     touched,
     setTouched,
-  ] = useState(EMPTY_TOUCHED)
+  ] = useState(
+    EMPTY_TOUCHED
+  )
 
   const [
     editCollectionId,
@@ -289,76 +521,110 @@ export default function ManageGallery() {
     setVideoUrls,
   ] = useState([''])
 
-  const pageTitle = isRtl
-    ? 'إدارة المعرض'
-    : 'Manage Gallery'
+  const [
+    currentCoverUrl,
+    setCurrentCoverUrl,
+  ] = useState('')
 
-  const load = async () => {
-    setLoading(true)
+  const [
+    uploadProgress,
+    setUploadProgress,
+  ] = useState(
+    EMPTY_UPLOAD_PROGRESS
+  )
 
-    try {
-      const data = await api.get(
-        '/gallery/collections/all',
-        {
-          globalLoading: false,
+  const pageTitle =
+    isRtl
+      ? 'إدارة المعرض'
+      : 'Manage Gallery'
 
-          loadingLabel:
-            'admin-gallery-collections',
-        }
-      )
+  const load =
+    useCallback(async () => {
+      setLoading(true)
 
-      setCollections(
-        Array.isArray(data)
-          ? data
-          : []
-      )
-    } catch (error) {
-      console.error(
-        'Failed to load gallery collections:',
-        error
-      )
+      try {
+        const data =
+          await api.get(
+            '/gallery/collections/all',
+            {
+              globalLoading:
+                false,
 
-      setCollections([])
-    } finally {
-      setLoading(false)
-    }
-  }
+              loadingLabel:
+                'admin-gallery-collections',
+            }
+          )
+
+        setCollections(
+          Array.isArray(data)
+            ? data
+            : []
+        )
+      } catch (error) {
+        console.error(
+          'Failed to load gallery collections:',
+          error
+        )
+
+        setCollections([])
+
+        toast.error(
+          normalizeErrorMessage(
+            error,
+            isRtl
+          ),
+          toastTheme.error
+        )
+      } finally {
+        setLoading(false)
+      }
+    }, [isRtl])
 
   useEffect(() => {
     load()
+  }, [load])
+
+  useEffect(() => {
+    return () => {
+      uploadAbortRef.current?.abort()
+    }
   }, [])
 
-  const errors = useMemo(
-    () =>
-      validateForm(
+  const errors =
+    useMemo(
+      () =>
+        validateForm(
+          form,
+          {
+            isRtl,
+            editCollectionId,
+            photoFiles,
+            videoFiles,
+            videoUrls,
+          }
+        ),
+      [
         form,
-        {
-          isRtl,
-          editCollectionId,
-          photoFiles,
-          videoFiles,
-          videoUrls,
-        }
-      ),
-    [
-      form,
-      isRtl,
-      editCollectionId,
-      photoFiles,
-      videoFiles,
-      videoUrls,
-    ]
-  )
+        isRtl,
+        editCollectionId,
+        photoFiles,
+        videoFiles,
+        videoUrls,
+      ]
+    )
 
   const filteredCollections =
     useMemo(() => {
-      if (filter === 'all') {
+      if (
+        filter === 'all'
+      ) {
         return collections
       }
 
       return collections.filter(
         (collection) =>
-          collection.type === filter
+          collection.type ===
+          filter
       )
     }, [
       collections,
@@ -368,61 +634,87 @@ export default function ManageGallery() {
   const photosCount =
     collections.filter(
       (collection) =>
-        collection.type === 'photo'
+        collection.type ===
+        'photo'
     ).length
 
   const videosCount =
     collections.filter(
       (collection) =>
-        collection.type === 'video'
+        collection.type ===
+        'video'
     ).length
 
-  const markTouched = (field) => {
-    setTouched((current) => ({
-      ...current,
-      [field]: true,
-    }))
-  }
+  const markTouched =
+    (field) => {
+      setTouched(
+        (current) => ({
+          ...current,
+          [field]: true,
+        })
+      )
+    }
 
   const updateForm = (
     key,
     value
   ) => {
-    setForm((current) => ({
-      ...current,
-      [key]: value,
-    }))
+    setForm(
+      (current) => ({
+        ...current,
+        [key]: value,
+      })
+    )
 
-    setTouched((current) => ({
-      ...current,
-      [key]: true,
-    }))
+    setTouched(
+      (current) => ({
+        ...current,
+        [key]: true,
+      })
+    )
   }
 
-  const resetModalState = () => {
-    setForm(EMPTY_COLLECTION)
-    setTouched(EMPTY_TOUCHED)
+  const resetModalState =
+    () => {
+      setForm(
+        EMPTY_COLLECTION
+      )
 
-    setEditCollectionId(null)
-    setCollectionItems([])
+      setTouched(
+        EMPTY_TOUCHED
+      )
 
-    setPhotoFiles([])
-    setVideoFiles([])
-    setVideoUrls([''])
-  }
+      setEditCollectionId(
+        null
+      )
 
-  const openAddCollection = (
-    type
-  ) => {
-    resetModalState()
+      setCollectionItems([])
 
-    setForm({
-      ...EMPTY_COLLECTION,
-      type,
-    })
+      setPhotoFiles([])
+      setVideoFiles([])
+      setVideoUrls([''])
 
-    setModalOpen(true)
-  }
+      setCurrentCoverUrl('')
+
+      setUploadProgress(
+        EMPTY_UPLOAD_PROGRESS
+      )
+
+      uploadAbortRef.current =
+        null
+    }
+
+  const openAddCollection =
+    (type) => {
+      resetModalState()
+
+      setForm({
+        ...EMPTY_COLLECTION,
+        type,
+      })
+
+      setModalOpen(true)
+    }
 
   const openEditCollection =
     async (collection) => {
@@ -432,19 +724,27 @@ export default function ManageGallery() {
         collection.id
       )
 
+      setCurrentCoverUrl(
+        collection.cover_url ||
+          ''
+      )
+
       setForm({
         title:
-          collection.title || '',
+          collection.title ||
+          '',
 
         title_en:
-          collection.title_en || '',
+          collection.title_en ||
+          '',
 
         type:
           collection.type ||
           'photo',
 
         sort_order:
-          collection.sort_order || 0,
+          collection.sort_order ||
+          0,
 
         is_active:
           isActive(
@@ -459,20 +759,35 @@ export default function ManageGallery() {
           await api.get(
             `/gallery/collections/${collection.id}`,
             {
-              globalLoading: false,
+              globalLoading:
+                false,
 
               loadingLabel:
                 'admin-gallery-collection-detail',
             }
           )
 
-        setCollectionItems(
+        const items =
           Array.isArray(
             detail?.items
           )
             ? detail.items
             : []
+
+        setCollectionItems(
+          items
         )
+
+        if (
+          !collection.cover_url &&
+          items.length > 0
+        ) {
+          setCurrentCoverUrl(
+            getItemMediaUrl(
+              items[0]
+            )
+          )
+        }
       } catch (error) {
         console.error(
           'Failed to load collection items:',
@@ -480,6 +795,14 @@ export default function ManageGallery() {
         )
 
         setCollectionItems([])
+
+        toast.error(
+          normalizeErrorMessage(
+            error,
+            isRtl
+          ),
+          toastTheme.error
+        )
       }
     }
 
@@ -492,147 +815,195 @@ export default function ManageGallery() {
     resetModalState()
   }
 
-  const handlePhotoFiles = (
-    event
-  ) => {
-    const files = Array.from(
-      event.target.files || []
-    )
-
-    const invalid = files.find(
-      (file) =>
-        !file.type.startsWith(
-          'image/'
-        ) ||
-        file.size >
-          MAX_IMAGE_SIZE
-    )
-
-    if (
-      files.length >
-      MAX_IMAGES
-    ) {
-      toast.error(
-        isRtl
-          ? `الحد الأقصى ${MAX_IMAGES} صورة في المرة الواحدة`
-          : `Maximum ${MAX_IMAGES} images at once`,
-        toastTheme.error
-      )
-
-      event.target.value = ''
-      return
-    }
-
-    if (invalid) {
-      toast.error(
-        isRtl
-          ? 'تأكد أن الملفات صور وحجم كل صورة لا يتجاوز 10MB'
-          : 'Use image files no larger than 10MB each',
-        toastTheme.error
-      )
-
-      event.target.value = ''
-      return
-    }
-
-    setPhotoFiles(files)
-    markTouched('media')
+  const cancelUpload = () => {
+    uploadAbortRef.current?.abort()
   }
 
-  const handleVideoFiles = (
-    event
-  ) => {
-    const files = Array.from(
-      event.target.files || []
-    )
+  const handlePhotoFiles =
+    (event) => {
+      const files =
+        Array.from(
+          event.target.files ||
+            []
+        )
 
-    const invalid = files.find(
-      (file) =>
-        !file.type.startsWith(
-          'video/'
-        ) ||
-        file.size >
-          MAX_VIDEO_SIZE
-    )
+      const invalid =
+        files.find(
+          (file) =>
+            !file.type.startsWith(
+              'image/'
+            ) ||
+            file.size >
+              MAX_IMAGE_SIZE
+        )
 
-    if (
-      files.length >
-      MAX_VIDEO_FILES
-    ) {
-      toast.error(
-        isRtl
-          ? `الحد الأقصى ${MAX_VIDEO_FILES} ملفات فيديو في المرة الواحدة`
-          : `Maximum ${MAX_VIDEO_FILES} video files at once`,
-        toastTheme.error
-      )
+      if (
+        files.length >
+        MAX_IMAGES
+      ) {
+        toast.error(
+          isRtl
+            ? `الحد الأقصى ${MAX_IMAGES} صورة في المرة الواحدة`
+            : `Maximum ${MAX_IMAGES} images at once`,
+          toastTheme.error
+        )
 
-      event.target.value = ''
-      return
+        event.target.value =
+          ''
+
+        return
+      }
+
+      if (invalid) {
+        toast.error(
+          isRtl
+            ? `الملف "${invalid.name}" ليس صورة صالحة أو حجمه أكبر من 10MB`
+            : `"${invalid.name}" is not a valid image or is larger than 10MB`,
+          toastTheme.error
+        )
+
+        event.target.value =
+          ''
+
+        return
+      }
+
+      setPhotoFiles(files)
+      markTouched('media')
+
+      event.target.value =
+        ''
     }
 
-    if (invalid) {
-      toast.error(
-        isRtl
-          ? 'تأكد أن الملفات فيديو وحجم كل فيديو لا يتجاوز 250MB'
-          : 'Use video files no larger than 250MB each',
-        toastTheme.error
-      )
+  const handleVideoFiles =
+    (event) => {
+      const files =
+        Array.from(
+          event.target.files ||
+            []
+        )
 
-      event.target.value = ''
-      return
+      if (
+        files.length >
+        MAX_VIDEO_FILES
+      ) {
+        toast.error(
+          isRtl
+            ? `الحد الأقصى ${MAX_VIDEO_FILES} ملفات فيديو في المرة الواحدة`
+            : `Maximum ${MAX_VIDEO_FILES} video files at once`,
+          toastTheme.error
+        )
+
+        event.target.value =
+          ''
+
+        return
+      }
+
+      const unsupported =
+        files.find(
+          (file) =>
+            !isSupportedVideoFile(
+              file
+            )
+        )
+
+      if (unsupported) {
+        toast.error(
+          isRtl
+            ? `صيغة الملف "${unsupported.name}" غير مدعومة`
+            : `The format of "${unsupported.name}" is not supported`,
+          toastTheme.error
+        )
+
+        event.target.value =
+          ''
+
+        return
+      }
+
+      const oversized =
+        files.find(
+          (file) =>
+            file.size >
+            MAX_VIDEO_SIZE
+        )
+
+      if (oversized) {
+        toast.error(
+          isRtl
+            ? `حجم الفيديو "${oversized.name}" يتجاوز 250MB`
+            : `"${oversized.name}" is larger than 250MB`,
+          toastTheme.error
+        )
+
+        event.target.value =
+          ''
+
+        return
+      }
+
+      setVideoFiles(files)
+      markTouched('media')
+
+      event.target.value =
+        ''
     }
 
-    setVideoFiles(files)
-    markTouched('media')
-  }
+  const removePhotoFile =
+    (index) => {
+      setPhotoFiles(
+        (current) =>
+          current.filter(
+            (_, currentIndex) =>
+              currentIndex !==
+              index
+          )
+      )
+
+      markTouched('media')
+    }
+
+  const removeVideoFile =
+    (index) => {
+      setVideoFiles(
+        (current) =>
+          current.filter(
+            (_, currentIndex) =>
+              currentIndex !==
+              index
+          )
+      )
+
+      markTouched('media')
+    }
 
   const addVideoUrl = () => {
-    setVideoUrls((current) => [
-      ...current,
-      '',
-    ])
+    setVideoUrls(
+      (current) => [
+        ...current,
+        '',
+      ]
+    )
   }
 
   const updateVideoUrl = (
     index,
     value
   ) => {
-    setVideoUrls((current) =>
-      current.map(
-        (
-          url,
-          currentIndex
-        ) =>
-          currentIndex === index
-            ? value
-            : url
-      )
-    )
-
-    markTouched(
-      'video_urls'
-    )
-
-    markTouched('media')
-  }
-
-  const removeVideoUrl = (
-    index
-  ) => {
-    setVideoUrls((current) => {
-      const next =
-        current.filter(
+    setVideoUrls(
+      (current) =>
+        current.map(
           (
-            _,
+            url,
             currentIndex
           ) =>
-            currentIndex !== index
+            currentIndex ===
+            index
+              ? value
+              : url
         )
-
-      return next.length
-        ? next
-        : ['']
-    })
+    )
 
     markTouched(
       'video_urls'
@@ -641,8 +1012,35 @@ export default function ManageGallery() {
     markTouched('media')
   }
 
+  const removeVideoUrl =
+    (index) => {
+      setVideoUrls(
+        (current) => {
+          const next =
+            current.filter(
+              (
+                _,
+                currentIndex
+              ) =>
+                currentIndex !==
+                index
+            )
+
+          return next.length
+            ? next
+            : ['']
+        }
+      )
+
+      markTouched(
+        'video_urls'
+      )
+
+      markTouched('media')
+    }
+
   const buildCollectionPayload =
-    () => ({
+    (coverUrl = currentCoverUrl) => ({
       title:
         form.title.trim(),
 
@@ -652,14 +1050,8 @@ export default function ManageGallery() {
       type:
         form.type,
 
-      /*
-       * No collection cover is used
-       * for photos or videos.
-       *
-       * Keep an empty value for backend
-       * compatibility.
-       */
-      cover_url: '',
+      cover_url:
+        coverUrl || '',
 
       sort_order:
         toNumber(
@@ -672,69 +1064,140 @@ export default function ManageGallery() {
         ),
     })
 
-  const uploadNewItems =
-    async (
-      collectionPayload
-    ) => {
+  const rollbackUploadedFiles =
+    async (urls) => {
+      const uniqueUrls =
+        [
+          ...new Set(
+            urls.filter(Boolean)
+          ),
+        ]
+
       if (
-        collectionPayload.type ===
-        'photo'
+        uniqueUrls.length === 0
       ) {
-        if (
-          !photoFiles.length
-        ) {
-          return []
-        }
+        return
+      }
+
+      await Promise.allSettled(
+        uniqueUrls.map(
+          (url) =>
+            api.deleteUploadedFile(
+              url,
+              {
+                globalLoading:
+                  false,
+              }
+            )
+        )
+      )
+    }
+
+  const uploadPhotoItems =
+    async (
+      collectionPayload,
+      signal
+    ) => {
+      const items = []
+      const uploadedUrls = []
+
+      for (
+        let index = 0;
+        index <
+        photoFiles.length;
+        index += 1
+      ) {
+        const file =
+          photoFiles[index]
+
+        setUploadProgress({
+          active: true,
+          stage: 'uploading',
+          fileName:
+            file.name,
+          current:
+            index + 1,
+          total:
+            photoFiles.length,
+          percent: 0,
+        })
 
         const uploaded =
-          await api.uploadMany(
-            photoFiles,
+          await api.upload(
+            file,
             'gallery/photos',
             {
-              globalLoading: false,
+              globalLoading:
+                false,
+
+              signal,
             }
           )
 
-        return (
-          uploaded.files || []
-        ).map(
-          (
-            file,
-            index
-          ) => ({
-            title:
-              collectionPayload.title,
+        if (!uploaded?.url) {
+          throw new Error(
+            isRtl
+              ? `لم يُرجع الخادم رابطًا للصورة "${file.name}"`
+              : `The server did not return a URL for "${file.name}"`
+          )
+        }
 
-            title_en:
-              collectionPayload.title_en,
+        uploadedUrls.push(
+          uploaded.url
+        )
 
-            image_url:
-              file.url,
-
-            /*
-             * This is an individual photo
-             * thumbnail, not a collection cover.
-             */
-            thumbnail_url:
-              file.url,
-
-            video_url: '',
-
-            sort_order:
-              collectionItems.length +
-              index +
-              1,
-
-            is_active: true,
+        setUploadProgress(
+          (current) => ({
+            ...current,
+            percent: 100,
           })
         )
+
+        items.push({
+          title:
+            collectionPayload.title,
+
+          title_en:
+            collectionPayload.title_en,
+
+          image_url:
+            uploaded.url,
+
+          thumbnail_url:
+            uploaded.url,
+
+          video_url: '',
+
+          sort_order:
+            collectionItems.length +
+            index +
+            1,
+
+          is_active: true,
+        })
       }
 
+      return {
+        items,
+
+        uploadedUrls,
+
+        coverUrl:
+          items[0]?.image_url ||
+          currentCoverUrl ||
+          '',
+      }
+    }
+
+  const uploadVideoItems =
+    async (
+      collectionPayload,
+      signal
+    ) => {
       const directItems =
         videoUrls
-          .map(
-            (url) =>
-              url.trim()
+          .map((url) =>
+            url.trim()
           )
           .filter(Boolean)
           .map(
@@ -751,8 +1214,7 @@ export default function ManageGallery() {
               image_url: '',
               thumbnail_url: '',
 
-              video_url:
-                url,
+              video_url: url,
 
               sort_order:
                 collectionItems.length +
@@ -763,54 +1225,148 @@ export default function ManageGallery() {
             })
           )
 
-      let uploadedItems = []
+      const uploadedItems = []
+      const uploadedUrls = []
 
       if (
-        videoFiles.length
+        videoFiles.length > 0 &&
+        typeof api
+          .uploadSignedMedia !==
+          'function'
       ) {
-        const uploaded =
-          await api.uploadManyMedia(
-            videoFiles,
-            'gallery/videos',
-            {
-              globalLoading: false,
-            }
-          )
-
-        uploadedItems = (
-          uploaded.files || []
-        ).map(
-          (
-            file,
-            index
-          ) => ({
-            title:
-              collectionPayload.title,
-
-            title_en:
-              collectionPayload.title_en,
-
-            image_url: '',
-            thumbnail_url: '',
-
-            video_url:
-              file.url,
-
-            sort_order:
-              collectionItems.length +
-              directItems.length +
-              index +
-              1,
-
-            is_active: true,
-          })
+        throw new Error(
+          isRtl
+            ? 'وظيفة رفع الفيديو الكبير غير مضافة داخل api.js'
+            : 'The large-video upload function is missing from api.js'
         )
       }
 
-      return [
-        ...directItems,
-        ...uploadedItems,
-      ]
+      for (
+        let index = 0;
+        index <
+        videoFiles.length;
+        index += 1
+      ) {
+        const originalFile =
+          videoFiles[index]
+
+        const file =
+          normalizeVideoFile(
+            originalFile
+          )
+
+        setUploadProgress({
+          active: true,
+          stage: 'uploading',
+          fileName:
+            file.name,
+          current:
+            index + 1,
+          total:
+            videoFiles.length,
+          percent: 0,
+        })
+
+        const uploaded =
+          await api.uploadSignedMedia(
+            file,
+            'gallery/videos',
+            {
+              globalLoading:
+                false,
+
+              timeoutMs:
+                VIDEO_UPLOAD_TIMEOUT,
+
+              signal,
+
+              onProgress: ({
+                percent,
+              }) => {
+                setUploadProgress(
+                  (current) => ({
+                    ...current,
+                    percent,
+                  })
+                )
+              },
+            }
+          )
+
+        if (!uploaded?.url) {
+          throw new Error(
+            isRtl
+              ? `لم يُرجع الخادم رابطًا للفيديو "${file.name}"`
+              : `The server did not return a URL for "${file.name}"`
+          )
+        }
+
+        uploadedUrls.push(
+          uploaded.url
+        )
+
+        uploadedItems.push({
+          title:
+            collectionPayload.title,
+
+          title_en:
+            collectionPayload.title_en,
+
+          image_url: '',
+          thumbnail_url: '',
+
+          video_url:
+            uploaded.url,
+
+          sort_order:
+            collectionItems.length +
+            directItems.length +
+            index +
+            1,
+
+          is_active: true,
+        })
+      }
+
+      const coverUrl =
+        uploadedItems[0]
+          ?.video_url ||
+        directItems[0]
+          ?.video_url ||
+        currentCoverUrl ||
+        ''
+
+      return {
+        items: [
+          ...directItems,
+          ...uploadedItems,
+        ],
+
+        uploadedUrls,
+
+        coverUrl,
+      }
+    }
+
+  const uploadNewItems =
+    async (
+      collectionPayload,
+      signal
+    ) => {
+      if (
+        collectionPayload.type ===
+        'photo'
+      ) {
+        return uploadPhotoItems(
+          collectionPayload,
+          signal
+        )
+      }
+
+      return uploadVideoItems(
+        collectionPayload,
+        signal
+      )
     }
 
   const handleSave =
@@ -823,42 +1379,116 @@ export default function ManageGallery() {
         video_urls: true,
       })
 
-      if (
-        Object.keys(errors)
-          .length > 0 ||
-        saving
-      ) {
+      if (saving) {
         return
       }
 
+      const currentErrors =
+        validateForm(
+          form,
+          {
+            isRtl,
+            editCollectionId,
+            photoFiles,
+            videoFiles,
+            videoUrls,
+          }
+        )
+
+      if (
+        Object.keys(
+          currentErrors
+        ).length > 0
+      ) {
+        const firstError =
+          Object.values(
+            currentErrors
+          )[0]
+
+        toast.error(
+          firstError,
+          toastTheme.error
+        )
+
+        return
+      }
+
+      const controller =
+        new AbortController()
+
+      uploadAbortRef.current =
+        controller
+
       setSaving(true)
 
+      let uploadedUrls = []
+      let dataPersisted = false
+
       try {
-        const collectionPayload =
+        const initialPayload =
           buildCollectionPayload()
 
-        const items =
+        const uploadResult =
           await uploadNewItems(
-            collectionPayload
+            initialPayload,
+            controller.signal
           )
+
+        uploadedUrls =
+          uploadResult
+            .uploadedUrls || []
+
+        const collectionPayload =
+          buildCollectionPayload(
+            uploadResult.coverUrl
+          )
+
+        setCurrentCoverUrl(
+          collectionPayload.cover_url
+        )
+
+        setUploadProgress({
+          active: true,
+          stage: 'saving',
+          fileName: '',
+          current:
+            uploadProgress.total ||
+            1,
+          total:
+            uploadProgress.total ||
+            1,
+          percent: 100,
+        })
 
         if (editCollectionId) {
           await api.put(
             `/gallery/collections/${editCollectionId}`,
             collectionPayload,
             {
-              globalLoading: false,
+              globalLoading:
+                false,
+
+              signal:
+                controller.signal,
             }
           )
 
-          if (items.length) {
+          if (
+            uploadResult
+              .items.length > 0
+          ) {
             await api.post(
               `/gallery/collections/${editCollectionId}/items`,
               {
-                items,
+                items:
+                  uploadResult.items,
               },
               {
-                globalLoading: false,
+                globalLoading:
+                  false,
+
+                signal:
+                  controller.signal,
               }
             )
           }
@@ -869,52 +1499,73 @@ export default function ManageGallery() {
               collection:
                 collectionPayload,
 
-              items,
+              items:
+                uploadResult.items,
             },
             {
-              globalLoading: false,
+              globalLoading:
+                false,
+
+              signal:
+                controller.signal,
             }
           )
         }
 
+        dataPersisted = true
+
         toast.success(
           editCollectionId
             ? isRtl
-              ? 'تم تحديث المجموعة بنجاح'
-              : 'Collection updated successfully'
+              ? 'تم تحديث المجموعة وملفاتها بنجاح'
+              : 'The collection and its files were updated successfully'
             : isRtl
-              ? 'تم حفظ المجموعة بنجاح'
-              : 'Collection saved successfully',
+              ? 'تم حفظ المجموعة وملفاتها بنجاح'
+              : 'The collection and its files were saved successfully',
           toastTheme.success
         )
 
-        await load()
-
-        /*
-         * Close directly because saving
-         * remains true until finally runs.
-         */
         setModalOpen(false)
         resetModalState()
+
+        await load()
       } catch (error) {
+        console.error(
+          'Save gallery collection failed:',
+          error
+        )
+
+        if (
+          !dataPersisted &&
+          uploadedUrls.length >
+            0
+        ) {
+          await rollbackUploadedFiles(
+            uploadedUrls
+          )
+        }
+
         toast.error(
-          error?.message ||
-            (
-              isRtl
-                ? 'حدث خطأ'
-                : 'Something went wrong'
-            ),
+          normalizeErrorMessage(
+            error,
+            isRtl
+          ),
           toastTheme.error
         )
       } finally {
+        uploadAbortRef.current =
+          null
+
         setSaving(false)
+
+        setUploadProgress(
+          EMPTY_UPLOAD_PROGRESS
+        )
       }
     }
 
   const handleDeleteCollection =
-    async (
-      collection
-    ) => {
+    async (collection) => {
       const confirmed =
         await requestConfirm({
           title: isRtl
@@ -925,8 +1576,7 @@ export default function ManageGallery() {
             ? 'سيتم حذف المجموعة وجميع الصور أو الفيديوهات التابعة لها نهائيًا.'
             : 'The collection and all of its media will be permanently removed.',
 
-          variant:
-            'danger',
+          variant: 'danger',
 
           confirmText:
             t.delete,
@@ -941,7 +1591,8 @@ export default function ManageGallery() {
           `/gallery/collections/${collection.id}`,
           null,
           {
-            globalLoading: false,
+            globalLoading:
+              false,
           }
         )
 
@@ -955,12 +1606,10 @@ export default function ManageGallery() {
         await load()
       } catch (error) {
         toast.error(
-          error?.message ||
-            (
-              isRtl
-                ? 'حدث خطأ أثناء الحذف'
-                : 'Delete failed'
-            ),
+          normalizeErrorMessage(
+            error,
+            isRtl
+          ),
           toastTheme.error
         )
       }
@@ -978,8 +1627,7 @@ export default function ManageGallery() {
             ? 'سيتم حذف هذا العنصر من المجموعة نهائيًا.'
             : 'This item will be permanently removed from the collection.',
 
-          variant:
-            'danger',
+          variant: 'danger',
 
           confirmText:
             t.delete,
@@ -994,22 +1642,52 @@ export default function ManageGallery() {
           `/gallery/items/${item.id}`,
           null,
           {
-            globalLoading: false,
+            globalLoading:
+              false,
           }
         )
 
+        const remainingItems =
+          collectionItems.filter(
+            (currentItem) =>
+              currentItem.id !==
+              item.id
+          )
+
         setCollectionItems(
-          (current) =>
-            current.filter(
-              (
-                currentItem
-              ) =>
-                currentItem.id !==
-                item.id
-            )
+          remainingItems
         )
 
-        await load()
+        const deletedMediaUrl =
+          getItemMediaUrl(item)
+
+        if (
+          deletedMediaUrl &&
+          deletedMediaUrl ===
+            currentCoverUrl
+        ) {
+          const nextCoverUrl =
+            getItemMediaUrl(
+              remainingItems[0]
+            )
+
+          setCurrentCoverUrl(
+            nextCoverUrl
+          )
+
+          if (editCollectionId) {
+            await api.put(
+              `/gallery/collections/${editCollectionId}`,
+              buildCollectionPayload(
+                nextCoverUrl
+              ),
+              {
+                globalLoading:
+                  false,
+              }
+            )
+          }
+        }
 
         toast.success(
           isRtl
@@ -1017,18 +1695,20 @@ export default function ManageGallery() {
             : 'Item deleted successfully',
           toastTheme.success
         )
+
+        await load()
       } catch (error) {
         toast.error(
-          error?.message ||
-            t.error,
+          normalizeErrorMessage(
+            error,
+            isRtl
+          ),
           toastTheme.error
         )
       }
     }
 
-  const getTitle = (
-    item
-  ) => {
+  const getTitle = (item) => {
     if (isRtl) {
       return (
         item.title ||
@@ -1054,8 +1734,8 @@ export default function ManageGallery() {
 
           <p className="mt-2 text-sm leading-6 text-gray-500">
             {isRtl
-              ? 'إدارة مجموعات الصور والفيديوهات دون استخدام صور غلاف للمجموعات.'
-              : 'Manage photo and video collections without collection cover images.'}
+              ? 'إدارة مجموعات الصور والفيديوهات، مع اختيار أول ملف مرفوع غلافًا للمجموعة تلقائيًا.'
+              : 'Manage photo and video collections. The first uploaded file is automatically used as the collection cover.'}
           </p>
         </div>
 
@@ -1087,9 +1767,7 @@ export default function ManageGallery() {
             }
             className="btn-primary justify-center"
           >
-            <Video
-              size={17}
-            />
+            <Video size={17} />
 
             {isRtl
               ? 'إضافة مجموعة فيديوهات'
@@ -1144,6 +1822,11 @@ export default function ManageGallery() {
 
       {loading ? (
         <div className="flex min-h-[260px] items-center justify-center rounded-2xl border border-gray-100 bg-white text-sm font-medium text-gray-400 shadow-sm">
+          <Loader2
+            size={20}
+            className="me-2 animate-spin"
+          />
+
           {isRtl
             ? 'جارٍ تحميل المجموعات...'
             : 'Loading collections...'}
@@ -1160,22 +1843,18 @@ export default function ManageGallery() {
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredCollections.map(
-            (
-              collection
-            ) => (
+            (collection) => (
               <article
                 key={
                   collection.id
                 }
                 className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
-                <CollectionHeader
+                <CollectionCover
                   collection={
                     collection
                   }
-                  isRtl={
-                    isRtl
-                  }
+                  isRtl={isRtl}
                 />
 
                 <div className="p-4">
@@ -1273,10 +1952,7 @@ export default function ManageGallery() {
                       }
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-50 text-sm font-semibold text-blue-600 transition hover:bg-blue-100"
                     >
-                      <Edit
-                        size={16}
-                      />
-
+                      <Edit size={16} />
                       {t.edit}
                     </button>
 
@@ -1320,39 +1996,29 @@ export default function ManageGallery() {
                 : 'Add Video Collection'
         }
         subtitle={
-          form.type ===
-          'video'
+          form.type === 'video'
             ? isRtl
-              ? 'يمكنك إضافة روابط فيديو مباشرة أو رفع ملفات فيديو من جهازك.'
-              : 'Add direct video links or upload video files from your device.'
+              ? 'يمكنك إضافة روابط فيديو مباشرة أو رفع ملفات فيديو من جهازك. سيصبح أول فيديو غلافًا للمجموعة.'
+              : 'Add direct video links or upload video files from your device. The first video becomes the collection cover.'
             : isRtl
-              ? `يمكن رفع حتى ${MAX_IMAGES} صورة من جهازك، ولا تحتاج المجموعة إلى صورة غلاف.`
-              : `Upload up to ${MAX_IMAGES} images from your device. No collection cover is required.`
+              ? `يمكن رفع حتى ${MAX_IMAGES} صورة، وستصبح أول صورة غلافًا للمجموعة.`
+              : `Upload up to ${MAX_IMAGES} images. The first image becomes the collection cover.`
         }
         icon={
-          form.type ===
-          'video'
+          form.type === 'video'
             ? Film
             : ImageIcon
         }
         isRtl={isRtl}
         size="wide"
-        onClose={
-          closeModal
-        }
-        closeDisabled={
-          saving
-        }
+        onClose={closeModal}
+        closeDisabled={saving}
         footer={
           <div className="grid w-full grid-cols-2 gap-3 sm:flex sm:justify-end">
             <button
               type="button"
-              onClick={
-                closeModal
-              }
-              disabled={
-                saving
-              }
+              onClick={closeModal}
+              disabled={saving}
               className="btn-outline justify-center"
             >
               {t.cancel}
@@ -1360,20 +2026,18 @@ export default function ManageGallery() {
 
             <button
               type="button"
-              onClick={
-                handleSave
-              }
-              disabled={
-                saving ||
-                Object.keys(
-                  errors
-                ).length > 0
-              }
+              onClick={handleSave}
+              disabled={saving}
               className="btn-primary justify-center"
             >
-              <Save
-                size={16}
-              />
+              {saving ? (
+                <Loader2
+                  size={16}
+                  className="animate-spin"
+                />
+              ) : (
+                <Save size={16} />
+              )}
 
               {saving
                 ? t.saving
@@ -1383,6 +2047,18 @@ export default function ManageGallery() {
         }
       >
         <div className="space-y-6">
+          {uploadProgress.active && (
+            <UploadProgressPanel
+              progress={
+                uploadProgress
+              }
+              isRtl={isRtl}
+              onCancel={
+                cancelUpload
+              }
+            />
+          )}
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ValidatedField
               label={
@@ -1390,12 +2066,8 @@ export default function ManageGallery() {
                   ? 'عنوان المجموعة بالعربي'
                   : 'Arabic Title'
               }
-              value={
-                form.title
-              }
-              onChange={(
-                value
-              ) =>
+              value={form.title}
+              onChange={(value) =>
                 updateForm(
                   'title',
                   value
@@ -1406,14 +2078,13 @@ export default function ManageGallery() {
                   'title'
                 )
               }
-              error={
-                errors.title
-              }
+              error={errors.title}
               touched={
                 touched.title
               }
               required
               dir="rtl"
+              disabled={saving}
             />
 
             <ValidatedField
@@ -1425,9 +2096,7 @@ export default function ManageGallery() {
               value={
                 form.title_en
               }
-              onChange={(
-                value
-              ) =>
+              onChange={(value) =>
                 updateForm(
                   'title_en',
                   value
@@ -1445,6 +2114,7 @@ export default function ManageGallery() {
                 touched.title_en
               }
               dir="ltr"
+              disabled={saving}
             />
 
             <ValidatedField
@@ -1453,33 +2123,23 @@ export default function ManageGallery() {
                   ? 'نوع المجموعة'
                   : 'Collection Type'
               }
-              value={
-                form.type
-              }
-              onChange={(
-                value
-              ) =>
+              value={form.type}
+              onChange={(value) =>
                 updateForm(
                   'type',
                   value
-                )
-              }
-              onBlur={() =>
-                markTouched(
-                  'type'
                 )
               }
               touched
               disabled={
                 Boolean(
                   editCollectionId
-                )
+                ) || saving
               }
               as="select"
               options={[
                 {
-                  value:
-                    'photo',
+                  value: 'photo',
 
                   label:
                     isRtl
@@ -1488,8 +2148,7 @@ export default function ManageGallery() {
                 },
 
                 {
-                  value:
-                    'video',
+                  value: 'video',
 
                   label:
                     isRtl
@@ -1508,9 +2167,7 @@ export default function ManageGallery() {
               value={
                 form.sort_order
               }
-              onChange={(
-                value
-              ) =>
+              onChange={(value) =>
                 updateForm(
                   'sort_order',
                   value
@@ -1530,6 +2187,7 @@ export default function ManageGallery() {
               type="number"
               min="0"
               dir="ltr"
+              disabled={saving}
             />
           </div>
 
@@ -1546,24 +2204,20 @@ export default function ManageGallery() {
                     : 'Upload Collection Images from Device'
               }
               accept="image/*"
-              files={
-                photoFiles
-              }
+              files={photoFiles}
               onChange={
                 handlePhotoFiles
               }
-              icon={
-                ImageIcon
+              onRemove={
+                removePhotoFile
               }
-              error={
-                errors.media
-              }
+              icon={ImageIcon}
+              error={errors.media}
               touched={
                 touched.media
               }
-              isRtl={
-                isRtl
-              }
+              isRtl={isRtl}
+              disabled={saving}
               hint={
                 isRtl
                   ? `حتى ${MAX_IMAGES} صورة، وحجم كل صورة لا يتجاوز 10MB`
@@ -1582,25 +2236,21 @@ export default function ManageGallery() {
                       ? 'رفع ملفات فيديو من الجهاز'
                       : 'Upload Video Files from Device'
                 }
-                accept="video/*"
-                files={
-                  videoFiles
-                }
+                accept="video/*,.mkv"
+                files={videoFiles}
                 onChange={
                   handleVideoFiles
                 }
-                icon={
-                  UploadCloud
+                onRemove={
+                  removeVideoFile
                 }
-                error={
-                  errors.media
-                }
+                icon={UploadCloud}
+                error={errors.media}
                 touched={
                   touched.media
                 }
-                isRtl={
-                  isRtl
-                }
+                isRtl={isRtl}
+                disabled={saving}
                 hint={
                   isRtl
                     ? `حتى ${MAX_VIDEO_FILES} فيديوهات، وحجم كل فيديو لا يتجاوز 250MB`
@@ -1626,14 +2276,11 @@ export default function ManageGallery() {
 
                   <button
                     type="button"
-                    onClick={
-                      addVideoUrl
-                    }
-                    className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/20"
+                    onClick={addVideoUrl}
+                    disabled={saving}
+                    className="inline-flex h-9 items-center gap-1 rounded-xl bg-primary/10 px-3 text-xs font-bold text-primary transition hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <Plus
-                      size={14}
-                    />
+                    <Plus size={14} />
 
                     {isRtl
                       ? 'إضافة رابط'
@@ -1643,14 +2290,9 @@ export default function ManageGallery() {
 
                 <div className="space-y-2">
                   {videoUrls.map(
-                    (
-                      url,
-                      index
-                    ) => (
+                    (url, index) => (
                       <div
-                        key={
-                          index
-                        }
+                        key={index}
                         className="flex items-center gap-2"
                       >
                         <div className="relative min-w-0 flex-1">
@@ -1661,16 +2303,14 @@ export default function ManageGallery() {
 
                           <input
                             type="url"
-                            value={
-                              url
-                            }
+                            value={url}
+                            disabled={saving}
                             onChange={(
                               event
                             ) =>
                               updateVideoUrl(
                                 index,
-                                event
-                                  .target
+                                event.target
                                   .value
                               )
                             }
@@ -1697,12 +2337,13 @@ export default function ManageGallery() {
                           1 && (
                           <button
                             type="button"
+                            disabled={saving}
                             onClick={() =>
                               removeVideoUrl(
                                 index
                               )
                             }
-                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100"
+                            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-50 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                             aria-label={
                               isRtl
                                 ? 'حذف الرابط'
@@ -1745,18 +2386,12 @@ export default function ManageGallery() {
                   {collectionItems.map(
                     (item) => (
                       <div
-                        key={
-                          item.id
-                        }
+                        key={item.id}
                         className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white p-3 shadow-sm"
                       >
                         <ItemThumb
-                          item={
-                            item
-                          }
-                          type={
-                            form.type
-                          }
+                          item={item}
+                          type={form.type}
                         />
 
                         <div className="min-w-0 flex-1">
@@ -1779,12 +2414,13 @@ export default function ManageGallery() {
 
                         <button
                           type="button"
+                          disabled={saving}
                           onClick={() =>
                             handleDeleteItem(
                               item
                             )
                           }
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
                           aria-label={
                             isRtl
                               ? 'حذف العنصر'
@@ -1805,14 +2441,11 @@ export default function ManageGallery() {
           <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
             <input
               type="checkbox"
-              checked={
-                Boolean(
-                  form.is_active
-                )
-              }
-              onChange={(
-                event
-              ) =>
+              checked={Boolean(
+                form.is_active
+              )}
+              disabled={saving}
+              onChange={(event) =>
                 updateForm(
                   'is_active',
                   event.target
@@ -1834,25 +2467,108 @@ export default function ManageGallery() {
   )
 }
 
+function UploadProgressPanel({
+  progress,
+  isRtl,
+  onCancel,
+}) {
+  const isSaving =
+    progress.stage ===
+    'saving'
+
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <Loader2
+              size={17}
+              className="shrink-0 animate-spin text-primary"
+            />
+
+            <p className="text-sm font-bold text-dark">
+              {isSaving
+                ? isRtl
+                  ? 'جارٍ حفظ بيانات المجموعة...'
+                  : 'Saving collection data...'
+                : isRtl
+                  ? 'جارٍ رفع الملف...'
+                  : 'Uploading file...'}
+            </p>
+          </div>
+
+          {!isSaving &&
+            progress.fileName && (
+              <p
+                className="mt-1 truncate text-xs text-gray-500"
+                dir="ltr"
+              >
+                {progress.fileName}
+              </p>
+            )}
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="text-sm font-bold text-primary">
+            {progress.percent}%
+          </span>
+
+          {!isSaving && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100"
+              aria-label={
+                isRtl
+                  ? 'إلغاء الرفع'
+                  : 'Cancel upload'
+              }
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-primary/10">
+        <div
+          className="h-full rounded-full bg-primary transition-[width] duration-200"
+          style={{
+            width:
+              `${progress.percent}%`,
+          }}
+        />
+      </div>
+
+      {!isSaving &&
+        progress.total > 0 && (
+          <p className="mt-2 text-xs text-gray-500">
+            {isRtl
+              ? `الملف ${progress.current} من ${progress.total}`
+              : `File ${progress.current} of ${progress.total}`}
+          </p>
+        )}
+    </div>
+  )
+}
+
 function MediaPicker({
   label,
   accept,
   files,
   onChange,
+  onRemove,
   icon: Icon,
   error,
   touched,
   isRtl,
   hint,
+  disabled,
 }) {
+  const reactId = useId()
+
   const inputId =
-    `${
-      accept.includes(
-        'video'
-      )
-        ? 'video'
-        : 'photo'
-    }-media-picker`
+    `gallery-media-${reactId}`
 
   return (
     <div>
@@ -1865,26 +2581,23 @@ function MediaPicker({
         type="file"
         accept={accept}
         multiple
-        onChange={
-          onChange
-        }
+        disabled={disabled}
+        onChange={onChange}
         className="hidden"
       />
 
       <label
-        htmlFor={
-          inputId
-        }
-        className={`group flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition ${
-          touched && error
-            ? 'border-red-300 bg-red-50/50'
-            : 'border-primary/25 bg-primary/5 hover:border-primary/50 hover:bg-primary/10'
+        htmlFor={inputId}
+        className={`group flex flex-col items-center justify-center rounded-2xl border-2 border-dashed px-4 py-6 text-center transition ${
+          disabled
+            ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-60'
+            : touched && error
+              ? 'cursor-pointer border-red-300 bg-red-50/50'
+              : 'cursor-pointer border-primary/25 bg-primary/5 hover:border-primary/50 hover:bg-primary/10'
         }`}
       >
         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary shadow-sm ring-1 ring-primary/10 transition group-hover:scale-105">
-          <Icon
-            size={23}
-          />
+          <Icon size={23} />
         </div>
 
         <p className="text-sm font-bold text-dark">
@@ -1898,42 +2611,32 @@ function MediaPicker({
         </p>
       </label>
 
-      {touched &&
-        error && (
-          <p className="mt-2 text-xs font-medium text-red-600">
-            {error}
-          </p>
-        )}
+      {touched && error && (
+        <p className="mt-2 text-xs font-medium text-red-600">
+          {error}
+        </p>
+      )}
 
-      {files.length >
-        0 && (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {files.length > 0 && (
+        <div className="mt-3 space-y-2">
           {files
-            .slice(
-              0,
-              8
-            )
+            .slice(0, 10)
             .map(
-              (
-                file,
-                index
-              ) => (
+              (file, index) => (
                 <div
-                  key={`${file.name}-${index}`}
+                  key={`${file.name}-${file.size}-${index}`}
                   className="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2 shadow-sm"
-                  dir="ltr"
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Icon
-                      size={16}
-                    />
+                    <Icon size={16} />
                   </div>
 
-                  <div className="min-w-0 flex-1">
-                    <p className="line-clamp-1 text-xs font-semibold text-gray-700">
-                      {
-                        file.name
-                      }
+                  <div
+                    className="min-w-0 flex-1"
+                    dir="ltr"
+                  >
+                    <p className="truncate text-xs font-semibold text-gray-700">
+                      {file.name}
                     </p>
 
                     <p className="mt-0.5 text-[11px] text-gray-400">
@@ -1942,22 +2645,102 @@ function MediaPicker({
                       )}
                     </p>
                   </div>
+
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    onClick={() =>
+                      onRemove(index)
+                    }
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-50 text-red-600 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={
+                      isRtl
+                        ? 'إزالة الملف'
+                        : 'Remove file'
+                    }
+                  >
+                    <X size={15} />
+                  </button>
                 </div>
               )
             )}
+
+          {files.length > 10 && (
+            <p className="text-xs font-medium text-gray-500">
+              {isRtl
+                ? `بالإضافة إلى ${files.length - 10} ملفات أخرى`
+                : `Plus ${files.length - 10} more files`}
+            </p>
+          )}
         </div>
       )}
     </div>
   )
 }
 
-function CollectionHeader({
+function CollectionCover({
   collection,
   isRtl,
 }) {
+  const [failed, setFailed] =
+    useState(false)
+
+  const coverUrl =
+    resolveCollectionMediaUrl(
+      collection.cover_url
+    )
+
   const isPhoto =
     collection.type ===
     'photo'
+
+  if (
+    coverUrl &&
+    !failed &&
+    isPhoto
+  ) {
+    return (
+      <img
+        src={coverUrl}
+        alt=""
+        loading="lazy"
+        onError={() =>
+          setFailed(true)
+        }
+        className="aspect-[16/8] w-full bg-gray-100 object-cover"
+      />
+    )
+  }
+
+  if (
+    coverUrl &&
+    !failed &&
+    !isPhoto &&
+    isDirectPlayableVideoUrl(
+      coverUrl
+    )
+  ) {
+    return (
+      <div className="relative aspect-[16/8] overflow-hidden bg-black">
+        <video
+          src={coverUrl}
+          muted
+          playsInline
+          preload="metadata"
+          onError={() =>
+            setFailed(true)
+          }
+          className="h-full w-full object-cover"
+        />
+
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
+          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/90 text-primary shadow-lg">
+            <Video size={27} />
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-[112px] items-center justify-center bg-gradient-to-br from-primary/10 via-primary/5 to-white">
@@ -1968,9 +2751,7 @@ function CollectionHeader({
               size={27}
             />
           ) : (
-            <Video
-              size={27}
-            />
+            <Video size={27} />
           )}
         </div>
 
@@ -1992,15 +2773,7 @@ function ItemThumb({
   item,
   type,
 }) {
-  /*
-   * Individual photo items can still show
-   * their own image preview.
-   *
-   * This is not a collection cover.
-   */
-  if (
-    type === 'photo'
-  ) {
+  if (type === 'photo') {
     const image =
       item.thumbnail_url ||
       item.image_url
@@ -2008,10 +2781,11 @@ function ItemThumb({
     if (image) {
       return (
         <img
-          src={resolveMediaUrl(
+          src={resolveCollectionMediaUrl(
             image
           )}
           alt=""
+          loading="lazy"
           className="h-12 w-12 shrink-0 rounded-lg object-cover"
         />
       )
@@ -2020,11 +2794,8 @@ function ItemThumb({
 
   return (
     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-      {type ===
-      'video' ? (
-        <Video
-          size={18}
-        />
+      {type === 'video' ? (
+        <Video size={18} />
       ) : (
         <ImageIcon
           size={18}
@@ -2042,9 +2813,7 @@ function FilterButton({
   return (
     <button
       type="button"
-      onClick={
-        onClick
-      }
+      onClick={onClick}
       className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${
         active
           ? 'bg-primary text-white shadow-sm'
