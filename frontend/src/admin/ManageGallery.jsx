@@ -1827,8 +1827,8 @@ export default function ManageGallery() {
 
           <p className="mt-2 text-sm leading-6 text-gray-500">
             {isRtl
-              ? 'إدارة مجموعات الصور والفيديوهات، مع اختيار أول ملف مرفوع غلافًا للمجموعة تلقائيًا.'
-              : 'Manage photo and video collections. The first uploaded file is automatically used as the collection cover.'}
+              ? 'إدارة مجموعات الصور والفيديوهات.'
+              : 'Manage photo and video collections.'}
           </p>
         </div>
 
