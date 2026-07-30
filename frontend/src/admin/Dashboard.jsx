@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { resolveMediaUrl } from '../lib/media'
 import { Link } from 'react-router-dom'
 import api from '../lib/api'
-import AdminPreloader from './AdminPreloader'
+import { useGlobalLoading } from '../context/LoadingContext'
 import {
   Newspaper,
   Calendar,
@@ -24,8 +24,11 @@ import {
   ADMIN_ROLES,
 } from './adminPermissions'
 
+let dashboardHasLoadedOnce = false
+
 export default function Dashboard() {
   const { t, isRtl, admin } = useAdminLang()
+  const { startLoading, stopLoading } = useGlobalLoading()
 
   const [stats, setStats] = useState({
     news: 0,
@@ -49,6 +52,10 @@ export default function Dashboard() {
 
     let cancelled = false
 
+    const dashboardLoadingToken = dashboardHasLoadedOnce
+      ? null
+      : startLoading('admin-dashboard-data')
+
     const loadDashboard = async () => {
       setLoading(true)
 
@@ -59,42 +66,60 @@ export default function Dashboard() {
         if (features.viewNews) {
           requests.push({
             type: 'news',
-            request: api.get('/news/all'),
+            request: api.get('/news/all', {
+              globalLoading: false,
+              loadingLabel: 'dashboard-news',
+            }),
           })
         }
 
         if (features.viewEvents) {
           requests.push({
             type: 'events',
-            request: api.get('/events/all'),
+            request: api.get('/events/all', {
+              globalLoading: false,
+              loadingLabel: 'dashboard-events',
+            }),
           })
         }
 
         if (features.viewAdmins) {
           requests.push({
             type: 'admins',
-            request: api.get('/admins'),
+            request: api.get('/admins', {
+              globalLoading: false,
+              loadingLabel: 'dashboard-admins',
+            }),
           })
         }
 
         if (features.viewMessages) {
           requests.push({
             type: 'messages',
-            request: api.get('/contact'),
+            request: api.get('/contact', {
+              globalLoading: false,
+              loadingLabel: 'dashboard-messages',
+            }),
           })
         }
 
         if (features.viewHeritage) {
           requests.push({
             type: 'heritage',
-            request: api.get('/heritage/all'),
+            request: api.get('/heritage/all', {
+              globalLoading: false,
+              loadingLabel: 'dashboard-heritage',
+            }),
           })
         }
 
         if (features.viewPartners) {
           requests.push({
             type: 'partners',
-            request: api.get('/partners/all'),
+            request: api.get('/partners/all', {
+              globalLoading: false,
+              loadingLabel: 'dashboard-partners',
+            }),
           })
         }
 
@@ -102,8 +127,16 @@ export default function Dashboard() {
           requests.push({
             type: 'gallery',
             request: api
-              .get('/gallery/collections/all')
-              .catch(() => api.get('/gallery/all')),
+              .get('/gallery/collections/all', {
+                globalLoading: false,
+                loadingLabel: 'dashboard-gallery',
+              })
+              .catch(() =>
+                api.get('/gallery/all', {
+                  globalLoading: false,
+                  loadingLabel: 'dashboard-gallery-fallback',
+                })
+              ),
           })
         }
 
@@ -173,7 +206,12 @@ export default function Dashboard() {
         }
       } finally {
         if (!cancelled) {
+          dashboardHasLoadedOnce = true
           setLoading(false)
+        }
+
+        if (dashboardLoadingToken) {
+          stopLoading(dashboardLoadingToken)
         }
       }
     }
@@ -182,8 +220,12 @@ export default function Dashboard() {
 
     return () => {
       cancelled = true
+
+      if (dashboardLoadingToken) {
+        stopLoading(dashboardLoadingToken)
+      }
     }
-  }, [admin?.role])
+  }, [admin?.role, startLoading, stopLoading])
 
   const features = useMemo(() => {
     if (!admin?.role) return {}
@@ -262,17 +304,19 @@ export default function Dashboard() {
     }
   }
 
-  if (!admin || loading) {
+  if (!admin) {
+    return null
+  }
+
+  /*
+   * The first dashboard load is covered by the global preloader.
+   * Later revisits use a small page-level loading state instead.
+   */
+  if (loading) {
     return (
-      <AdminPreloader
-        lang={isRtl ? 'ar' : 'en'}
-        compact
-        text={
-          isRtl
-            ? 'جارٍ تحميل بيانات لوحة التحكم...'
-            : 'Loading dashboard data...'
-        }
-      />
+      <div className="flex min-h-[280px] items-center justify-center rounded-2xl border border-gray-100 bg-white text-sm font-medium text-gray-400 shadow-sm">
+        {t.loading || (isRtl ? 'جارٍ تحميل البيانات...' : 'Loading data...')}
+      </div>
     )
   }
 

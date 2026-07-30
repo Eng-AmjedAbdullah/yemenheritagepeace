@@ -25,7 +25,6 @@ import {
 
 import { adminTranslations, AdminLangContext } from './adminI18n'
 import { getSidebarItems, canAccessPage } from './adminPermissions'
-import AdminPreloader from './AdminPreloader'
 import api from '../lib/api'
 
 export const ConfirmContext = React.createContext()
@@ -371,18 +370,10 @@ export default function AdminLayout() {
     navigate('/admin/login', { replace: true })
   }
 
+  // The single global application preloader handles this loading state.
+  // Returning null prevents a second admin-specific preloader from rendering.
   if (loading) {
-    return (
-      <AdminPreloader
-        lang={adminLang}
-        fullScreen
-        text={
-          isRtl
-            ? 'جارٍ تجهيز لوحة الإدارة...'
-            : 'Preparing admin dashboard...'
-        }
-      />
-    )
+    return null
   }
 
   if (!admin) {
