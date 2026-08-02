@@ -70,13 +70,32 @@ const GOALS_DATA = {
   ],
 }
 
+const CURRENT_HERO_IMAGE_URL =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
+
 const DEFAULT_HERO_SLIDE = {
   id: 'default-hero',
-  image_url: '/default-hero.jpg',
+  image_url: CURRENT_HERO_IMAGE_URL,
   caption_ar: 'قلعة القاهرة – تعز (اليمن)',
   caption_en: 'Al-Qahira Castle - Taiz (Yemen)',
-  alt_ar: 'قلعة القاهرة – تعز (اليمن)',
-  alt_en: 'Al-Qahira Castle - Taiz (Yemen)',
+  alt_ar: 'قلعة القاهرة تطل على مدينة تعز',
+  alt_en: 'Al-Qahira Castle overlooking Taiz city',
+}
+
+function resolveHeroImageUrl(value) {
+  const resolved = resolveMediaUrl(value)
+
+  if (!resolved) {
+    return CURRENT_HERO_IMAGE_URL
+  }
+
+  const isCurrentOriginalImage =
+    resolved.includes('The_castle_above_Taiz_%288683935588%29.jpg') &&
+    !resolved.includes('/thumb/')
+
+  return isCurrentOriginalImage
+    ? CURRENT_HERO_IMAGE_URL
+    : resolved
 }
 
 function SectionTitle({ children, align = 'center' }) {
@@ -116,10 +135,15 @@ export default function Home() {
   const ChevronDir = isRtl ? ChevronLeft : ChevronRight
   const goals = GOALS_DATA[lang] || GOALS_DATA.ar
 
-  const heroSlidesData = useMemo(
-    () => (heroSlides.length > 0 ? heroSlides : [DEFAULT_HERO_SLIDE]),
-    [heroSlides]
-  )
+  const heroSlidesData = useMemo(() => {
+    const remoteSlides = heroSlides.filter((slide) => {
+      const source = resolveHeroImageUrl(slide?.image_url)
+
+      return source && source !== CURRENT_HERO_IMAGE_URL
+    })
+
+    return [DEFAULT_HERO_SLIDE, ...remoteSlides]
+  }, [heroSlides])
 
   const latestNews = useMemo(() => {
     return [...news].sort(
@@ -179,10 +203,10 @@ export default function Home() {
     let alive = true
 
     Promise.allSettled([
-      api.get('/hero'),
-      api.get('/news?limit=100'),
-      api.get('/events?limit=100'),
-      api.get('/partners'),
+      api.get('/hero', { globalLoading: false }),
+      api.get('/news?limit=100', { globalLoading: false }),
+      api.get('/events?limit=100', { globalLoading: false }),
+      api.get('/partners', { globalLoading: false }),
     ]).then(([heroResult, newsResult, eventsResult, partnersResult]) => {
       if (!alive) return
 
@@ -232,15 +256,27 @@ export default function Home() {
   }, [heroSlidesData.length])
 
   useEffect(() => {
-    heroSlidesData.forEach(({ image_url }) => {
-      const src = resolveMediaUrl(image_url)
+    if (heroSlidesData.length <= 1) {
+      return undefined
+    }
 
-      if (src) {
-        const image = new Image()
-        image.src = src
+    const timeoutId = window.setTimeout(() => {
+      const nextIndex = (heroIdx + 1) % heroSlidesData.length
+      const nextSlide = heroSlidesData[nextIndex]
+      const nextSource = resolveHeroImageUrl(nextSlide?.image_url)
+
+      if (!nextSource) {
+        return
       }
-    })
-  }, [heroSlidesData])
+
+      const image = new Image()
+      image.decoding = 'async'
+      image.fetchPriority = 'low'
+      image.src = nextSource
+    }, 3000)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [heroIdx, heroSlidesData])
 
   const eventIcon = (type) => {
     if (type === 'seminar') return <BookOpen size={16} />
@@ -283,48 +319,52 @@ export default function Home() {
     ? settings?.home_about_image_alt_ar || ''
     : settings?.home_about_image_alt_en || ''
 
+  const activeHeroSlide =
+    heroSlidesData[heroIdx] || DEFAULT_HERO_SLIDE
+
+  const activeHeroImageSrc = resolveHeroImageUrl(
+    activeHeroSlide.image_url
+  )
+
+  const activeHeroCaption = isRtl
+    ? activeHeroSlide.caption_ar
+    : activeHeroSlide.caption_en
+
   return (
     <main>
       <section
         id="home-hero"
         className="relative flex min-h-[86vh] items-center justify-center overflow-hidden py-8"
       >
-        {heroSlidesData.map((img, index) => {
-          const imageSrc =
-            resolveMediaUrl(img.image_url) || DEFAULT_HERO_SLIDE.image_url
+        <div
+          key={activeHeroSlide.id || activeHeroImageSrc}
+          className="absolute inset-0"
+        >
+          <img
+            src={activeHeroImageSrc}
+            alt={heroAlt || DEFAULT_HERO_SLIDE.alt_ar}
+            width="1280"
+            height="770"
+            className="h-full w-full object-cover"
+            loading="eager"
+            fetchPriority={heroIdx === 0 ? 'high' : 'auto'}
+            decoding="async"
+          />
 
-          return (
+          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/55" />
+
+          {activeHeroCaption && (
             <div
-              key={img.id || index}
-              className={`absolute inset-0 ${
-                index === heroIdx ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{ transition: 'opacity 1.5s ease' }}
-              aria-hidden={index !== heroIdx}
+              className={`absolute bottom-20 ${
+                isRtl ? 'right-8' : 'left-8'
+              } hidden md:block`}
             >
-              <img
-                src={imageSrc}
-                alt={index === heroIdx ? heroAlt : ''}
-                className="h-full w-full object-cover"
-                loading={index === 0 ? 'eager' : 'lazy'}
-              />
-
-              <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/30 to-black/55" />
-
-              {(img.caption_ar || img.caption_en) && (
-                <div
-                  className={`absolute bottom-20 ${
-                    isRtl ? 'right-8' : 'left-8'
-                  } hidden md:block`}
-                >
-                  <p className="border-s-2 border-primary ps-3 text-xs italic text-white/80">
-                    {isRtl ? img.caption_ar : img.caption_en}
-                  </p>
-                </div>
-              )}
+              <p className="border-s-2 border-primary ps-3 text-xs italic text-white/80">
+                {activeHeroCaption}
+              </p>
             </div>
-          )
-        })}
+          )}
+        </div>
 
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-[700px] w-[700px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/10 blur-3xl" />
 
