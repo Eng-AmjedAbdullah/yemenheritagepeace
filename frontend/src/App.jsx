@@ -53,11 +53,37 @@ export const AppContext = createContext(null)
 
 export const useLang = () => useContext(AppContext)
 
+const DEFAULT_SETTINGS = {
+  site_name_ar: 'منظمة تراث اليمن لأجل السلام',
+  site_name_en: 'Yemen Heritage for Peace Organization',
+  logo_url: '/logo.png',
+  contact_phone: '',
+  contact_email: '',
+  address_ar: '',
+  address_en: '',
+  home_about_image_url: '',
+  home_about_image_alt_ar: '',
+  home_about_image_alt_en: '',
+}
 
 function getInitialLang() {
   const savedLang = localStorage.getItem('yhpo_lang')
 
   return savedLang === 'en' ? 'en' : 'ar'
+}
+
+function normalizeSettings(value) {
+  const loadedSettings =
+    value &&
+    typeof value === 'object' &&
+    !Array.isArray(value)
+      ? value
+      : {}
+
+  return {
+    ...DEFAULT_SETTINGS,
+    ...loadedSettings,
+  }
 }
 
 function PublicLayout() {
@@ -70,25 +96,35 @@ function PublicLayout() {
         <Route path="/about" element={<About />} />
         <Route path="/news" element={<News />} />
         <Route path="/events" element={<Events />} />
+
         <Route
           path="/events/:eventId/collections"
           element={<EventCollections />}
         />
+
         <Route path="/fields" element={<Fields />} />
+
         <Route
           path="/heritage-life"
           element={<HeritageLive />}
         />
+
         <Route path="/contact" element={<Contact />} />
+
         <Route
           path="/photo-gallery"
           element={<PhotoGallery />}
         />
+
         <Route
           path="/video-gallery"
           element={<VideoGallery />}
         />
-        <Route path="*" element={<Navigate to="/" replace />} />
+
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
+        />
       </Routes>
 
       <Footer />
@@ -110,7 +146,8 @@ function AppToaster() {
           padding: '14px 18px',
           maxWidth: '420px',
           color: '#ffffff',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.22)',
+          boxShadow:
+            '0 10px 30px rgba(0, 0, 0, 0.22)',
         },
         success: {
           duration: 3000,
@@ -155,50 +192,19 @@ function AppToaster() {
   )
 }
 
-
-function BootstrapError({ lang, onRetry }) {
-  const isArabic = lang === 'ar'
-
-  return (
-    <div
-      className="fixed inset-0 z-[10000] flex items-center justify-center bg-white px-6"
-      dir={isArabic ? 'rtl' : 'ltr'}
-    >
-      <div className="w-full max-w-md rounded-2xl border border-red-100 bg-white p-6 text-center shadow-xl">
-        <h2 className="text-xl font-bold text-red-700">
-          {isArabic
-            ? 'تعذر تحميل الموقع'
-            : 'Unable to load the website'}
-        </h2>
-
-        <p className="mt-3 text-sm leading-7 text-gray-600">
-          {isArabic
-            ? 'حدث خطأ أثناء تحميل البيانات. تحقق من الاتصال ثم أعد المحاولة.'
-            : 'An error occurred while loading the data. Check the connection and try again.'}
-        </p>
-
-        <button
-          type="button"
-          onClick={onRetry}
-          className="mt-6 inline-flex min-w-[160px] items-center justify-center rounded-xl bg-primary px-6 py-3 font-semibold text-white transition hover:bg-primary-dark"
-        >
-          {isArabic ? 'إعادة المحاولة' : 'Try again'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
 export default function App() {
   const [lang, setLang] = useState(getInitialLang)
-  const [settings, setSettings] = useState(null)
-  const [settingsLoading, setSettingsLoading] =
-    useState(false)
-  const [settingsError, setSettingsError] = useState(null)
-  const [bootLoading, setBootLoading] = useState(true)
-  const [bootError, setBootError] = useState(null)
 
-  const { isLoading, runWithLoading } = useGlobalLoading()
+  const [settings, setSettings] =
+    useState(DEFAULT_SETTINGS)
+
+  const [settingsLoading, setSettingsLoading] =
+    useState(true)
+
+  const [settingsError, setSettingsError] =
+    useState(null)
+
+  const { isLoading } = useGlobalLoading()
 
   const t = translations[lang]
   const dir = lang === 'ar' ? 'rtl' : 'ltr'
@@ -210,22 +216,19 @@ export default function App() {
     document.body.dir = dir
   }, [lang, dir])
 
-  const toggleLang = () => {
+  const toggleLang = useCallback(() => {
     setLang((currentLang) =>
       currentLang === 'ar' ? 'en' : 'ar'
     )
-  }
+  }, [])
 
-  const loadSettings = useCallback(async () => {
+  const fetchSettings = useCallback(async () => {
     const siteSettings = await api.get('/settings', {
       globalLoading: false,
       loadingLabel: 'site-settings',
     })
 
-    setSettings(siteSettings)
-    setSettingsError(null)
-
-    return siteSettings
+    return normalizeSettings(siteSettings)
   }, [])
 
   const refreshSettings = useCallback(async () => {
@@ -233,7 +236,11 @@ export default function App() {
     setSettingsError(null)
 
     try {
-      return await loadSettings()
+      const loadedSettings = await fetchSettings()
+
+      setSettings(loadedSettings)
+
+      return loadedSettings
     } catch (error) {
       console.error(
         'Failed to refresh site settings:',
@@ -241,45 +248,48 @@ export default function App() {
       )
 
       setSettingsError(error)
+
       throw error
     } finally {
       setSettingsLoading(false)
     }
-  }, [loadSettings])
-
-
-  const bootstrapApp = useCallback(async () => {
-    setBootLoading(true)
-    setBootError(null)
-    setSettingsError(null)
-
-    try {
-      /*
-       * The router and current page remain mounted behind the preloader.
-       * LoadingContext automatically captures GET requests started during
-       * this first bootstrap, including the initial route data.
-       */
-      await runWithLoading(
-        'app-bootstrap',
-        async () => loadSettings()
-      )
-    } catch (error) {
-      console.error('App bootstrap failed:', error)
-      setBootError(error)
-    } finally {
-      setBootLoading(false)
-
-      /*
-       * Existing initial request tokens remain active until their requests
-       * finish, but later GET requests stop reopening the full-screen loader.
-       */
-      finishInitialLoading()
-    }
-  }, [loadSettings, runWithLoading])
+  }, [fetchSettings])
 
   useEffect(() => {
-    bootstrapApp()
-  }, [bootstrapApp])
+    let cancelled = false
+
+    finishInitialLoading()
+
+    setSettingsLoading(true)
+    setSettingsError(null)
+
+    fetchSettings()
+      .then((loadedSettings) => {
+        if (cancelled) return
+
+        setSettings(loadedSettings)
+        setSettingsError(null)
+      })
+      .catch((error) => {
+        if (cancelled) return
+
+        console.error(
+          'Failed to load site settings in the background:',
+          error
+        )
+
+        setSettingsError(error)
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setSettingsLoading(false)
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [fetchSettings])
 
   const contextValue = {
     lang,
@@ -290,16 +300,20 @@ export default function App() {
     settingsLoading,
     settingsError,
     refreshSettings,
-    bootLoading,
-    bootError,
-    retryBootstrap: bootstrapApp,
+    bootLoading: false,
+    bootError: null,
+    retryBootstrap: refreshSettings,
   }
 
   return (
     <AppContext.Provider value={contextValue}>
       <div
         dir={dir}
-        className={lang === 'ar' ? 'font-ar' : 'font-en'}
+        className={
+          lang === 'ar'
+            ? 'font-ar'
+            : 'font-en'
+        }
       >
         <BrowserRouter>
           <AppToaster />
@@ -314,56 +328,83 @@ export default function App() {
               path="/admin/*"
               element={<AdminLayout />}
             >
-              <Route index element={<Dashboard />} />
-              <Route path="news" element={<ManageNews />} />
+              <Route
+                index
+                element={<Dashboard />}
+              />
+
+              <Route
+                path="news"
+                element={<ManageNews />}
+              />
+
               <Route
                 path="events"
                 element={<ManageEvents />}
               />
+
               <Route
                 path="heritage"
                 element={<ManageHeritage />}
               />
+
               <Route
                 path="partners"
                 element={<ManagePartners />}
               />
-              <Route path="hero" element={<ManageHero />} />
+
+              <Route
+                path="hero"
+                element={<ManageHero />}
+              />
+
               <Route
                 path="settings"
                 element={<ManageSettings />}
               />
+
               <Route
                 path="admins"
                 element={<ManageAdmins />}
               />
+
               <Route
                 path="messages"
                 element={<ManageMessages />}
               />
-              <Route path="profile" element={<Profile />} />
+
+              <Route
+                path="profile"
+                element={<Profile />}
+              />
+
               <Route
                 path="gallery"
                 element={<ManageGallery />}
               />
+
               <Route
                 path="*"
-                element={<Navigate to="/admin" replace />}
+                element={
+                  <Navigate
+                    to="/admin"
+                    replace
+                  />
+                }
               />
             </Route>
 
-            <Route path="/*" element={<PublicLayout />} />
+            <Route
+              path="/*"
+              element={<PublicLayout />}
+            />
           </Routes>
         </BrowserRouter>
 
         {isLoading && (
-          <Preloader lang={lang} settings={settings} />
-        )}
-
-        {bootError && !isLoading && (
-          <BootstrapError
+          <Preloader
             lang={lang}
-            onRetry={bootstrapApp}
+            settings={settings}
           />
         )}
       </div>
