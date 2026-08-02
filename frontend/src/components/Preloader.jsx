@@ -39,12 +39,14 @@ export default function Preloader({ lang = 'ar', settings = null }) {
         </div>
 
         <div className="space-y-2">
-          <h1
+          <p
             dir="rtl"
+            role="status"
+            aria-live="polite"
             className="text-xl font-bold leading-snug text-primary md:text-2xl"
           >
             {orgNameAr}
-          </h1>
+          </p>
 
           <p
             dir="ltr"
