@@ -40,19 +40,35 @@ select {
 }
 
 .font-ar {
-  font-family: 'Noto Kufi Arabic', sans-serif;
+  font-family:
+    'Noto Kufi Arabic Variable',
+    Tahoma,
+    Arial,
+    sans-serif;
 }
 
 .font-en {
-  font-family: 'Exo 2', sans-serif;
+  font-family:
+    'Exo 2 Variable',
+    'Segoe UI',
+    Arial,
+    sans-serif;
 }
 
-[dir="rtl"] {
-  font-family: 'Noto Kufi Arabic', sans-serif;
+[dir='rtl'] {
+  font-family:
+    'Noto Kufi Arabic Variable',
+    Tahoma,
+    Arial,
+    sans-serif;
 }
 
-[dir="ltr"] {
-  font-family: 'Exo 2', sans-serif;
+[dir='ltr'] {
+  font-family:
+    'Exo 2 Variable',
+    'Segoe UI',
+    Arial,
+    sans-serif;
 }
 
 /* Navbar */
