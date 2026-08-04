@@ -12,6 +12,7 @@ import {
   useCallback,
   lazy,
   Suspense,
+  useLayoutEffect,
 } from 'react'
 import { Toaster } from 'react-hot-toast'
 
@@ -25,6 +26,7 @@ import {
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Preloader from './components/Preloader'
+import { removeInitialPreloader } from './lib/initialPreloader'
 import Home from './pages/Home'
 
 const About = lazy(() => import('./pages/About'))
@@ -194,6 +196,14 @@ function AppToaster() {
   )
 }
 
+function InitialPreloaderHandoff() {
+  useLayoutEffect(() => {
+    removeInitialPreloader()
+  }, [])
+
+  return null
+}
+
 export default function App() {
   const [lang, setLang] = useState(getInitialLang)
 
@@ -318,6 +328,7 @@ export default function App() {
         }
       >
         <BrowserRouter>
+          <InitialPreloaderHandoff />
           <AppToaster />
 
           <Suspense fallback={<Preloader lang={lang} settings={settings} />}>

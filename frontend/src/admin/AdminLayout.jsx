@@ -293,8 +293,8 @@ export default function AdminLayout() {
 
       try {
         const freshAdmin = await api.get('/auth/me', {
-          globalLoading: false,
-          loadingLabel: 'admin-session-validation',
+          globalLoading: true,
+          loadingLabel: 'admin-initial-session-validation',
         })
 
         if (cancelled) return

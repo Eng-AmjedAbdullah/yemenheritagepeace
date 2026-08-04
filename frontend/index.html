@@ -53,6 +53,99 @@
       href="/logo.png"
     />
 
+    <style>
+      .initial-app-preloader {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        background: #ffffff;
+        color: #0f172a;
+        text-align: center;
+      }
+
+      .initial-app-preloader__panel {
+        width: min(100%, 420px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+      }
+
+      .initial-app-preloader__visual {
+        position: relative;
+        width: 120px;
+        height: 120px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .initial-app-preloader__ring {
+        position: absolute;
+        inset: 0;
+        border-radius: 9999px;
+        border: 3px solid rgba(24, 162, 190, 0.22);
+        box-sizing: border-box;
+        animation: initial-app-preloader-spin 1.2s linear infinite;
+      }
+
+      .initial-app-preloader__ring::before {
+        content: '';
+        position: absolute;
+        inset: 10px;
+        border-radius: 9999px;
+        border: 3px solid rgba(24, 162, 190, 0.15);
+        box-sizing: border-box;
+      }
+
+      .initial-app-preloader__logo {
+        position: relative;
+        width: 84px;
+        height: 84px;
+        border-radius: 9999px;
+        object-fit: contain;
+        background: #ffffff;
+        z-index: 1;
+      }
+
+      .initial-app-preloader__title {
+        margin: 0;
+        font-size: 1.35rem;
+        line-height: 1.2;
+        font-weight: 700;
+      }
+
+      .initial-app-preloader__subtitle {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.4;
+        font-weight: 600;
+        color: #0e4a67;
+      }
+
+      .initial-app-preloader--leaving {
+        opacity: 0;
+        transition: opacity 320ms ease;
+        pointer-events: none;
+      }
+
+      @keyframes initial-app-preloader-spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .initial-app-preloader__ring {
+          animation: none;
+        }
+      }
+    </style>
+
     <link
       rel="preconnect"
       href="https://upload.wikimedia.org"
