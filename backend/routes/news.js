@@ -14,6 +14,10 @@ const { deleteFile } = require('../lib/storage')
 
 const VALID_CATEGORIES_AR = ['أخبار', 'فعاليات', 'مشاريع', 'دراسات', 'إعلانات', 'تقارير']
 const VALID_CATEGORIES_EN = ['News', 'Events', 'Projects', 'Studies', 'Announcements', 'Reports']
+
+function cleanText(value) {
+  return String(value || '').trim() || null
+}
 router.get('/ping', async (req, res) => {
   try {
     await db.query('SELECT 1'); 
@@ -69,12 +73,12 @@ router.get('/:id', async (req, res) => {
 // POST /api/news  (admin)
 router.post('/', auth, async (req, res) => {
   try {
-    const { title, title_en, content, content_en, category, category_en, image_url, published, created_at } = req.body
+    const { title, title_en, content, content_en, category, category_en, image_url, thumbnail_url, published, created_at } = req.body
     if (!title) return res.status(400).json({ error: 'العنوان مطلوب' })
     const [result] = await db.query(
-      'INSERT INTO news (title,title_en,content,content_en,category,category_en,image_url,published,created_at) VALUES (?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO news (title,title_en,content,content_en,category,category_en,image_url,thumbnail_url,published,created_at) VALUES (?,?,?,?,?,?,?,?,?,?)',
       [title, title_en||null, content||null, content_en||null,
-       category||'أخبار', category_en||'News', image_url||null,
+       category||'أخبار', category_en||'News', image_url||null, thumbnail_url||null,
        published !== false ? 1 : 0, created_at||null]
     )
     res.status(201).json({ id: result.insertId, message: 'تم الإضافة' })
@@ -84,13 +88,46 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/news/:id  (admin)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { title, title_en, content, content_en, category, category_en, image_url, published, created_at } = req.body
+    const [rows] = await db.query('SELECT image_url, thumbnail_url FROM news WHERE id = ?', [req.params.id])
+    if (!rows.length) return res.status(404).json({ error: 'غير موجود' })
+
+    const existing = rows[0]
+    const {
+      title,
+      title_en,
+      content,
+      content_en,
+      category,
+      category_en,
+      published,
+      created_at,
+    } = req.body
+
+    const image_url = req.body.hasOwnProperty('image_url')
+      ? cleanText(req.body.image_url)
+      : existing.image_url
+
+    const thumbnail_url = req.body.hasOwnProperty('thumbnail_url')
+      ? cleanText(req.body.thumbnail_url)
+      : existing.thumbnail_url
+
     if (!title) return res.status(400).json({ error: 'العنوان مطلوب' })
+
     await db.query(
-      'UPDATE news SET title=?,title_en=?,content=?,content_en=?,category=?,category_en=?,image_url=?,published=?,created_at=?,updated_at=NOW() WHERE id=?',
-      [title, title_en||null, content||null, content_en||null,
-       category||'أخبار', category_en||'News', image_url||null,
-       published !== false ? 1 : 0, created_at||null, req.params.id]
+      'UPDATE news SET title=?,title_en=?,content=?,content_en=?,category=?,category_en=?,image_url=?,thumbnail_url=?,published=?,created_at=?,updated_at=NOW() WHERE id=?',
+      [
+        title,
+        title_en||null,
+        content||null,
+        content_en||null,
+        category||'أخبار',
+        category_en||'News',
+        image_url,
+        thumbnail_url,
+        published !== false ? 1 : 0,
+        created_at||null,
+        req.params.id,
+      ]
     )
     res.json({ message: 'تم التحديث' })
   } catch { res.status(500).json({ error: 'خطأ في الخادم' }) }
@@ -99,10 +136,19 @@ router.put('/:id', auth, async (req, res) => {
 // DELETE /api/news/:id  (admin)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT image_url FROM news WHERE id = ?', [req.params.id])
+    const [rows] = await db.query('SELECT image_url, thumbnail_url FROM news WHERE id = ?', [req.params.id])
     if (!rows.length) return res.status(404).json({ error: 'غير موجود' })
-    if (rows[0]?.image_url) await deleteFile(rows[0].image_url).catch(() => {})
+
+    const imageUrl = rows[0]?.image_url
+    const thumbnailUrl = rows[0]?.thumbnail_url
+
     await db.query('DELETE FROM news WHERE id = ?', [req.params.id])
+
+    await Promise.allSettled([
+      imageUrl ? deleteFile(imageUrl) : Promise.resolve(),
+      thumbnailUrl ? deleteFile(thumbnailUrl) : Promise.resolve(),
+    ])
+
     res.json({ message: 'تم الحذف' })
   } catch { res.status(500).json({ error: 'خطأ في الخادم' }) }
 })

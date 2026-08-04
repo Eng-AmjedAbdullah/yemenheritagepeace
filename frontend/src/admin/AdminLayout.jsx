@@ -26,6 +26,7 @@ import {
 import { adminTranslations, AdminLangContext } from './adminI18n'
 import { getSidebarItems, canAccessPage } from './adminPermissions'
 import api from '../lib/api'
+import './admin-ui-fixes.css'
 
 export const ConfirmContext = React.createContext()
 
@@ -527,7 +528,7 @@ export default function AdminLayout() {
           </header>
 
           <aside
-            className={`fixed bottom-0 top-[76px] z-40 border-white/15 shadow-2xl transition-all duration-300 ${
+            className={`admin-sidebar fixed bottom-0 top-[76px] z-40 border-white/15 shadow-2xl transition-all duration-300 ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
@@ -554,7 +555,7 @@ export default function AdminLayout() {
             )}
 
             <div className="flex h-full flex-col">
-              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6">
+              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6 admin-sidebar-scrollbar">
                 {isMobile && (
                   <button
                     type="button"

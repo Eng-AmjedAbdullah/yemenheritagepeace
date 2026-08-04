@@ -47,6 +47,8 @@ const MIME_EXTENSIONS = {
   'video/mkv': '.mkv',
 }
 
+const LONG_TERM_CACHE_SECONDS = '31536000'
+
 function ensureStorageConfiguration() {
   if (!BUCKET) {
     throw new Error(
@@ -209,13 +211,8 @@ async function uploadBuffer({
             'application/octet-stream',
 
           upsert: false,
-
           cacheControl:
-            mimeType?.startsWith(
-              'video/'
-            )
-              ? '86400'
-              : '3600',
+            LONG_TERM_CACHE_SECONDS,
         }
       )
 

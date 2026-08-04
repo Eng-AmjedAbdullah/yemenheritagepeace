@@ -70,8 +70,26 @@ const GOALS_DATA = {
   ],
 }
 
+const HERO_IMAGE_640 =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/640px-The_castle_above_Taiz_%288683935588%29.jpg'
+
+const HERO_IMAGE_960 =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/960px-The_castle_above_Taiz_%288683935588%29.jpg'
+
 const CURRENT_HERO_IMAGE_URL =
   'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
+
+const HERO_IMAGE_SRC_SET = [
+  `${HERO_IMAGE_640} 640w`,
+  `${HERO_IMAGE_960} 960w`,
+  `${CURRENT_HERO_IMAGE_URL} 1280w`,
+].join(', ')
+
+const TANGIBLE_HERITAGE_IMAGE =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Temple_in_Ancient_city_of_Marib.jpg/640px-Temple_in_Ancient_city_of_Marib.jpg'
+
+const INTANGIBLE_HERITAGE_IMAGE =
+  'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Janbiya_Dance%2C_Yemen_%2811041030075%29.jpg/640px-Janbiya_Dance%2C_Yemen_%2811041030075%29.jpg'
 
 const DEFAULT_HERO_SLIDE = {
   id: 'default-hero',
@@ -96,6 +114,17 @@ function resolveHeroImageUrl(value) {
   return isCurrentOriginalImage
     ? CURRENT_HERO_IMAGE_URL
     : resolved
+}
+
+function getHeroImageAttributes(value) {
+  const src = resolveHeroImageUrl(value)
+  const isDefaultHero = src === CURRENT_HERO_IMAGE_URL
+
+  return {
+    src,
+    srcSet: isDefaultHero ? HERO_IMAGE_SRC_SET : undefined,
+    sizes: isDefaultHero ? '100vw' : undefined,
+  }
 }
 
 function SectionTitle({ children, align = 'center' }) {
@@ -204,8 +233,8 @@ export default function Home() {
 
     Promise.allSettled([
       api.get('/hero', { globalLoading: false }),
-      api.get('/news?limit=100', { globalLoading: false }),
-      api.get('/events?limit=100', { globalLoading: false }),
+      api.get('/news?limit=3', { globalLoading: false }),
+      api.get('/events?limit=3', { globalLoading: false }),
       api.get('/partners', { globalLoading: false }),
     ]).then(([heroResult, newsResult, eventsResult, partnersResult]) => {
       if (!alive) return
@@ -322,9 +351,19 @@ export default function Home() {
   const activeHeroSlide =
     heroSlidesData[heroIdx] || DEFAULT_HERO_SLIDE
 
-  const activeHeroImageSrc = resolveHeroImageUrl(
+  const activeHeroImage = getHeroImageAttributes(
     activeHeroSlide.image_url
   )
+
+  const activeHeroImageSrc = activeHeroImage.src
+
+  const resolvedAboutImage = resolveMediaUrl(aboutImageUrl)
+
+  const aboutImageSrc = resolvedAboutImage || HERO_IMAGE_960
+
+  const aboutImageSrcSet = resolvedAboutImage
+    ? undefined
+    : HERO_IMAGE_SRC_SET
 
   const activeHeroCaption = isRtl
     ? activeHeroSlide.caption_ar
@@ -342,6 +381,8 @@ export default function Home() {
         >
           <img
             src={activeHeroImageSrc}
+            srcSet={activeHeroImage.srcSet}
+            sizes={activeHeroImage.sizes}
             alt={heroAlt || DEFAULT_HERO_SLIDE.alt_ar}
             width="1280"
             height="770"
@@ -476,18 +517,20 @@ export default function Home() {
 
           <div className="relative">
             <img
-              src={
-                resolveMediaUrl(aboutImageUrl) ||
-                'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/The_castle_above_Taiz_%288683935588%29.jpg/1280px-The_castle_above_Taiz_%288683935588%29.jpg'
-              }
+              src={aboutImageSrc}
+              srcSet={aboutImageSrcSet}
+              sizes="(min-width: 768px) 50vw, 100vw"
               alt={
                 aboutAlt ||
                 (isRtl
                   ? 'العمارة اليمنية التاريخية'
                   : 'Historic Yemeni Architecture')
               }
+              width="1280"
+              height="770"
               className="h-80 w-full rounded-2xl object-cover shadow-xl"
               loading="lazy"
+              decoding="async"
             />
 
             <div className="absolute -bottom-5 -start-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-2xl">
@@ -575,10 +618,18 @@ export default function Home() {
               className="group relative h-64 overflow-hidden rounded-2xl border border-gray-100 shadow-md"
             >
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Temple_in_Ancient_city_of_Marib.jpg/1280px-Temple_in_Ancient_city_of_Marib.jpg"
-                alt={isRtl ? 'معلم أثري في مأرب' : 'Archaeological site in Marib'}
+                src={TANGIBLE_HERITAGE_IMAGE}
+                alt={
+                  isRtl
+                    ? 'معلم أثري في مأرب'
+                    : 'Archaeological site in Marib'
+                }
+                width="640"
+                height="360"
+                sizes="(min-width: 768px) 50vw, 100vw"
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
+                decoding="async"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-dark/20 to-transparent" />
@@ -603,10 +654,18 @@ export default function Home() {
               className="group relative h-64 overflow-hidden rounded-2xl border border-gray-100 shadow-md"
             >
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Janbiya_Dance%2C_Yemen_%2811041030075%29.jpg/1280px-Janbiya_Dance%2C_Yemen_%2811041030075%29.jpg"
-                alt={isRtl ? 'رقصة شعبية يمنية' : 'Traditional Yemeni dance'}
+                src={INTANGIBLE_HERITAGE_IMAGE}
+                alt={
+                  isRtl
+                    ? 'رقصة شعبية يمنية'
+                    : 'Traditional Yemeni dance'
+                }
+                width="640"
+                height="360"
+                sizes="(min-width: 768px) 50vw, 100vw"
                 className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                 loading="lazy"
+                decoding="async"
               />
 
               <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-dark/20 to-transparent" />
@@ -663,12 +722,18 @@ export default function Home() {
                     className="group overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="relative h-44 overflow-hidden">
-                      {item.image_url ? (
+                      {item.thumbnail_url || item.image_url ? (
                         <img
-                          src={resolveMediaUrl(item.image_url)}
+                          src={resolveMediaUrl(
+                            item.thumbnail_url || item.image_url
+                          )}
                           alt={title || ''}
+                          width="640"
+                          height="360"
+                          sizes="(min-width: 768px) 33vw, 100vw"
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
+                          decoding="async"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gray-100">
@@ -755,13 +820,19 @@ export default function Home() {
                     to={eventHref}
                     className="group overflow-hidden rounded-2xl border border-gray-100 bg-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
                   >
-                    {item.image_url && (
+                    {(item.thumbnail_url || item.image_url) && (
                       <div className="relative h-44 overflow-hidden">
                         <img
-                          src={resolveMediaUrl(item.image_url)}
+                          src={resolveMediaUrl(
+                            item.thumbnail_url || item.image_url
+                          )}
                           alt={title || ''}
+                          width="640"
+                          height="360"
+                          sizes="(min-width: 768px) 33vw, 100vw"
                           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           loading="lazy"
+                          decoding="async"
                         />
 
                         <div className="absolute inset-0 bg-gradient-to-t from-dark/40 to-transparent" />
@@ -849,9 +920,13 @@ export default function Home() {
                       <div className="flex h-12 w-full items-center justify-center">
                         <img
                           src={resolveMediaUrl(partner.logo_url)}
-                          alt={partnerName}
+                          alt=""
+                          aria-hidden="true"
+                          width="110"
+                          height="48"
                           className="max-h-12 w-auto max-w-[110px] object-contain"
                           loading="lazy"
+                          decoding="async"
                           onError={() =>
                             setPartnerErrors((current) => ({
                               ...current,

@@ -31,6 +31,7 @@ function isManagedUpload(value) {
 export default function ImageUpload({
   value,
   onChange,
+  onUploadComplete,
   folder = 'general',
   label,
   previewHeight = 'h-64 sm:h-72',
@@ -136,6 +137,16 @@ export default function ImageUpload({
     try {
       const data = await api.upload(file, folder)
       onChange(data.url || '')
+      onUploadComplete?.({
+        url: data.url || '',
+        thumbnail_url: data.thumbnail_url || '',
+        path: data.path || '',
+        thumbnail_path: data.thumbnail_path || '',
+        optimized: Boolean(data.optimized),
+        original_size: data.original_size || 0,
+        size: data.size || 0,
+        thumbnail_size: data.thumbnail_size || 0,
+      })
       setImageError(false)
       toast.success(text.uploadSuccess)
     } catch (err) {

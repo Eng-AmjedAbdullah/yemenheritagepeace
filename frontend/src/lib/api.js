@@ -373,7 +373,7 @@ function uploadFileToSignedUrl(signedUrl, file, options = {}) {
     options.signal?.addEventListener('abort', abortHandler, { once: true })
 
     const form = new FormData()
-    form.append('cacheControl', String(options.cacheControl || '86400'))
+    form.append('cacheControl', String(options.cacheControl || '31536000'))
     form.append('file', file, file.name || 'video')
 
     xhr.send(form)

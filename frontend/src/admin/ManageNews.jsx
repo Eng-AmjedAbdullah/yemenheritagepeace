@@ -26,6 +26,7 @@ const EMPTY_FORM = {
   category: 'أخبار',
   category_en: 'News',
   image_url: '',
+  thumbnail_url: '',
   published: true,
   created_at: '',
 }
@@ -98,6 +99,8 @@ export default function ManageNews() {
   const [saving, setSaving] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editId, setEditId] = useState(null)
+  const [prevImageUrl, setPrevImageUrl] = useState('')
+  const [prevThumbnailUrl, setPrevThumbnailUrl] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
   const [touched, setTouched] = useState(EMPTY_TOUCHED)
   const [searchTerm, setSearchTerm] = useState('')
@@ -149,6 +152,8 @@ export default function ManageNews() {
   const openAdd = () => {
     setEditId(null)
     setTouched(EMPTY_TOUCHED)
+    setPrevImageUrl('')
+    setPrevThumbnailUrl('')
     setForm({ ...EMPTY_FORM, created_at: new Date().toISOString().split('T')[0] })
     setModalOpen(true)
   }
@@ -164,9 +169,12 @@ export default function ManageNews() {
       category: item.category || 'أخبار',
       category_en: item.category_en || 'News',
       image_url: item.image_url || '',
+      thumbnail_url: item.thumbnail_url || '',
       published: isPublished(item.published),
       created_at: getInputDate(item.created_at),
     })
+    setPrevImageUrl(item.image_url || '')
+    setPrevThumbnailUrl(item.thumbnail_url || '')
     setModalOpen(true)
   }
 
@@ -212,6 +220,15 @@ export default function ManageNews() {
           globalLoading: false,
           loadingLabel: 'update-news',
         })
+        // After DB update succeeds, remove previous files if they were replaced
+        try {
+          const deletions = []
+          if (prevImageUrl && prevImageUrl !== form.image_url) deletions.push(api.deleteUploadedFile(prevImageUrl))
+          if (prevThumbnailUrl && prevThumbnailUrl !== form.thumbnail_url) deletions.push(api.deleteUploadedFile(prevThumbnailUrl))
+          if (deletions.length) await Promise.allSettled(deletions)
+        } catch (e) {
+          console.error('Failed to delete replaced media:', e)
+        }
       } else {
         await api.post('/news', payload, {
           globalLoading: false,
@@ -351,7 +368,8 @@ export default function ManageNews() {
         }
       >
         <div className="space-y-6">
-          <ImageUpload value={form.image_url} onChange={(value) => updateForm('image_url', value)} folder="news" label={t.newsImage || (isRtl ? 'صورة الخبر' : 'News image')} />
+          <ImageUpload value={form.image_url} onChange={(value) => updateForm('image_url', value)} onUploadComplete={(data) => updateForm('thumbnail_url', data.thumbnail_url || '')} folder="news" label={t.newsImage || (isRtl ? 'صورة الخبر' : 'News image')} />
+
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <ValidatedField label={isRtl ? 'العنوان العربي' : 'Arabic title'} value={form.title} onChange={(value) => updateForm('title', value)} error={errors.title} touched={touched.title} required dir="rtl" />

@@ -33,6 +33,7 @@ const EMPTY_FORM = {
   location: '',
   location_en: '',
   image_url: '',
+  thumbnail_url: '',
   published: true,
   collection_ids: [],
 }
@@ -174,6 +175,8 @@ export default function ManageEvents() {
   const [editId, setEditId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [touched, setTouched] = useState(EMPTY_TOUCHED)
+  const [prevImageUrl, setPrevImageUrl] = useState('')
+  const [prevThumbnailUrl, setPrevThumbnailUrl] = useState('')
 
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -261,6 +264,8 @@ export default function ManageEvents() {
 
   const openAdd = () => {
     resetForm()
+    setPrevImageUrl('')
+    setPrevThumbnailUrl('')
     setModalOpen(true)
   }
 
@@ -277,12 +282,15 @@ export default function ManageEvents() {
       location: item.location || '',
       location_en: item.location_en || '',
       image_url: item.image_url || '',
+      thumbnail_url: item.thumbnail_url || '',
       published: isPublished(item.published),
       collection_ids: normalizeCollectionIds(
         item.related_collection_ids ||
           item.related_collections?.map((collection) => collection.id)
       ),
     })
+    setPrevImageUrl(item.image_url || '')
+    setPrevThumbnailUrl(item.thumbnail_url || '')
     setModalOpen(true)
   }
 
@@ -349,6 +357,7 @@ export default function ManageEvents() {
         location: form.location.trim(),
         location_en: form.location_en.trim(),
         image_url: form.image_url.trim(),
+        thumbnail_url: (form.thumbnail_url || '').trim(),
         published: Boolean(form.published),
         collection_ids: normalizeCollectionIds(form.collection_ids),
       }
@@ -358,6 +367,15 @@ export default function ManageEvents() {
           globalLoading: false,
           loadingLabel: 'update-event',
         })
+        // After DB update succeeds, remove previous files if replaced
+        try {
+          const deletions = []
+          if (prevImageUrl && prevImageUrl !== form.image_url) deletions.push(api.deleteUploadedFile(prevImageUrl))
+          if (prevThumbnailUrl && prevThumbnailUrl !== form.thumbnail_url) deletions.push(api.deleteUploadedFile(prevThumbnailUrl))
+          if (deletions.length) await Promise.allSettled(deletions)
+        } catch (e) {
+          console.error('Failed to delete replaced media:', e)
+        }
       } else {
         await api.post('/events', payload, {
           globalLoading: false,
@@ -682,6 +700,7 @@ export default function ManageEvents() {
           <ImageUpload
             value={form.image_url}
             onChange={(value) => updateForm('image_url', value)}
+            onUploadComplete={(data) => updateForm('thumbnail_url', data.thumbnail_url || '')}
             folder="events"
             label={t.eventImage || (isRtl ? 'صورة الفعالية' : 'Event image')}
           />

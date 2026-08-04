@@ -10,6 +10,8 @@ import {
   createContext,
   useContext,
   useCallback,
+  lazy,
+  Suspense,
 } from 'react'
 import { Toaster } from 'react-hot-toast'
 
@@ -23,31 +25,31 @@ import {
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Preloader from './components/Preloader'
-
 import Home from './pages/Home'
-import About from './pages/About'
-import News from './pages/News'
-import Events from './pages/Events'
-import Fields from './pages/Fields'
-import HeritageLive from './pages/HeritageLive'
-import Contact from './pages/Contact'
-import PhotoGallery from './pages/PhotoGallery'
-import VideoGallery from './pages/VideoGallery'
-import EventCollections from './pages/EventCollections'
 
-import AdminLogin from './admin/AdminLogin'
-import AdminLayout from './admin/AdminLayout'
-import Dashboard from './admin/Dashboard'
-import ManageNews from './admin/ManageNews'
-import ManageEvents from './admin/ManageEvents'
-import ManageHeritage from './admin/ManageHeritage'
-import ManageAdmins from './admin/ManageAdmins'
-import ManageMessages from './admin/ManageMessages'
-import Profile from './admin/Profile'
-import ManagePartners from './admin/ManagePartners'
-import ManageHero from './admin/ManageHero'
-import ManageSettings from './admin/ManageSettings'
-import ManageGallery from './admin/ManageGallery'
+const About = lazy(() => import('./pages/About'))
+const News = lazy(() => import('./pages/News'))
+const Events = lazy(() => import('./pages/Events'))
+const Fields = lazy(() => import('./pages/Fields'))
+const HeritageLive = lazy(() => import('./pages/HeritageLive'))
+const Contact = lazy(() => import('./pages/Contact'))
+const PhotoGallery = lazy(() => import('./pages/PhotoGallery'))
+const VideoGallery = lazy(() => import('./pages/VideoGallery'))
+const EventCollections = lazy(() => import('./pages/EventCollections'))
+
+const AdminLogin = lazy(() => import('./admin/AdminLogin'))
+const AdminLayout = lazy(() => import('./admin/AdminLayout'))
+const Dashboard = lazy(() => import('./admin/Dashboard'))
+const ManageNews = lazy(() => import('./admin/ManageNews'))
+const ManageEvents = lazy(() => import('./admin/ManageEvents'))
+const ManageHeritage = lazy(() => import('./admin/ManageHeritage'))
+const ManageAdmins = lazy(() => import('./admin/ManageAdmins'))
+const ManageMessages = lazy(() => import('./admin/ManageMessages'))
+const Profile = lazy(() => import('./admin/Profile'))
+const ManagePartners = lazy(() => import('./admin/ManagePartners'))
+const ManageHero = lazy(() => import('./admin/ManageHero'))
+const ManageSettings = lazy(() => import('./admin/ManageSettings'))
+const ManageGallery = lazy(() => import('./admin/ManageGallery'))
 
 export const AppContext = createContext(null)
 

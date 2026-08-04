@@ -43,6 +43,7 @@ function normalizeEventPayload(body = {}) {
     location: cleanText(body.location),
     location_en: cleanText(body.location_en),
     image_url: cleanText(body.image_url),
+    thumbnail_url: cleanText(body.thumbnail_url),
     published: normalizeBoolean(body.published, true) ? 1 : 0,
     collection_ids: normalizeCollectionIds(body.collection_ids),
   }
@@ -303,9 +304,10 @@ router.post('/', auth, async (req, res) => {
           location,
           location_en,
           image_url,
+          thumbnail_url,
           published
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         event.title,
@@ -317,6 +319,7 @@ router.post('/', auth, async (req, res) => {
         event.location,
         event.location_en,
         event.image_url,
+        event.thumbnail_url,
         event.published,
       ]
     )
@@ -352,14 +355,24 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(400).json({ error: 'العنوان مطلوب' })
     }
 
-    const [existing] = await connection.query(
-      'SELECT id FROM events WHERE id = ?',
+    const [existingRows] = await connection.query(
+      'SELECT image_url, thumbnail_url FROM events WHERE id = ?',
       [req.params.id]
     )
 
-    if (!existing.length) {
+    if (!existingRows.length) {
       return res.status(404).json({ error: 'غير موجود' })
     }
+
+    const existing = existingRows[0]
+
+    event.image_url = req.body.hasOwnProperty('image_url')
+      ? cleanText(req.body.image_url)
+      : existing.image_url
+
+    event.thumbnail_url = req.body.hasOwnProperty('thumbnail_url')
+      ? cleanText(req.body.thumbnail_url)
+      : existing.thumbnail_url
 
     await connection.beginTransaction()
 
@@ -376,6 +389,7 @@ router.put('/:id', auth, async (req, res) => {
           location = ?,
           location_en = ?,
           image_url = ?,
+          thumbnail_url = ?,
           published = ?,
           updated_at = NOW()
         WHERE id = ?
@@ -390,6 +404,7 @@ router.put('/:id', auth, async (req, res) => {
         event.location,
         event.location_en,
         event.image_url,
+        event.thumbnail_url,
         event.published,
         req.params.id,
       ]
@@ -414,7 +429,7 @@ router.put('/:id', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT image_url FROM events WHERE id = ?', [
+    const [rows] = await db.query('SELECT image_url, thumbnail_url FROM events WHERE id = ?', [
       req.params.id,
     ])
 
@@ -426,11 +441,13 @@ router.delete('/:id', auth, async (req, res) => {
       'DELETE FROM event_gallery_collections WHERE event_id = ?',
       [req.params.id]
     )
+
     await db.query('DELETE FROM events WHERE id = ?', [req.params.id])
 
-    if (rows[0]?.image_url) {
-      await deleteFile(rows[0].image_url).catch(() => {})
-    }
+    await Promise.allSettled([
+      rows[0]?.image_url ? deleteFile(rows[0].image_url) : Promise.resolve(),
+      rows[0]?.thumbnail_url ? deleteFile(rows[0].thumbnail_url) : Promise.resolve(),
+    ])
 
     return res.json({ message: 'تم الحذف' })
   } catch (error) {

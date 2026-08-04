@@ -228,12 +228,13 @@ html.admin-document-active:has(body.modal-open) {
 }
 
 .admin-sidebar-scrollbar::-webkit-scrollbar-track {
-  background: transparent !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-radius: 9999px;
 }
 
 .admin-sidebar-scrollbar::-webkit-scrollbar-thumb {
-  min-height: 36px;
-  border: 1px solid transparent;
+  min-height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
   border-radius: 9999px;
   background-color: rgba(255, 255, 255, 0.96) !important;
   background-clip: padding-box;
