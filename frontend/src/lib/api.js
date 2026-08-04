@@ -96,7 +96,7 @@ async function request(
   requestOptions = {}
 ) {
   const config = normalizeRequestOptions(requestOptions)
-  const shouldUseGlobalLoading = config.globalLoading ?? method === 'GET'
+  const shouldUseGlobalLoading = config.globalLoading === true
 
   const loadingToken = shouldUseGlobalLoading
     ? startGlobalLoading(config.loadingLabel || `${method} ${path}`)

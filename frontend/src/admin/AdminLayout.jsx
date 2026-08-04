@@ -263,7 +263,10 @@ export default function AdminLayout() {
     }
 
     return api
-      .get('/contact/unread-count')
+      .get('/contact/unread-count', {
+        globalLoading: false,
+        loadingLabel: 'unread-count-poll',
+      })
       .then((data) => setUnreadCount(data?.count || 0))
       .catch(() => {})
   }, [])
@@ -289,7 +292,10 @@ export default function AdminLayout() {
       }
 
       try {
-        const freshAdmin = await api.get('/auth/me')
+        const freshAdmin = await api.get('/auth/me', {
+          globalLoading: false,
+          loadingLabel: 'admin-session-validation',
+        })
 
         if (cancelled) return
 
@@ -528,7 +534,7 @@ export default function AdminLayout() {
           </header>
 
           <aside
-            className={`admin-sidebar fixed bottom-0 top-[76px] z-40 border-white/15 shadow-2xl transition-all duration-300 ${
+            className={`fixed bottom-0 top-[76px] z-40 border-white/15 shadow-2xl transition-all duration-300 ${
               isRtl ? 'right-0 border-l' : 'left-0 border-r'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
