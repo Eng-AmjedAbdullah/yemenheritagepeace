@@ -177,6 +177,7 @@ export default function ManageEvents() {
   const [touched, setTouched] = useState(EMPTY_TOUCHED)
   const [prevImageUrl, setPrevImageUrl] = useState('')
   const [prevThumbnailUrl, setPrevThumbnailUrl] = useState('')
+  const [tempUploadedUrls, setTempUploadedUrls] = useState([])
 
   const [searchTerm, setSearchTerm] = useState('')
   const [typeFilter, setTypeFilter] = useState('all')
@@ -266,6 +267,7 @@ export default function ManageEvents() {
     resetForm()
     setPrevImageUrl('')
     setPrevThumbnailUrl('')
+    setTempUploadedUrls([])
     setModalOpen(true)
   }
 
@@ -291,12 +293,32 @@ export default function ManageEvents() {
     })
     setPrevImageUrl(item.image_url || '')
     setPrevThumbnailUrl(item.thumbnail_url || '')
+    setTempUploadedUrls([])
     setModalOpen(true)
+  }
+
+  const clearTempUploadedUrls = () => {
+    setTempUploadedUrls([])
+  }
+
+  const cleanupTempUploadedUrls = async () => {
+    const uniqueUrls = [...new Set(tempUploadedUrls.filter(Boolean))]
+    if (!uniqueUrls.length) return
+
+    setTempUploadedUrls([])
+    await Promise.allSettled(
+      uniqueUrls.map((url) => api.deleteUploadedFile(url, { globalLoading: false }))
+    )
   }
 
   const closeModal = () => {
     setModalOpen(false)
     resetForm()
+  }
+
+  const cancelModal = async () => {
+    await cleanupTempUploadedUrls()
+    closeModal()
   }
 
   const toggleCollection = (collectionId) => {
@@ -382,6 +404,7 @@ export default function ManageEvents() {
           loadingLabel: 'create-event',
         })
       }
+      clearTempUploadedUrls()
 
       toast.success(
         editId
@@ -653,7 +676,7 @@ export default function ManageEvents() {
 
       <AdminModal
         open={modalOpen}
-        onClose={closeModal}
+        onClose={cancelModal}
         closeDisabled={saving}
         title={
           editId
@@ -676,7 +699,7 @@ export default function ManageEvents() {
           <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={closeModal}
+              onClick={cancelModal}
               disabled={saving}
               className="btn-outline min-w-32 justify-center"
             >
@@ -700,7 +723,24 @@ export default function ManageEvents() {
           <ImageUpload
             value={form.image_url}
             onChange={(value) => updateForm('image_url', value)}
-            onUploadComplete={(data) => updateForm('thumbnail_url', data.thumbnail_url || '')}
+            onUploadComplete={(data) => {
+              updateForm('thumbnail_url', data.thumbnail_url || '')
+              setTempUploadedUrls((current) => [
+                ...new Set([
+                  ...current,
+                  data.url,
+                  data.thumbnail_url,
+                ].filter(Boolean)),
+              ])
+            }}
+            onRemove={async (removedUrl) => {
+              updateForm('thumbnail_url', '')
+
+              if (tempUploadedUrls.includes(removedUrl)) {
+                await api.deleteUploadedFile(removedUrl, { globalLoading: false }).catch(() => {})
+                setTempUploadedUrls((current) => current.filter((url) => url !== removedUrl))
+              }
+            }}
             folder="events"
             label={t.eventImage || (isRtl ? 'صورة الفعالية' : 'Event image')}
           />

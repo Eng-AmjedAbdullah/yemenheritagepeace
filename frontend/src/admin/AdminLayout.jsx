@@ -534,8 +534,8 @@ export default function AdminLayout() {
           </header>
 
           <aside
-            className={`fixed bottom-0 top-[76px] z-40 border-white/15 shadow-2xl transition-all duration-300 ${
-              isRtl ? 'right-0 border-l' : 'left-0 border-r'
+            className={`admin-sidebar fixed bottom-0 top-[76px] z-40 flex flex-col overflow-hidden border-white/15 shadow-2xl transition-all duration-300 ${
+              isRtl ? 'right-0' : 'left-0'
             } ${isMobile ? 'w-72' : sidebarOpen ? 'w-72' : 'w-20'} ${
               isMobile && !sidebarOpen
                 ? isRtl
@@ -560,70 +560,68 @@ export default function AdminLayout() {
               </button>
             )}
 
-            <div className="flex-1 min-h-0 relative admin-sidebar-scroll-shell">
-              <div className="admin-sidebar-scroll">
-                <nav className="space-y-2 rounded-3xl p-3 pt-6">
-                  <div
-                    className="admin-sidebar-scroll-content"
-                    dir={isRtl ? 'rtl' : 'ltr'}
-                  >
-                    {isMobile && (
-                      <button
-                        type="button"
-                        onClick={toggleAdminLang}
-                        className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-white/85 transition-all hover:bg-white/15 hover:text-white"
+            <div className="flex min-h-0 flex-1 flex-col">
+              <nav className="admin-sidebar-scrollbar min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-3 pt-6">
+                <div
+                  className="admin-sidebar-scroll-content"
+                  dir={isRtl ? 'rtl' : 'ltr'}
+                >
+                  {isMobile && (
+                    <button
+                      type="button"
+                      onClick={toggleAdminLang}
+                      className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-white/85 transition-all hover:bg-white/15 hover:text-white"
+                    >
+                      <Globe size={19} className="shrink-0" />
+
+                      <span className="text-sm font-semibold">
+                        {t.switchLang}
+                      </span>
+                    </button>
+                  )}
+
+                  {navItems.map((item) => {
+                    const Icon = iconMap[item.key] || LayoutDashboard
+                    const active = isActiveLink(item.href)
+
+                    return (
+                      <Link
+                        key={item.key}
+                        to={item.href}
+                        onClick={() => isMobile && setSidebarOpen(false)}
+                        className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
+                          active
+                            ? 'bg-white shadow-sm'
+                            : 'text-white/85 hover:bg-white/15 hover:text-white'
+                        } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
+                        style={active ? { color: ADMIN_BRAND } : undefined}
                       >
-                        <Globe size={19} className="shrink-0" />
+                        <Icon size={19} className="shrink-0" />
 
-                        <span className="text-sm font-semibold">
-                          {t.switchLang}
-                        </span>
-                      </button>
-                    )}
+                        {(sidebarOpen || isMobile) && (
+                          <span className="text-sm font-semibold">
+                            {item.label}
+                          </span>
+                        )}
 
-                    {navItems.map((item) => {
-                      const Icon = iconMap[item.key] || LayoutDashboard
-                      const active = isActiveLink(item.href)
+                        {item.key === 'messages' && unreadCount > 0 && (
+                          <span
+                            className={`${
+                              sidebarOpen || isMobile
+                                ? 'ms-auto'
+                                : 'absolute -top-1 -end-1'
+                            } flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white`}
+                          >
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
+                      </Link>
+                    )
+                  })}
+                </div>
+              </nav>
 
-                      return (
-                        <Link
-                          key={item.key}
-                          to={item.href}
-                          onClick={() => isMobile && setSidebarOpen(false)}
-                          className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
-                            active
-                              ? 'bg-white shadow-sm'
-                              : 'text-white/85 hover:bg-white/15 hover:text-white'
-                          } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
-                          style={active ? { color: ADMIN_BRAND } : undefined}
-                        >
-                          <Icon size={19} className="shrink-0" />
-
-                          {(sidebarOpen || isMobile) && (
-                            <span className="text-sm font-semibold">
-                              {item.label}
-                            </span>
-                          )}
-
-                          {item.key === 'messages' && unreadCount > 0 && (
-                            <span
-                              className={`${
-                                sidebarOpen || isMobile
-                                  ? 'ms-auto'
-                                  : 'absolute -top-1 -end-1'
-                              } flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white`}
-                            >
-                              {unreadCount > 99 ? '99+' : unreadCount}
-                            </span>
-                          )}
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </nav>
-              </div>
-
-              <div className="border-t border-white/15 p-3">
+              <div className="shrink-0 border-t border-white/15 p-3">
                 <button
                   type="button"
                   onClick={handleLogout}

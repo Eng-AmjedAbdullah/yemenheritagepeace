@@ -1,7 +1,7 @@
 /* Admin-only UI overrides moved out of the public bundle. */
 
 .admin-sidebar {
-  @apply bg-dark border-e border-primary/20 min-h-screen w-64 fixed top-0 z-40;
+  @apply bg-dark border-e border-primary/20 z-40;
 }
 
 [dir="rtl"] .admin-sidebar {

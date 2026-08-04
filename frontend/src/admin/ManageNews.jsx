@@ -101,6 +101,7 @@ export default function ManageNews() {
   const [editId, setEditId] = useState(null)
   const [prevImageUrl, setPrevImageUrl] = useState('')
   const [prevThumbnailUrl, setPrevThumbnailUrl] = useState('')
+  const [tempUploadedUrls, setTempUploadedUrls] = useState([])
   const [form, setForm] = useState(EMPTY_FORM)
   const [touched, setTouched] = useState(EMPTY_TOUCHED)
   const [searchTerm, setSearchTerm] = useState('')
@@ -154,6 +155,7 @@ export default function ManageNews() {
     setTouched(EMPTY_TOUCHED)
     setPrevImageUrl('')
     setPrevThumbnailUrl('')
+    setTempUploadedUrls([])
     setForm({ ...EMPTY_FORM, created_at: new Date().toISOString().split('T')[0] })
     setModalOpen(true)
   }
@@ -175,7 +177,26 @@ export default function ManageNews() {
     })
     setPrevImageUrl(item.image_url || '')
     setPrevThumbnailUrl(item.thumbnail_url || '')
+    setTempUploadedUrls([])
     setModalOpen(true)
+  }
+
+  const clearTempUploadedUrls = () => {
+    setTempUploadedUrls([])
+  }
+
+  const cleanupTempUploadedUrls = async (keepUrls = []) => {
+    const keepSet = new Set((keepUrls || []).filter(Boolean))
+    const uniqueUrls = [...new Set(tempUploadedUrls.filter(Boolean))].filter(
+      (url) => !keepSet.has(url)
+    )
+
+    if (!uniqueUrls.length) return
+
+    setTempUploadedUrls([])
+    await Promise.allSettled(
+      uniqueUrls.map((url) => api.deleteUploadedFile(url, { globalLoading: false }))
+    )
   }
 
   const closeModal = () => {
@@ -183,6 +204,11 @@ export default function ManageNews() {
     setEditId(null)
     setForm(EMPTY_FORM)
     setTouched(EMPTY_TOUCHED)
+  }
+
+  const cancelModal = async () => {
+    await cleanupTempUploadedUrls([])
+    closeModal()
   }
 
   const touchAll = () => {
@@ -235,6 +261,7 @@ export default function ManageNews() {
           loadingLabel: 'create-news',
         })
       }
+      await cleanupTempUploadedUrls([form.image_url, form.thumbnail_url])
 
       toast.success(
         editId
@@ -356,11 +383,11 @@ export default function ManageNews() {
         icon={SquarePen}
         isRtl={isRtl}
         size="wide"
-        onClose={closeModal}
+        onClose={cancellModal}
         closeDisabled={saving}
         footer={
           <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-            <button type="button" onClick={closeModal} disabled={saving} className="btn-outline min-w-32 justify-center">{t.cancel || (isRtl ? 'إلغاء' : 'Cancel')}</button>
+            <button type="button" onClick={cancelModal} disabled={saving} className="btn-outline min-w-32 justify-center">{t.cancel || (isRtl ? 'إلغاء' : 'Cancel')}</button>
             <button type="button" onClick={handleSave} disabled={saving || hasErrors} className="btn-primary min-w-36 justify-center">
               <Save size={16} /> {saving ? (isRtl ? 'جارٍ الحفظ...' : 'Saving...') : (t.save || (isRtl ? 'حفظ' : 'Save'))}
             </button>
@@ -368,7 +395,30 @@ export default function ManageNews() {
         }
       >
         <div className="space-y-6">
-          <ImageUpload value={form.image_url} onChange={(value) => updateForm('image_url', value)} onUploadComplete={(data) => updateForm('thumbnail_url', data.thumbnail_url || '')} folder="news" label={t.newsImage || (isRtl ? 'صورة الخبر' : 'News image')} />
+          <ImageUpload
+            value={form.image_url}
+            onChange={(value) => updateForm('image_url', value)}
+            onUploadComplete={(data) => {
+              updateForm('thumbnail_url', data.thumbnail_url || '')
+              setTempUploadedUrls((current) => [
+                ...new Set([
+                  ...current,
+                  data.url,
+                  data.thumbnail_url,
+                ].filter(Boolean)),
+              ])
+            }}
+            onRemove={async (removedUrl) => {
+              updateForm('thumbnail_url', '')
+
+              if (tempUploadedUrls.includes(removedUrl)) {
+                await api.deleteUploadedFile(removedUrl, { globalLoading: false }).catch(() => {})
+                setTempUploadedUrls((current) => current.filter((url) => url !== removedUrl))
+              }
+            }}
+            folder="news"
+            label={t.newsImage || (isRtl ? 'صورة الخبر' : 'News image')}
+          />
 
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

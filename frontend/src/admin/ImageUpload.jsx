@@ -32,6 +32,7 @@ export default function ImageUpload({
   value,
   onChange,
   onUploadComplete,
+  onRemove,
   folder = 'general',
   label,
   previewHeight = 'h-64 sm:h-72',
@@ -51,7 +52,6 @@ export default function ImageUpload({
   const hasValue = Boolean(rawValue)
   const previewSrc = useMemo(() => resolveMediaUrl(rawValue), [rawValue])
   const isExternal = /^https?:/i.test(rawValue)
-  const canDeleteFromStorage = isManagedUpload(rawValue)
 
   const text = {
     label: label || (isRtl ? 'صورة' : 'Image'),
@@ -190,10 +190,7 @@ export default function ImageUpload({
     setMenuOpen(false)
 
     try {
-      if (canDeleteFromStorage) {
-        await api.deleteUploadedFile(rawValue)
-      }
-
+      await onRemove?.(rawValue)
       onChange('')
       setImageError(false)
       toast.success(text.removeSuccess)

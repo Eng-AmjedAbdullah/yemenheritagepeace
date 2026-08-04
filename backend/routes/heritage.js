@@ -33,8 +33,17 @@ router.get('/all', auth, async (req, res) => {
   } catch { res.status(500).json({ error: 'خطأ في الخادم' }) }
 })
 
-// GET /api/heritage/:id  (public — single item)
+// GET /api/heritage/:id  (public — published only)
 router.get('/:id', async (req, res) => {
+  try {
+    const [rows] = await db.query('SELECT * FROM heritage_items WHERE id = ? AND published = 1', [req.params.id])
+    if (!rows.length) return res.status(404).json({ error: 'غير موجود' })
+    res.json(rows[0])
+  } catch { res.status(500).json({ error: 'خطأ في الخادم' }) }
+})
+
+// GET /api/heritage/admin/:id  (admin — single item regardless of published)
+router.get('/admin/:id', auth, async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM heritage_items WHERE id = ?', [req.params.id])
     if (!rows.length) return res.status(404).json({ error: 'غير موجود' })
