@@ -29,7 +29,7 @@ export default function News() {
     setLoading(true)
 
     api
-      .get('/news?limit=100')
+      .get('/news?limit=3')
       .then((data) => {
         if (!alive) return
         setNews(Array.isArray(data) ? data : [])

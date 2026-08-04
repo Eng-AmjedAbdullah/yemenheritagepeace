@@ -555,7 +555,7 @@ export default function AdminLayout() {
             )}
 
             <div className="flex h-full flex-col">
-              <nav className="flex-1 space-y-1 overflow-y-auto p-3 pt-6 admin-sidebar-scrollbar">
+              <nav className="flex-1 space-y-2 overflow-y-auto rounded-3xl p-3 pt-6 admin-sidebar-scrollbar">
                 {isMobile && (
                   <button
                     type="button"
