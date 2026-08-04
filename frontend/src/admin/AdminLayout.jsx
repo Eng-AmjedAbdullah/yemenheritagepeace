@@ -560,61 +560,68 @@ export default function AdminLayout() {
               </button>
             )}
 
-            <div className="flex h-full flex-col">
-              <nav className="flex-1 space-y-2 overflow-y-auto rounded-3xl p-3 pt-6 admin-sidebar-scrollbar">
-                {isMobile && (
-                  <button
-                    type="button"
-                    onClick={toggleAdminLang}
-                    className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-white/85 transition-all hover:bg-white/15 hover:text-white"
+            <div className="flex-1 min-h-0 relative admin-sidebar-scroll-shell">
+              <div className="admin-sidebar-scroll">
+                <nav className="space-y-2 rounded-3xl p-3 pt-6">
+                  <div
+                    className="admin-sidebar-scroll-content"
+                    dir={isRtl ? 'rtl' : 'ltr'}
                   >
-                    <Globe size={19} className="shrink-0" />
+                    {isMobile && (
+                      <button
+                        type="button"
+                        onClick={toggleAdminLang}
+                        className="group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-white/85 transition-all hover:bg-white/15 hover:text-white"
+                      >
+                        <Globe size={19} className="shrink-0" />
 
-                    <span className="text-sm font-semibold">
-                      {t.switchLang}
-                    </span>
-                  </button>
-                )}
-
-                {navItems.map((item) => {
-                  const Icon = iconMap[item.key] || LayoutDashboard
-                  const active = isActiveLink(item.href)
-
-                  return (
-                    <Link
-                      key={item.key}
-                      to={item.href}
-                      onClick={() => isMobile && setSidebarOpen(false)}
-                      className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
-                        active
-                          ? 'bg-white shadow-sm'
-                          : 'text-white/85 hover:bg-white/15 hover:text-white'
-                      } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
-                      style={active ? { color: ADMIN_BRAND } : undefined}
-                    >
-                      <Icon size={19} className="shrink-0" />
-
-                      {(sidebarOpen || isMobile) && (
                         <span className="text-sm font-semibold">
-                          {item.label}
+                          {t.switchLang}
                         </span>
-                      )}
+                      </button>
+                    )}
 
-                      {item.key === 'messages' && unreadCount > 0 && (
-                        <span
-                          className={`${
-                            sidebarOpen || isMobile
-                              ? 'ms-auto'
-                              : 'absolute -top-1 -end-1'
-                          } flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white`}
+                    {navItems.map((item) => {
+                      const Icon = iconMap[item.key] || LayoutDashboard
+                      const active = isActiveLink(item.href)
+
+                      return (
+                        <Link
+                          key={item.key}
+                          to={item.href}
+                          onClick={() => isMobile && setSidebarOpen(false)}
+                          className={`group relative flex items-center gap-3 rounded-xl px-3 py-3 transition-all ${
+                            active
+                              ? 'bg-white shadow-sm'
+                              : 'text-white/85 hover:bg-white/15 hover:text-white'
+                          } ${!sidebarOpen && !isMobile ? 'justify-center' : ''}`}
+                          style={active ? { color: ADMIN_BRAND } : undefined}
                         >
-                          {unreadCount > 99 ? '99+' : unreadCount}
-                        </span>
-                      )}
-                    </Link>
-                  )
-                })}
-              </nav>
+                          <Icon size={19} className="shrink-0" />
+
+                          {(sidebarOpen || isMobile) && (
+                            <span className="text-sm font-semibold">
+                              {item.label}
+                            </span>
+                          )}
+
+                          {item.key === 'messages' && unreadCount > 0 && (
+                            <span
+                              className={`${
+                                sidebarOpen || isMobile
+                                  ? 'ms-auto'
+                                  : 'absolute -top-1 -end-1'
+                              } flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-xs font-bold text-white`}
+                            >
+                              {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                          )}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </nav>
+              </div>
 
               <div className="border-t border-white/15 p-3">
                 <button

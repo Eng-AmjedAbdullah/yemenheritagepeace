@@ -215,40 +215,56 @@ html.admin-document-active:has(body.modal-open) {
   overflow: hidden;
 }
 
-.admin-sidebar-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.96) rgba(255, 255, 255, 0.16);
-  scrollbar-gutter: stable both-edges;
+.admin-sidebar-scroll {
+  position: absolute;
+  inset: 0 8px 0 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
-  padding-inline-end: 10px;
-  padding-block: 10px;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff transparent;
 }
 
-.admin-sidebar-scrollbar::-webkit-scrollbar {
+.admin-sidebar-scroll-content {
+  min-height: 100%;
+}
+
+.admin-sidebar-scroll-content[dir='rtl'],
+html[dir='rtl'] .admin-sidebar-scroll-content {
+  direction: rtl;
+}
+
+.admin-sidebar-scroll-content[dir='ltr'],
+html[dir='ltr'] .admin-sidebar-scroll-content {
+  direction: ltr;
+}
+
+.admin-sidebar-scroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.admin-sidebar-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.16) !important;
+.admin-sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
   border-radius: 9999px;
 }
 
-.admin-sidebar-scrollbar::-webkit-scrollbar-thumb {
-  min-height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.95);
+.admin-sidebar-scroll::-webkit-scrollbar-thumb {
+  min-height: 32px;
+  background-color: #ffffff;
   border-radius: 9999px;
-  background-color: #ffffff !important;
-  background-clip: padding-box;
+  opacity: 1;
 }
 
-.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover,
-.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:active {
-  background-color: #ffffff !important;
+.admin-sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.admin-sidebar-scroll::-webkit-scrollbar-thumb:active {
+  background-color: #ffffff;
+  opacity: 1;
 }
 
-.admin-sidebar-scrollbar::-webkit-scrollbar-corner {
-  background: transparent !important;
+.admin-sidebar-scroll::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 .admin-sidebar {
