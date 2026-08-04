@@ -220,11 +220,13 @@ html.admin-document-active:has(body.modal-open) {
   scrollbar-color: rgba(255, 255, 255, 0.96) rgba(255, 255, 255, 0.16);
   scrollbar-gutter: stable both-edges;
   overscroll-behavior: contain;
+  padding-inline-end: 10px;
+  padding-block: 10px;
 }
 
 .admin-sidebar-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 .admin-sidebar-scrollbar::-webkit-scrollbar-track {
@@ -233,14 +235,15 @@ html.admin-document-active:has(body.modal-open) {
 }
 
 .admin-sidebar-scrollbar::-webkit-scrollbar-thumb {
-  min-height: 22px;
-  border: 2px solid rgba(255, 255, 255, 0.85);
+  min-height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.95);
   border-radius: 9999px;
-  background-color: rgba(255, 255, 255, 0.96) !important;
+  background-color: #ffffff !important;
   background-clip: padding-box;
 }
 
-.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover,
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:active {
   background-color: #ffffff !important;
 }
 

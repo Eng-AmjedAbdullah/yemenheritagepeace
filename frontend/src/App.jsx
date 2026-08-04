@@ -320,16 +320,17 @@ export default function App() {
         <BrowserRouter>
           <AppToaster />
 
-          <Routes>
-            <Route
-              path="/admin/login"
-              element={<AdminLogin />}
-            />
+          <Suspense fallback={<Preloader lang={lang} settings={settings} />}>
+            <Routes>
+              <Route
+                path="/admin/login"
+                element={<AdminLogin />}
+              />
 
-            <Route
-              path="/admin/*"
-              element={<AdminLayout />}
-            >
+              <Route
+                path="/admin/*"
+                element={<AdminLayout />}
+              >
               <Route
                 index
                 element={<Dashboard />}
@@ -401,6 +402,7 @@ export default function App() {
               element={<PublicLayout />}
             />
           </Routes>
+          </Suspense>
         </BrowserRouter>
 
         {isLoading && (
